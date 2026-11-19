@@ -316,7 +316,9 @@ void main(){
   float lonD = degrees(lon), latD = degrees(lat);
   vec2 d0uv, d1uv;
   float w1 = detW(box1, amt1, lonD, latD, d1uv), w0 = detW(box0, amt0, lonD, latD, d0uv);
-  float t1 = texture(det1, d1uv).r, t0 = texture(det0, d0uv).r;
+  vec4 T1 = texture(det1, d1uv), T0 = texture(det0, d0uv);
+  float t1 = T1.r, t0 = T0.r;
+  w1 *= T1.a; w0 *= T0.a;                       // gaps in a live patch (missing tiles) show the base map
   float dw = max(w0, w1);
   // relief normal from the elevation grid
   float hE = texture(heightTex, vUv + vec2(hTexel.x, 0.0)).r, hW = texture(heightTex, vUv - vec2(hTexel.x, 0.0)).r;
@@ -642,7 +644,7 @@ if (innerWidth < 720) $('hide').click();
 // ---------------------------------------------------------------- close-up detail
 // Regional close-ups: data/detail/regions.json lists stitched LROC images (made by tools/fetch_detail_tiles.py).
 // Live close-ups: if NASA Moon Trek allows it (checked by the same script), tiles for the current view are loaded on the fly.
-const detail = { info: null, regions: [], cache: new Map(), live: null, liveBusy: false, liveOff: false, albBlob: null, albCPU: null, lastCam: 0, status: '' };
+const detail = { info: null, regions: [], cache: new Map(), live: null, liveBusy: false, liveOff: false, liveFails: 0, albBlob: null, albCPU: null, lastCam: 0, status: '' };
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 async function loadDetailInfo() {
@@ -759,7 +761,10 @@ function maybeLive(now, a, slots) {
   if (slots.some(s => s.amt > 0.95 && s.reg && inBox(s.box, cLat, cLon) && s.reg.ang * 1.2 > a)) return;  // a stored close-up already covers it
   const L = detail.live;
   if (L && inBox(L.innerBox, cLat, cLon) && a > L.alt * 0.55 && a < L.alt * 1.6) return;                  // current live patch still fits
-  buildLive(cLat, cLon, a).catch(e => { console.warn('live tiles unavailable', e); detail.liveOff = true; detail.liveBusy = false; });
+  buildLive(cLat, cLon, a).then(() => { detail.liveFails = 0; }).catch(e => {
+    console.warn('live tiles not loaded', e); detail.liveBusy = false; detail.lastCam = performance.now() + 3000;   // wait before trying again
+    if (++detail.liveFails >= 3) detail.liveOff = true;                                                           // give up after repeated failures
+  });
 }
 async function buildLive(lat, lon, a) {
   detail.liveBusy = true;
@@ -776,14 +781,16 @@ async function buildLive(lat, lon, a) {
   const c0 = Math.floor(x0 / Lv.tw), r0 = Math.floor(y0 / Lv.th), c1 = Math.floor((x0 + wpx - 1) / Lv.tw), r1 = Math.floor((y0 + hpx - 1) / Lv.th);
   const cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
   const ctx = cv.getContext('2d', { willReadFrequently: true });
-  const jobs = [];
+  const jobs = []; let ok = 0;
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
     if (r < 0 || r >= Lv.mh) continue;
     const url = info.template.replace('{TileMatrix}', Lv.id).replace('{TileRow}', r).replace('{TileCol}', ((c % Lv.mw) + Lv.mw) % Lv.mw);
     jobs.push(fetch(url, { mode: 'cors' }).then(res => { if (!res.ok) throw new Error('tile ' + res.status); return res.blob(); }).then(bitmap)
-      .then(bm => ctx.drawImage(bm, Math.round((c - c0) * Lv.tw - (x0 - c0 * Lv.tw)), Math.round((r - r0) * Lv.th - (y0 - r0 * Lv.th)))));
+      .then(bm => { ctx.drawImage(bm, Math.round((c - c0) * Lv.tw - (x0 - c0 * Lv.tw)), Math.round((r - r0) * Lv.th - (y0 - r0 * Lv.th))); ok++; })
+      .catch(() => {}));                                     // a missing tile just leaves a gap that shows the base map
   }
   await Promise.all(jobs);
+  if (!ok) throw new Error('no tiles could be loaded');
   // match brightness and contrast to the base map over the same area
   const A = await albedoCPU(), img = ctx.getImageData(0, 0, wpx, hpx).data;
   let sp = 0, sp2 = 0, sb = 0, sb2 = 0, n = 0;

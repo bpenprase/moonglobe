@@ -76,8 +76,8 @@ def read_layout():
         for tm in tms.findall("w:TileMatrix", ns):
             a, b = (float(v) for v in tm.find("w:TopLeftCorner", ns).text.split())
             lon0, lat0 = (b, a) if abs(a) <= 90 < abs(b) else (a, b)
-            mw, mh = int(tm.find("w:MatrixWidth", ns).text), int(tm.find("w:MatrixHeight", ns).text)
-            tw, th = int(tm.find("w:TileWidth", ns).text), int(tm.find("w:TileHeight", ns).text)
+            mw, mh = int(float(tm.find("w:MatrixWidth", ns).text)), int(float(tm.find("w:MatrixHeight", ns).text))
+            tw, th = int(float(tm.find("w:TileWidth", ns).text)), int(float(tm.find("w:TileHeight", ns).text))
             scale = float(tm.find("w:ScaleDenominator", ns).text)
             deg_scale = scale * 0.00028 / (KM_PER_DEG * 1000)
             deg_width = 360.0 / (mw * tw)
