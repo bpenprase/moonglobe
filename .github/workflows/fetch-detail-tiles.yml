@@ -1,0 +1,51 @@
+# Downloads the close-up images listed in tools/detail_regions.json from NASA Moon Trek
+# and commits them to data/detail/. Runs when the script or the region list changes,
+# or by hand from the Actions tab ("Run workflow").
+name: Fetch close-up tiles
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/fetch_detail_tiles.py
+      - tools/detail_regions.json
+      - .github/workflows/fetch-detail-tiles.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-detail-tiles
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: pip install numpy pillow scipy
+
+      - name: Download and stitch close-up regions
+        run: python tools/fetch_detail_tiles.py
+
+      - name: Save the results to the repository
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A data/detail tools/detail_report.txt || true
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit"
+          else
+            git commit -m "Update close-up images from NASA Moon Trek"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

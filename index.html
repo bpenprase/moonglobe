@@ -29,6 +29,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .lbl.l100::after{content:"\25C6";color:var(--l100);font-size:8px;margin-left:4px;vertical-align:2px}
 .k-land{color:var(--land);font-size:11.5px;font-weight:600}
 .k-land::before{content:"\25B2";font-size:9px;margin-right:4px;vertical-align:1px}
+.k-det{color:#7fe3ff;font-size:11.5px;font-weight:600}
+.k-det::before{content:"\25A3";font-size:10px;margin-right:4px;vertical-align:0}
 .k-grid{color:var(--gold);font-size:10.5px;opacity:.85;pointer-events:none;font-variant-numeric:tabular-nums}
 
 #panel{position:fixed;top:14px;left:14px;width:300px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);
@@ -80,6 +82,11 @@ details a{color:#9cc8ff}
   border-radius:999px;padding:7px 16px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #readout b{color:var(--text);font-weight:500}
+#detBadge{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:rgba(10,40,52,.85);border:1px solid rgba(127,227,255,.35);
+  color:#bdf1ff;border-radius:999px;padding:5px 14px;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .4s;pointer-events:none}
+#regionSel{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;color:var(--text);font:13px Inter,sans-serif;padding:8px 9px;outline:none}
+#regionSel option,#regionSel optgroup{background:#121826;color:var(--text)}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
 #legend{position:fixed;right:14px;bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:11px;color:var(--muted);display:none;width:220px}
 #legend .bar{height:10px;border-radius:5px;margin:6px 0 3px}
 #legend .ticks{display:flex;justify-content:space-between}
@@ -147,6 +154,7 @@ details a{color:#9cc8ff}
     <label class="chk"><input type="checkbox" id="L-satellite"><span class="sw" style="background:var(--sat)"></span>Satellite craters (A, B, C&hellip;)</label>
     <label class="chk"><input type="checkbox" id="L-l100" checked><span class="sw" style="background:var(--l100)"></span>Lunar 100 (Charles Wood)</label>
     <label class="chk"><input type="checkbox" id="L-land" checked><span class="sw" style="background:var(--land)"></span>Landing sites</label>
+    <label class="chk"><input type="checkbox" id="L-det" checked><span class="sw" style="background:#7fe3ff"></span>Close-up regions</label>
   </div>
 
   <div class="sec">
@@ -159,6 +167,12 @@ details a{color:#9cc8ff}
     <label class="chk" style="margin-top:9px"><input type="checkbox" id="spin">Slow rotation</label>
   </div>
 
+  <div class="sec" id="detSec" style="display:none">
+    <h2>Close-up regions</h2>
+    <select id="regionSel"><option value="">Choose a region to zoom into&hellip;</option></select>
+    <div class="note" id="detNote">Sharp LROC images (about 100 m per pixel) fade in as you zoom into these regions.</div>
+  </div>
+
   <div class="sec">
     <details>
       <summary>About the data</summary>
@@ -166,12 +180,15 @@ details a{color:#9cc8ff}
       <a href="https://svs.gsfc.nasa.gov/4720" target="_blank" rel="noopener">CGI Moon Kit</a>. About 1.3 km per pixel at the equator.</p>
       <p>Elevation: Lunar Orbiter Laser Altimeter (LOLA) gridded topography, resampled to 8 pixels per degree. Heights are relative to a 1737.4 km sphere.</p>
       <p>Names: IAU <a href="https://planetarynames.wr.usgs.gov/" target="_blank" rel="noopener">Gazetteer of Planetary Nomenclature</a> (USGS). Lunar 100 list by Charles Wood (<i>Sky &amp; Telescope</i>, 2004).</p>
+      <p>Close-ups: LROC Wide Angle Camera global mosaic at 303 pixels per degree (about 100 m per pixel), NASA/GSFC/Arizona State University, from the NASA
+      <a href="https://trek.nasa.gov/moon/" target="_blank" rel="noopener">Moon Trek</a> tile service.</p>
       <p>Longitudes are east positive. Lunar near side faces you at the start.</p>
     </details>
   </div>
 </aside>
 
 <div id="info"><button class="x" id="infoX">&times;</button><div id="infoBody"></div></div>
+<div id="detBadge"></div>
 <div id="readout">Move over the Moon to read coordinates</div>
 <div id="legend"><div>Elevation relative to 1737.4 km</div><div class="bar" id="lgBar"></div><div class="ticks"><span>&minus;9 km</span><span>0</span><span>+10.7 km</span></div></div>
 
@@ -255,8 +272,11 @@ function globeGeometry(nx, ny) {
 const uniforms = {
   albedoTex: { value: null }, heightTex: { value: null }, hTexel: { value: new THREE.Vector2(1 / 2880, 1 / 1440) },
   exag: { value: 4 }, lightDir: { value: new THREE.Vector3(0, 0, 1) }, ambient: { value: 0.18 }, mode: { value: 0 },
-  gridOn: { value: 1 }, gridStep: { value: 30 }, sunMode: { value: 0 }
+  gridOn: { value: 1 }, gridStep: { value: 30 }, sunMode: { value: 0 },
+  det0: { value: null }, det1: { value: null }, box0: { value: new THREE.Vector4() }, box1: { value: new THREE.Vector4() },
+  amt0: { value: 0 }, amt1: { value: 0 }, dg0: { value: new THREE.Vector2(1, 0) }, dg1: { value: new THREE.Vector2(1, 0) }
 };
+{ const blank = new THREE.DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1); blank.needsUpdate = true; uniforms.det0.value = uniforms.det1.value = blank; }
 
 const vert = /* glsl */`
 uniform sampler2D heightTex; uniform float exag;
@@ -272,8 +292,18 @@ void main(){
 const frag = /* glsl */`
 uniform sampler2D albedoTex, heightTex; uniform vec2 hTexel; uniform float exag, ambient, gridOn, gridStep, sunMode;
 uniform vec3 lightDir; uniform int mode;
+uniform sampler2D det0, det1; uniform vec4 box0, box1; uniform float amt0, amt1; uniform vec2 dg0, dg1;
 varying vec2 vUv; varying vec3 vDir; varying float vH;
 const float PI = 3.14159265359;
+// weight of a close-up patch (box = west, north, width, height in degrees) at this point
+float detW(vec4 box, float amt, float lonD, float latD, out vec2 duv){
+  float u = mod(lonD - box.x + 720.0, 360.0) / box.z;
+  float v = (box.y - latD) / box.w;
+  duv = vec2(u, v);
+  if (amt <= 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) return 0.0;
+  float e = min(min(u, 1.0 - u) * box.z * cos(radians(latD)), min(v, 1.0 - v) * box.w) / max(box.w, 1e-3);
+  return amt * smoothstep(0.0, 0.08, e);
+}
 vec3 ramp(float t){
   t = clamp(t, 0.0, 1.0);
   vec3 c0=vec3(.10,.12,.42), c1=vec3(.13,.43,.78), c2=vec3(.25,.72,.72), c3=vec3(.48,.78,.36), c4=vec3(.93,.83,.36), c5=vec3(.86,.45,.22), c6=vec3(.62,.22,.20), c7=vec3(.97,.95,.93);
@@ -283,6 +313,11 @@ vec3 ramp(float t){
 }
 void main(){
   float lat = (0.5 - vUv.y) * PI, lon = (vUv.x - 0.5) * 2.0 * PI;
+  float lonD = degrees(lon), latD = degrees(lat);
+  vec2 d0uv, d1uv;
+  float w1 = detW(box1, amt1, lonD, latD, d1uv), w0 = detW(box0, amt0, lonD, latD, d0uv);
+  float t1 = texture(det1, d1uv).r, t0 = texture(det0, d0uv).r;
+  float dw = max(w0, w1);
   // relief normal from the elevation grid
   float hE = texture(heightTex, vUv + vec2(hTexel.x, 0.0)).r, hW = texture(heightTex, vUv - vec2(hTexel.x, 0.0)).r;
   float hN = texture(heightTex, vUv - vec2(0.0, hTexel.y)).r, hS = texture(heightTex, vUv + vec2(0.0, hTexel.y)).r;
@@ -292,10 +327,12 @@ void main(){
   vec3 up = normalize(vDir);
   vec3 east = normalize(vec3(cos(lon), 0.0, -sin(lon)));
   vec3 north = cross(up, east);
-  float k = max(exag, 0.0);
+  float k = max(exag, 0.0) * (1.0 - 0.45 * dw);
   vec3 n = normalize(up - k * (sE * east + sN * north));
 
   float alb = texture(albedoTex, vUv).r;
+  alb = mix(alb, clamp(t1 * dg1.x + dg1.y, 0.0, 1.0), w1);
+  alb = mix(alb, clamp(t0 * dg0.x + dg0.y, 0.0, 1.0), w0);
   vec3 base;
   if (mode == 0) base = vec3(alb) * 1.15;
   else if (mode == 1) base = ramp((vH - ${HMIN.toFixed(1)}) / ${(HMAX - HMIN).toFixed(1)});
@@ -337,6 +374,7 @@ const KIND_TEXT = { Mare: 'Sea (mare)', Oceanus: 'Ocean', Lacus: 'Lake', Sinus: 
 function vec(lat, lon) { const cl = Math.cos(lat * DEG); return [cl * Math.sin(lon * DEG), Math.sin(lat * DEG), cl * Math.cos(lon * DEG)]; }
 function sampleH(lat, lon) {
   if (!heightKm) return NaN;
+  lon = ((lon + 540) % 360 + 360) % 360 - 180;
   const x = Math.min(HW - 1, Math.max(0, Math.floor((lon + 180) / 360 * HW))), y = Math.min(HH - 1, Math.max(0, Math.floor((90 - lat) / 180 * HH)));
   return heightKm[y * HW + x];
 }
@@ -347,7 +385,7 @@ const fmtH = v => isNaN(v) ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2
 async function loadAll() {
   setLoad(0.02, 'Loading surface map');
   const maxTex = renderer.capabilities.maxTextureSize;
-  const albBlob = await fetchBlob('data/moon_albedo_4k.jpg', f => setLoad(0.02 + f * 0.3));
+  const albBlob = await fetchBlob('data/moon_albedo_4k.jpg', f => setLoad(0.02 + f * 0.3)); detail.albBlob = albBlob;
   const albTex = new THREE.Texture(await bitmap(albBlob));
   albTex.flipY = false; albTex.wrapS = THREE.RepeatWrapping; albTex.colorSpace = THREE.NoColorSpace;
   albTex.anisotropy = renderer.capabilities.getMaxAnisotropy(); albTex.needsUpdate = true;
@@ -380,6 +418,7 @@ async function loadAll() {
   }
   for (const [name, lat, lon, desc] of fj.landings) items.push({ name, lat, lon, diam: 0, kind: 'land', desc });
   for (const it of items) { const v = vec(it.lat, it.lon); it.x = v[0]; it.y = v[1]; it.z = v[2]; it.r = it.diam / R_KM; it.el = null; it.lc = it.name.toLowerCase(); }
+  await loadDetailInfo();
   setLoad(1, 'Ready');
   $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 700);
   setTimeout(() => { $('hint').style.opacity = 0; }, 7000);
@@ -396,7 +435,7 @@ async function loadAll() {
 }
 
 // ---------------------------------------------------------------- labels
-const layer = { mare: true, crater: true, mount: true, other: true, satellite: false, l100: true, land: true };
+const layer = { mare: true, crater: true, mount: true, other: true, satellite: false, l100: true, land: true, det: true };
 const labelBox = $('labels'); const pool = []; let used = 0;
 function getLabel() {
   let el = pool[used];
@@ -421,6 +460,7 @@ function updateLabels() {
     let pri;
     if (it.kind === 'land') pri = 1e6;
     else if (it.kind === 'l100') { if (dist > 3.2) continue; pri = 5e5; }
+    else if (it.kind === 'det') { if (dist > 3.4 || px > H * 0.4) continue; pri = 8e5; }
     else if (it.kind === 'mare') { if (px < 40) continue; pri = 9e5 + Math.min(px, 2000); }
     else if (it.kind === 'satellite') { if (px < 60) continue; pri = px * 0.5; }
     else if (viaL100 && dist < 3.2) pri = 5e5 + px;
@@ -437,8 +477,8 @@ function updateLabels() {
   for (const c of cand) {
     if (used >= (dist > 3 ? 70 : 160)) break;
     const fs = c.it.kind === 'mare' ? 15 : c.it.kind === 'satellite' ? 10.5 : 12;
-    const w = c.it.name.length * fs * (c.it.kind === 'mare' ? 0.6 : 0.56) + (c.it.kind === 'l100' || c.it.kind === 'land' ? 14 : 4), h = fs + 4;
-    const point = c.it.kind === 'l100' || c.it.kind === 'land';
+    const w = c.it.name.length * fs * (c.it.kind === 'mare' ? 0.6 : 0.56) + (c.it.kind === 'l100' || c.it.kind === 'land' || c.it.kind === 'det' ? 14 : 4), h = fs + 4;
+    const point = c.it.kind === 'l100' || c.it.kind === 'land' || c.it.kind === 'det';
     const x0 = point ? c.sx - 5 : c.sx - w / 2, y0 = c.sy - h / 2;
     let hit = false;
     for (const b of boxes) if (x0 < b[2] && x0 + w > b[0] && y0 < b[3] && y0 + h > b[1]) { hit = true; break; }
@@ -468,6 +508,7 @@ function updateLabels() {
 
 // ---------------------------------------------------------------- info card and fly-to
 function kindText(it) {
+  if (it.kind === 'det') return 'Close-up region';
   if (it.kind === 'land') return 'Landing site';
   if (it.kind === 'l100') return 'Lunar 100 feature';
   if (it.l100) return (KIND_TEXT[it.name.split(' ')[0]] || 'Crater') + ' \u00B7 Lunar 100';
@@ -475,6 +516,7 @@ function kindText(it) {
   return KIND_TEXT[it.name.split(' ')[0]] || 'Crater';
 }
 function select(it, fly) {
+  if (it.kind === 'det') return selectRegion(it.reg, fly);
   const h = sampleH(it.lat, it.lon);
   let html = `<h3>${esc(it.name)}</h3><div class="kind">${kindText(it)}</div>`;
   if (it.desc) html += `<div class="desc">${esc(it.desc)}</div>`;
@@ -582,7 +624,7 @@ seg('light', v => {
 $('ang').oninput = e => { $('angV').textContent = e.target.value + '°'; dirty = true; };
 $('sun').oninput = e => { const s = +e.target.value; $('sunV').textContent = s === 0 ? '0°' : Math.abs(s) + '°' + (s > 0 ? 'E' : 'W'); dirty = true; };
 $('sun').dispatchEvent(new Event('input'));
-$('ex').oninput = e => { uniforms.exag.value = +e.target.value; controls.minDistance = 1.03 + uniforms.exag.value * 0.0065; $('exV').textContent = e.target.value + '×'; dirty = true; };
+$('ex').oninput = e => { uniforms.exag.value = +e.target.value; $('exV').textContent = e.target.value + '×'; dirty = true; };
 $('L-grid').onchange = e => { uniforms.gridOn.value = e.target.checked ? 1 : 0; dirty = true; };
 for (const k of Object.keys(layer)) { const c = $('L-' + k); c.checked = layer[k]; c.onchange = () => { layer[k] = c.checked; dirty = true; }; }
 let spin = false; $('spin').onchange = e => { spin = e.target.checked; };
@@ -597,8 +639,177 @@ if (innerWidth < 720) $('hide').click();
   $('lgBar').style.background = 'linear-gradient(90deg,' + st.map((c, i) => `rgb(${c.map(x => Math.round(x * 255)).join(',')}) ${(i / 7 * 100).toFixed(0)}%`).join(',') + ')';
 }
 
+// ---------------------------------------------------------------- close-up detail
+// Regional close-ups: data/detail/regions.json lists stitched LROC images (made by tools/fetch_detail_tiles.py).
+// Live close-ups: if NASA Moon Trek allows it (checked by the same script), tiles for the current view are loaded on the fly.
+const detail = { info: null, regions: [], cache: new Map(), live: null, liveBusy: false, liveOff: false, albBlob: null, albCPU: null, lastCam: 0, status: '' };
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+async function loadDetailInfo() {
+  try {
+    const r = await fetch('data/detail/regions.json'); if (!r.ok) return;
+    const info = await r.json(); detail.info = info;
+    const sel = $('regionSel'); const groups = new Map();
+    for (const g of info.regions) {
+      const v = vec(g.lat, g.lon);
+      const reg = { ...g, v: new THREE.Vector3(...v), box: new THREE.Vector4(g.west, g.north, g.wdeg, g.hdeg),
+        ang: g.size_km / R_KM, tex: null, loading: false, used: 0, shownAt: 0 };
+      detail.regions.push(reg);
+      const it = { name: g.name, lat: g.lat, lon: g.lon, diam: 0, kind: 'det', reg, desc: '' };
+      it.x = v[0]; it.y = v[1]; it.z = v[2]; it.r = g.size_km / R_KM; it.lc = g.name.toLowerCase(); reg.item = it;
+      items.push(it);
+      if (!groups.has(g.group)) { const og = document.createElement('optgroup'); og.label = g.group || 'Regions'; groups.set(g.group, og); sel.appendChild(og); }
+      const o = document.createElement('option'); o.value = detail.regions.length - 1; o.textContent = g.name; groups.get(g.group).appendChild(o);
+    }
+    sel.onchange = () => { const reg = detail.regions[+sel.value]; if (reg) selectRegion(reg, true); sel.value = ''; sel.blur(); };
+    $('detSec').style.display = '';
+    if (info.live_tiles) $('detNote').textContent = 'Sharp LROC images (about 100 m per pixel) fade in as you zoom into these regions. Live close-ups from NASA Moon Trek also load anywhere you zoom in.';
+  } catch (e) { console.warn('No close-up regions', e); }
+}
+
+function selectRegion(reg, fly) {
+  const h = sampleH(reg.lat, reg.lon);
+  $('infoBody').innerHTML = `<h3>${esc(reg.name)}</h3><div class="kind">Close-up region${reg.group ? ' &middot; ' + esc(reg.group) : ''}</div>
+    <div class="desc">A sharp LROC Wide Angle Camera image of this area fades in as you zoom in. Keep zooming to see small craters, rilles and boulder-strewn slopes.</div>
+    <table><tr><td>Area covered</td><td>${reg.size_km} &times; ${reg.size_km} km</td></tr>
+    <tr><td>Image detail</td><td>about ${reg.m_per_px} m per pixel</td></tr>
+    <tr><td>Center</td><td>${fmtLat(reg.lat)}, ${fmtLon(reg.lon)}</td></tr>${isNaN(h) ? '' : `<tr><td>Elevation at center</td><td>${fmtH(h)}</td></tr>`}</table>`;
+  $('info').style.display = 'block';
+  if (fly) flyTo(reg.lat, reg.lon, 1 + Math.max(0.03, reg.ang * 1.9));
+}
+
+function regionTex(reg, now) {
+  reg.used = now;
+  if (reg.tex) return reg.tex;
+  if (!reg.loading) {
+    reg.loading = true;
+    fetch('data/detail/' + reg.file).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(bitmap).then(bm => {
+      const t = new THREE.Texture(bm); t.flipY = false; t.colorSpace = THREE.NoColorSpace;
+      t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.minFilter = THREE.LinearMipmapLinearFilter; t.needsUpdate = true;
+      reg.tex = t; reg.shownAt = performance.now(); dirty = true;
+      const loaded = detail.regions.filter(r => r.tex).sort((a, b) => a.used - b.used);   // keep at most 6 in memory
+      while (loaded.length > 6) { const old = loaded.shift(); old.tex.dispose(); old.tex = null; old.loading = false; }
+    }).catch(e => { console.warn('close-up not loaded', reg.file, e); });
+  }
+  return null;
+}
+
+const cd = new THREE.Vector3();
+function updateDetail(now) {
+  const C = camera.position, a = C.length() - 1;
+  cd.copy(C).normalize();
+  const viewRad = a * Math.tan(camera.fov * DEG / 2) * Math.max(1, camera.aspect);
+  const act = [];
+  for (const reg of detail.regions) {
+    let amt = 1 - smooth(reg.ang * 2.0, reg.ang * 3.6, a);
+    if (amt <= 0.001) continue;
+    const ang = Math.acos(Math.min(1, cd.dot(reg.v)));
+    if (ang > viewRad * 1.6 + reg.ang) continue;
+    act.push({ reg, amt, ang });
+  }
+  act.sort((p, q) => p.ang - q.ang);
+  const slots = [];
+  for (const c of act) {
+    const t = regionTex(c.reg, now); if (!t) continue;
+    const f = smooth(0, 700, now - c.reg.shownAt);
+    if (f < 1) dirty = true;
+    slots.push({ tex: t, box: c.reg.box, amt: c.amt * f, g: [1, 0], name: c.reg.name, mpp: c.reg.m_per_px, reg: c.reg });
+    if (slots.length === 2) break;
+  }
+  // live close-up for the current view
+  if (detail.info && detail.info.live_tiles && !detail.liveOff) {
+    maybeLive(now, a, slots);
+    const L = detail.live;
+    if (L && slots.length < 2) {
+      const amt = (1 - smooth(L.alt * 2.2, L.alt * 4, a)) * smooth(0, 600, now - L.t);
+      if (amt < 1) dirty = true;
+      if (amt > 0.001) slots.push({ tex: L.tex, box: L.box, amt, g: L.g, name: 'Live LROC close-up', mpp: L.mpp });
+    }
+  }
+  const s0 = slots[0], s1 = slots[1];
+  const sig = (s0 ? s0.amt.toFixed(3) + s0.tex.id : '-') + '|' + (s1 ? s1.amt.toFixed(3) + s1.tex.id : '-');
+  if (sig !== detail.sig) { detail.sig = sig; dirty = true; }       // redraw whenever a close-up changes
+  uniforms.amt0.value = s0 ? s0.amt : 0; uniforms.amt1.value = s1 ? s1.amt : 0;
+  if (s0) { uniforms.det0.value = s0.tex; uniforms.box0.value.copy(s0.box); uniforms.dg0.value.set(...s0.g); }
+  if (s1) { uniforms.det1.value = s1.tex; uniforms.box1.value.copy(s1.box); uniforms.dg1.value.set(...s1.g); }
+  // badge: the patch under the view center
+  const cLat = Math.asin(cd.y) / DEG, cLon = Math.atan2(cd.x, cd.z) / DEG;
+  const under = slots.find(s => s.amt > 0.5 && inBox(s.box, cLat, cLon));
+  const txt = under ? `Close-up: ${under.name} &middot; about ${under.mpp} m per pixel` : '';
+  if (txt !== detail.status) { detail.status = txt; const b = $('detBadge'); if (txt) b.innerHTML = txt; b.style.opacity = txt ? 1 : 0; }
+}
+function inBox(box, lat, lon) {
+  const u = (((lon - box.x) % 360) + 360) % 360;
+  return u <= box.z && lat <= box.y && lat >= box.y - box.w;
+}
+
+// ---- live tiles (only when the tile service allows browser access)
+async function albedoCPU() {
+  if (detail.albCPU) return detail.albCPU;
+  const bm = await bitmap(detail.albBlob);
+  const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bm, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height).data, g = new Uint8Array(c.width * c.height);
+  for (let i = 0; i < g.length; i++) g[i] = d[i * 4];
+  return (detail.albCPU = { w: c.width, h: c.height, g });
+}
+function maybeLive(now, a, slots) {
+  if (detail.liveBusy || a > 0.16 || now - detail.lastCam < 350) return;
+  const cLat = Math.asin(cd.y) / DEG, cLon = Math.atan2(cd.x, cd.z) / DEG;
+  if (slots.some(s => s.amt > 0.95 && s.reg && inBox(s.box, cLat, cLon) && s.reg.ang * 1.2 > a)) return;  // a stored close-up already covers it
+  const L = detail.live;
+  if (L && inBox(L.innerBox, cLat, cLon) && a > L.alt * 0.55 && a < L.alt * 1.6) return;                  // current live patch still fits
+  buildLive(cLat, cLon, a).catch(e => { console.warn('live tiles unavailable', e); detail.liveOff = true; detail.liveBusy = false; });
+}
+async function buildLive(lat, lon, a) {
+  detail.liveBusy = true;
+  const info = detail.info, levels = info.levels;
+  const viewRad = a * Math.tan(camera.fov * DEG / 2) * Math.max(1, camera.aspect) * 1.5;
+  const hdeg = Math.min(40, 2 * viewRad / DEG), wdeg = Math.min(80, hdeg / Math.max(0.15, Math.cos(lat * DEG)));
+  const north = Math.min(90, lat + hdeg / 2), west = lon - wdeg / 2;
+  const needPpd = Math.min(303, innerHeight * Math.min(devicePixelRatio, 2) / (hdeg / 1.5));
+  let li = levels.findIndex(l => 1 / l.deg >= needPpd * 0.9); if (li < 0) li = levels.length - 1;
+  while (li > 0 && (wdeg / levels[li].deg > 2048 || hdeg / levels[li].deg > 2048)) li--;
+  const Lv = levels[li];
+  const wpx = Math.round(wdeg / Lv.deg), hpx = Math.round(hdeg / Lv.deg);
+  const x0 = (west - Lv.lon0) / Lv.deg, y0 = (Lv.lat0 - north) / Lv.deg;
+  const c0 = Math.floor(x0 / Lv.tw), r0 = Math.floor(y0 / Lv.th), c1 = Math.floor((x0 + wpx - 1) / Lv.tw), r1 = Math.floor((y0 + hpx - 1) / Lv.th);
+  const cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const jobs = [];
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    if (r < 0 || r >= Lv.mh) continue;
+    const url = info.template.replace('{TileMatrix}', Lv.id).replace('{TileRow}', r).replace('{TileCol}', ((c % Lv.mw) + Lv.mw) % Lv.mw);
+    jobs.push(fetch(url, { mode: 'cors' }).then(res => { if (!res.ok) throw new Error('tile ' + res.status); return res.blob(); }).then(bitmap)
+      .then(bm => ctx.drawImage(bm, Math.round((c - c0) * Lv.tw - (x0 - c0 * Lv.tw)), Math.round((r - r0) * Lv.th - (y0 - r0 * Lv.th)))));
+  }
+  await Promise.all(jobs);
+  // match brightness and contrast to the base map over the same area
+  const A = await albedoCPU(), img = ctx.getImageData(0, 0, wpx, hpx).data;
+  let sp = 0, sp2 = 0, sb = 0, sb2 = 0, n = 0;
+  for (let j = 0; j < 40; j++) for (let i = 0; i < 40; i++) {
+    const u = (i + 0.5) / 40, v = (j + 0.5) / 40;
+    const p = img[(Math.floor(v * hpx) * wpx + Math.floor(u * wpx)) * 4]; if (p < 3) continue;
+    const blon = west + u * wdeg, blat = north - v * hdeg;
+    const bx = ((Math.floor((blon + 180) / 360 * A.w) % A.w) + A.w) % A.w, by = Math.min(A.h - 1, Math.max(0, Math.floor((90 - blat) / 180 * A.h)));
+    const b = A.g[by * A.w + bx]; sp += p; sp2 += p * p; sb += b; sb2 += b * b; n++;
+  }
+  let g = [1, 0];
+  if (n > 50) {
+    const mp = sp / n, mb = sb / n, vp = Math.sqrt(Math.max(1, sp2 / n - mp * mp)), vb = Math.sqrt(Math.max(1, sb2 / n - mb * mb));
+    const gain = Math.min(1.4, Math.max(0.75, vb / vp)); g = [gain, (mb - gain * mp) / 255];
+  }
+  const tex = new THREE.CanvasTexture(cv); tex.flipY = false; tex.colorSpace = THREE.NoColorSpace;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); tex.minFilter = THREE.LinearMipmapLinearFilter;
+  const old = detail.live;
+  detail.live = { tex, g, alt: a, t: performance.now(), mpp: Math.round(R_KM * 1000 * DEG * Lv.deg),
+    box: new THREE.Vector4(west, north, wdeg, hdeg), innerBox: new THREE.Vector4(west + wdeg * 0.2, north - hdeg * 0.2, wdeg * 0.6, hdeg * 0.6) };
+  if (old) setTimeout(() => old.tex.dispose(), 1000);
+  detail.liveBusy = false; dirty = true;
+}
+
 // ---------------------------------------------------------------- frame loop
-controls.addEventListener('change', () => { dirty = true; });
+controls.addEventListener('change', () => { dirty = true; detail.lastCam = performance.now(); });
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); dirty = true; });
 const camDir = new THREE.Vector3(), camUp = new THREE.Vector3(), camRight = new THREE.Vector3();
 function updateLight() {
@@ -619,8 +830,20 @@ function loop(now) {
   if (spin && !anim) { const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.0012); camera.position.applyQuaternion(q); camera.lookAt(0, 0, 0); dirty = true; }
   if (!anim) controls.update();
   const dist = camera.position.length();
-  controls.rotateSpeed = Math.max(0.04, Math.min(1, (dist - 1) * 0.55));
-  controls.zoomSpeed = dist < 1.3 ? 0.5 : 0.9;
+  const alt = dist - 1;
+  controls.rotateSpeed = Math.max(0.0025, Math.min(1, alt * 0.55));
+  // each wheel step or pinch changes the height above the surface by about 15 percent
+  controls.zoomSpeed = Math.max(0.01, Math.min(1.2, Math.log((1 + 0.85 * alt) / (1 + alt)) / Math.log(0.95)));
+  // let the camera come down close to the ground, but never inside the (exaggerated) terrain below it
+  if (heightKm) {
+    const cLat = Math.asin(camera.position.y / dist) / DEG, cLon = Math.atan2(camera.position.x, camera.position.z) / DEG;
+    let hmax = -20;
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) hmax = Math.max(hmax, sampleH(Math.max(-89.9, Math.min(89.9, cLat + j * 0.15)), cLon + i * 0.15 / Math.max(0.2, Math.cos(cLat * DEG))));
+    controls.minDistance = Math.max(1.008, 1 + hmax * uniforms.exag.value / R_KM + 0.015);
+  }
+  const near = Math.max(0.0004, Math.min(0.05, alt * 0.25));
+  if (Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); dirty = true; }
+  if (detail.regions.length || (detail.info && detail.info.live_tiles)) updateDetail(now);
   const gs = gridFor(dist); if (gs !== uniforms.gridStep.value) { uniforms.gridStep.value = gs; $('gridStep').textContent = gs + '°'; dirty = true; }
   if (!dirty) return;
   dirty = false;

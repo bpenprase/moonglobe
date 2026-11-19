@@ -1,0 +1,39 @@
+{
+  "_help": "Close-up regions for the Lunar Globe Explorer. Give either 'feature' (an IAU name, looked up in data/features.json) or 'lat' and 'lon' (degrees, east positive). 'size_km' is the width of the square region. Edit this list and push it to GitHub to fetch new regions automatically.",
+  "regions": [
+    {"name": "Apollo 11 - Tranquility Base", "lat": 0.674, "lon": 23.473, "size_km": 110, "group": "Apollo landing sites"},
+    {"name": "Apollo 12 - Ocean of Storms", "lat": -3.012, "lon": -23.422, "size_km": 110, "group": "Apollo landing sites"},
+    {"name": "Apollo 14 - Fra Mauro", "lat": -3.645, "lon": -17.471, "size_km": 110, "group": "Apollo landing sites"},
+    {"name": "Apollo 15 - Hadley Rille", "lat": 26.132, "lon": 3.634, "size_km": 140, "group": "Apollo landing sites"},
+    {"name": "Apollo 16 - Descartes Highlands", "lat": -8.973, "lon": 15.500, "size_km": 110, "group": "Apollo landing sites"},
+    {"name": "Apollo 17 - Taurus-Littrow", "lat": 20.191, "lon": 30.772, "size_km": 110, "group": "Apollo landing sites"},
+
+    {"name": "Copernicus", "feature": "Copernicus", "size_km": 200, "group": "Famous craters"},
+    {"name": "Tycho", "feature": "Tycho", "size_km": 190, "group": "Famous craters"},
+    {"name": "Kepler", "feature": "Kepler", "size_km": 130, "group": "Famous craters"},
+    {"name": "Eratosthenes", "feature": "Eratosthenes", "size_km": 140, "group": "Famous craters"},
+    {"name": "Aristarchus and Vallis Schroteri", "lat": 25.5, "lon": -49.5, "size_km": 260, "group": "Famous craters"},
+    {"name": "Plato", "feature": "Plato", "size_km": 220, "group": "Famous craters"},
+    {"name": "Clavius", "feature": "Clavius", "size_km": 380, "group": "Famous craters"},
+    {"name": "Theophilus, Cyrillus and Catharina", "lat": -14.5, "lon": 25.2, "size_km": 360, "group": "Famous craters"},
+    {"name": "Ptolemaeus, Alphonsus and Arzachel", "lat": -13.0, "lon": -2.5, "size_km": 430, "group": "Famous craters"},
+    {"name": "Archimedes, Aristillus and Autolycus", "lat": 29.0, "lon": 2.5, "size_km": 300, "group": "Famous craters"},
+    {"name": "Gassendi", "feature": "Gassendi", "size_km": 220, "group": "Famous craters"},
+    {"name": "Petavius", "feature": "Petavius", "size_km": 300, "group": "Famous craters"},
+    {"name": "Langrenus", "feature": "Langrenus", "size_km": 240, "group": "Famous craters"},
+    {"name": "Posidonius", "feature": "Posidonius", "size_km": 200, "group": "Famous craters"},
+    {"name": "Grimaldi", "feature": "Grimaldi", "size_km": 330, "group": "Famous craters"},
+    {"name": "Schickard", "feature": "Schickard", "size_km": 330, "group": "Famous craters"},
+
+    {"name": "Vallis Alpes (Alpine Valley)", "lat": 48.5, "lon": 3.2, "size_km": 260, "group": "Valleys, walls and swirls"},
+    {"name": "Rupes Recta (Straight Wall)", "lat": -22.0, "lon": -7.6, "size_km": 200, "group": "Valleys, walls and swirls"},
+    {"name": "Sinus Iridum (Bay of Rainbows)", "lat": 44.8, "lon": -31.5, "size_km": 380, "group": "Valleys, walls and swirls"},
+    {"name": "Reiner Gamma swirl", "lat": 7.5, "lon": -59.0, "size_km": 220, "group": "Valleys, walls and swirls"},
+    {"name": "Mare Orientale", "lat": -19.5, "lon": -94.5, "size_km": 900, "group": "Valleys, walls and swirls"},
+
+    {"name": "Chang'e 3 / Yutu", "lat": 44.12, "lon": -19.51, "size_km": 110, "group": "Robotic landing sites"},
+    {"name": "Lunokhod 1 (Luna 17)", "lat": 38.24, "lon": -35.0, "size_km": 110, "group": "Robotic landing sites"},
+    {"name": "Chang'e 4 in Von Karman", "lat": -45.6, "lon": 177.6, "size_km": 260, "group": "Far side"},
+    {"name": "Tsiolkovskiy", "feature": "Tsiolkovskiy", "size_km": 300, "group": "Far side"}
+  ]
+}
