@@ -224,7 +224,13 @@ async function bitmap(blob) {
 
 // ---------------------------------------------------------------- renderer, scene
 const canvas = $('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) {
+  $('lstat').innerHTML = 'This browser has 3D graphics (WebGL) turned off, so the globe cannot be drawn.<br>Try Chrome, Edge, Firefox or Safari with hardware acceleration switched on.';
+  $('lbar').parentNode.style.display = 'none';
+  throw e;
+}
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 const scene = new THREE.Scene();
