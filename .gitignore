@@ -1,0 +1,5 @@
+tools/raw/
+node_modules/
+_test.html
+.DS_Store
+__pycache__/
