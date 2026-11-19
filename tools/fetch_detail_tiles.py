@@ -19,7 +19,7 @@ This normally runs on GitHub (see .github/workflows/fetch-detail-tiles.yml) when
 the region list changes. To run it yourself:  pip install numpy pillow scipy  then
 python3 tools/fetch_detail_tiles.py
 """
-import io, json, math, os, re, sys, time, urllib.request
+import io, json, math, os, re, shutil, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -46,11 +46,14 @@ def log(*a):
     print(s, flush=True)
     log_lines.append(s)
 
-def http_get(url, headers=None, tries=4):
+START = time.time()
+TIME_LIMIT = 40 * 60          # seconds; stop starting new regions after this
+
+def http_get(url, headers=None, tries=3):
     req = urllib.request.Request(url, headers={"User-Agent": "LunarGlobeExplorer/1.0 (education; Soka University of America)", **(headers or {})})
     for i in range(tries):
         try:
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return r.read(), dict(r.headers)
         except Exception as e:
             if getattr(e, "code", None) == 404:
@@ -60,8 +63,25 @@ def http_get(url, headers=None, tries=4):
             time.sleep(2 * (i + 1))
 
 # ---------------------------------------------------------------- 1. tile layout
+def standard_layout():
+    """The usual Moon Trek layout: level z has 2^(z+1) x 2^z tiles of 256 px covering the whole Moon."""
+    template = BASE_URL + "/default/default028mm/{TileMatrix}/{TileRow}/{TileCol}.jpg"
+    levels = [dict(id=str(z), lon0=-180.0, lat0=90.0, mw=2 ** (z + 1), mh=2 ** z, tw=256, th=256,
+                   deg=180.0 / (256 * 2 ** z), deg_scale=None) for z in range(0, 9)]
+    return levels, template
+
 def read_layout():
-    """Return the tile matrix levels from the WMTS capabilities (or a standard fallback)."""
+    """Use the standard layout if its tiles load; otherwise read the WMTS capabilities file."""
+    levels, template = standard_layout()
+    try:
+        top, _ = http_get(tile_url(template, levels[8], 128, 256))
+        if top and Image.open(io.BytesIO(top)).size == (256, 256):
+            log("Using the standard Moon Trek tile layout (test tile loaded).")
+            for L in levels:
+                log(f"  level {L['id']}: {L['mw']} x {L['mh']} tiles of 256 px, {1 / L['deg']:.2f} px/deg")
+            return levels, template
+    except Exception as e:
+        log("Standard layout test failed:", repr(e))
     levels, template = [], None
     try:
         xml, _ = http_get(f"{BASE_URL}/WMTSCapabilities.xml")
@@ -85,11 +105,8 @@ def read_layout():
                                deg=deg_width, deg_scale=deg_scale))
         log("Capabilities read OK. Style:", style, " TileMatrixSet:", tms_id)
     except Exception as e:
-        log("Could not read capabilities, using the standard Moon Trek layout. Reason:", repr(e))
-        template = BASE_URL + "/default/default028mm/{TileMatrix}/{TileRow}/{TileCol}.jpg"
-        for z in range(0, 9):
-            levels.append(dict(id=str(z), lon0=-180.0, lat0=90.0, mw=2 ** (z + 1), mh=2 ** z, tw=256, th=256,
-                               deg=180.0 / (256 * 2 ** z), deg_scale=None))
+        log("Could not read capabilities either, trying the standard layout anyway. Reason:", repr(e))
+        levels, template = standard_layout()
     log("Tile URL template:", template)
     for L in levels:
         from_scale = "n/a" if not L["deg_scale"] else "%.2f" % (1 / L["deg_scale"])
@@ -183,17 +200,28 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 def main():
-    OUT.mkdir(parents=True, exist_ok=True)
     levels, template = read_layout()
     shift, align_corr = check_alignment(levels, template)
     cors = check_cors(levels, template)
     if align_corr < 0.5:
-        log("WARNING: the tiles do not match the base map well. Regions are still saved, but check the report.")
+        log("STOPPED: the tiles do not line up with the globe's base map, so nothing was changed.")
+        sys.exit(1)
+    work = OUT.parent / "detail_new"
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
 
     feats = {f[0].lower(): f for f in json.load(open(ROOT / "data" / "features.json"))["features"]}
     spec = json.load(open(ROOT / "tools" / "detail_regions.json"))["regions"]
     out_regions = []
     for R in spec:
+        if time.time() - START > TIME_LIMIT:
+            log("Time limit reached; the remaining regions keep their previous images.")
+            old = OUT / (slug(R["name"]) + ".jpg")
+            prev = {r["file"]: r for r in json.load(open(OUT / "regions.json"))["regions"]} if (OUT / "regions.json").exists() else {}
+            if old.exists() and old.name in prev:
+                shutil.copy(old, work / old.name); out_regions.append(prev[old.name])
+            continue
         if "feature" in R:
             f = feats.get(R["feature"].lower())
             if not f:
@@ -225,24 +253,24 @@ def main():
         blended = p - gaussian_filter(p, sigma) + gaussian_filter(b, sigma)
         blended = np.where(valid, blended, b)
         name = slug(R["name"]) + ".jpg"
-        Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8), "L").save(OUT / name, quality=86, optimize=True, progressive=True)
+        Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8), "L").save(work / name, quality=86, optimize=True, progressive=True)
         out_regions.append(dict(name=R["name"], group=R.get("group", ""), file=name, lat=round(lat, 4), lon=round(lon, 4),
                                 west=round(west, 5), north=round(north, 5), wdeg=round(wdeg, 5), hdeg=round(hdeg, 5),
                                 w=p.shape[1], h=p.shape[0], m_per_px=round(KM_PER_DEG * 1000 / ppd), size_km=R["size_km"]))
         log(f"{R['name']}: level {L['id']}, {p.shape[1]} x {p.shape[0]} px, {KM_PER_DEG * 1000 / ppd:.0f} m/px, "
             f"{n} tiles, {len(missing)} missing, {time.time() - t0:.1f} s")
 
-    # clean out images from regions that were removed from the list
-    keep = {r["file"] for r in out_regions}
-    for f in OUT.glob("*.jpg"):
-        if f.name not in keep:
-            f.unlink()
     info = dict(source="NASA Moon Trek, LRO WAC global mosaic 303 ppd (NASA/GSFC/ASU)", layer=LAYER,
                 updated=time.strftime("%Y-%m-%d"), alignment_correlation=round(align_corr, 3), lon_correction_deg=shift,
                 live_tiles=cors, template=template,
                 levels=[{k: L[k] for k in ("id", "lon0", "lat0", "mw", "mh", "tw", "th", "deg")} for L in levels],
                 regions=out_regions)
-    json.dump(info, open(OUT / "regions.json", "w"), indent=1)
+    json.dump(info, open(work / "regions.json", "w"), indent=1)
+    if not out_regions:
+        log("STOPPED: no regions could be made, so nothing was changed."); shutil.rmtree(work); sys.exit(1)
+    if OUT.exists():
+        shutil.rmtree(OUT)
+    work.rename(OUT)                       # swap in the new set (removed regions disappear)
     log(f"Done: {len(out_regions)} regions saved to data/detail/")
 
 if __name__ == "__main__":
