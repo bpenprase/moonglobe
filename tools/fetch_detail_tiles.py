@@ -99,7 +99,7 @@ def read_layout():
         top_level = levels[-1]; n = top_level["mh"]
         top, _ = http_get(tile_url(template, top_level, n // 2, n))
         if top and Image.open(io.BytesIO(top)).size == (256, 256):
-            log("Using the standard Moon Trek tile layout (test tile loaded).")
+            log(f"Using the standard {ARGS.body} Trek tile layout (test tile loaded).")
             for L in levels:
                 log(f"  level {L['id']}: {L['mw']} x {L['mh']} tiles of 256 px, {1 / L['deg']:.2f} px/deg")
             return levels, template

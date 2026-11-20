@@ -140,6 +140,31 @@ def best_shift(img, ref):
     norm = math.sqrt((a * a).sum() * (b * b).sum()) + 1e-9
     return k, peak / norm, abs(float((a * b).sum() / norm))
 
+def finish_ir(img, h):
+    """Fill the THEMIS gaps (poles above about 67 degrees, and small gores) with MOLA shaded relief matched to
+    the infrared tones, then stretch the contrast so landforms show up at the scale of the whole planet."""
+    from scipy.ndimage import binary_erosion, gaussian_filter
+    a = np.asarray(img, dtype=np.float32)
+    valid = binary_erosion(a > 3, iterations=3)
+    hs = hillshade(h, 16.0)
+    hs = np.asarray(Image.fromarray(hs.astype(np.float32), "F").resize(img.size, Image.BILINEAR), dtype=np.float32)
+    sub = (slice(None, None, 4), slice(None, None, 4))
+    va, vh = a[sub][valid[sub]], hs[sub][valid[sub]]
+    c = np.corrcoef(va, vh)[0, 1]
+    if c < 0:
+        hs = -hs; vh = -vh
+    hs = (hs - vh.mean()) / (vh.std() + 1e-6) * va.std() + va.mean()
+    filled = np.where(valid, a, hs)
+    w = gaussian_filter(valid.astype(np.float32), 6)
+    out = filled * w + hs * (1 - w)
+    # this THEMIS version is flattened at large scales, so add some MOLA relief everywhere:
+    # it makes the volcanoes, basins and canyon walls readable when the whole planet is in view
+    out = out + 0.7 * (hs - va.mean())
+    lo, hi = np.percentile(out[sub], [0.5, 99.7])
+    out = np.clip((out - lo) / (hi - lo), 0, 1) ** 0.95 * 255
+    log(f"  infrared gaps filled from MOLA relief ({100 * (1 - valid.mean()):.1f}% of the map, relief correlation {c:+.2f}); contrast stretched")
+    return Image.fromarray(out.astype(np.uint8), "L")
+
 # ---------------------------------------------------------------- names
 KIND_BY_TYPE = {
     "volcano": ["Mons", "Montes", "Tholus", "Tholi", "Patera", "Paterae"],
@@ -181,11 +206,13 @@ def load_names():
             continue
         lon = (float(lon) + 180) % 360 - 180
         diam = float(f(rec, "diameter", "diam") or 0)
-        ftype = str(f(rec, "type", "feature_ty", "featuretyp") or "")
-        kind = TYPE_TO_KIND.get(ftype.lower())
-        if not kind:
-            last = str(name).split(" ")[-1]
-            kind = TYPE_TO_KIND.get(last.lower(), "other")
+        # the type field looks like "Crater, craters" or "Mons, montes": singular, then plural
+        parts = [t.strip() for t in str(f(rec, "type", "feature_ty", "featuretyp") or "").split(",") if t.strip()]
+        parts = [t[0].upper() + t[1:] for t in parts]
+        last = str(name).split(" ")[-1]
+        ftype = next((t for t in parts if t.lower() == last.lower()), parts[0] if parts else "")
+        kind = TYPE_TO_KIND.get(parts[0].lower()) if parts else None
+        kind = kind or TYPE_TO_KIND.get(last.lower(), "other")
         link = str(f(rec, "link") or "")
         m = re.search(r"Feature/(\d+)", link)
         fid = int(m.group(1)) if m else int(f(rec, "id", "feature_id") or 0)
@@ -245,6 +272,8 @@ def main():
             g = Image.fromarray(np.roll(np.asarray(g), round(L["lon_shift_deg"] / 360 * g.width), axis=1))
             log(f"  applied a {L['lon_shift_deg']:+.2f} deg longitude correction")
         g8 = g.resize((8192, 4096), Image.LANCZOS) if g.width != 8192 else g
+        if key == "ir":
+            g8 = finish_ir(g8, h)
         name = "mars_ir" if key == "ir" else "mars_color"
         g8.save(OUT / f"{name}_8k.jpg", quality=86, optimize=True, progressive=True)
         g8.resize((4096, 2048), Image.LANCZOS).save(OUT / f"{name}_4k.jpg", quality=88, optimize=True, progressive=True)
