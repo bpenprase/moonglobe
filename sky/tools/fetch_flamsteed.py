@@ -1,83 +1,75 @@
 """
 fetch_flamsteed.py
-Finds public-domain scans of John Flamsteed's Atlas Coelestis (1729, and the 1753 second edition) on
-Wikimedia Commons, writes a list of what it found, and downloads them (at most 4000 pixels wide) into
-sky_sources/flamsteed/. Runs on GitHub (.github/workflows/fetch-flamsteed.yml); the scans are kept on the
-separate branch 'flamsteed-sources' so they do not weigh down the published site.
+Downloads public-domain scans of John Flamsteed's Atlas Coelestis (London, 1729) onto the separate branch
+'flamsteed-sources' (see .github/workflows/fetch-flamsteed.yml), so they do not weigh down the published site.
+
+Sources
+  1. Internet Archive item 'atlascoelestis00flam' (1729 first edition, Wellesley College Library, 400 ppi):
+     a small preview of every page, then full-size images of the pages listed in PAGES below.
+  2. Wikimedia Commons set "Atlas Coelestis by John Flamsteed (1729) NNN.jpg" (from RareMaps), fetched by
+     building the file addresses directly (Commons limits search requests from shared servers).
 """
-import json, re, time, urllib.parse, urllib.request
+import hashlib, json, sys, time, urllib.request
 from pathlib import Path
 
 OUT = Path("sky_sources/flamsteed")
-OUT.mkdir(parents=True, exist_ok=True)
-API = "https://commons.wikimedia.org/w/api.php"
-UA = {"User-Agent": "CelestialSphereExplorer/1.0 (astronomy education, Soka University of America; github.com/bpenprase/moonglobe)"}
+(OUT / "ia_preview").mkdir(parents=True, exist_ok=True)
+(OUT / "ia").mkdir(parents=True, exist_ok=True)
+(OUT / "commons").mkdir(parents=True, exist_ok=True)
+UA = {"User-Agent": "CelestialSphereExplorer/1.0 (astronomy education, Soka University of America; https://github.com/bpenprase/moonglobe)"}
+IA = "atlascoelestis00flam"
+PAGES = []          # Internet Archive page numbers (n0, n1, ...) to download at full size; filled in once the previews are checked
+log = []
 
-def api(**params):
-    params.update(format="json", formatversion="2")
-    req = urllib.request.Request(API + "?" + urllib.parse.urlencode(params), headers=UA)
-    for i in range(4):
+def get(url, tries=5):
+    for i in range(tries):
         try:
-            return json.loads(urllib.request.urlopen(req, timeout=60).read())
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=180) as r:
+                return r.read()
         except Exception as e:
-            time.sleep(3 * (i + 1)); err = e
-    raise err
+            code = getattr(e, "code", None)
+            if code == 404:
+                return None
+            wait = 20 * (i + 1)
+            if code == 429:
+                try: wait = max(wait, int(e.headers.get("Retry-After", wait)))
+                except Exception: pass
+            log.append(f"  retry in {wait}s after {code or e!r}: {url}")
+            time.sleep(min(wait, 120))
+    log.append(f"  gave up: {url}")
+    return None
 
-titles, log = {}, []
-def add(t, why):
-    if t.startswith("File:") and re.search(r"\.(jpe?g|png|tiff?)$", t, re.I):
-        titles.setdefault(t, why)
+# ---------------------------------------------------------------- 1. Internet Archive
+meta = json.loads(get(f"https://archive.org/metadata/{IA}") or b"{}")
+n = int(meta.get("metadata", {}).get("imagecount", 0) or 0)
+log.append(f"Internet Archive {IA}: {n} page images; title {meta.get('metadata', {}).get('title')!r}, date {meta.get('metadata', {}).get('date')!r}")
+patterns = [f"https://archive.org/download/{IA}/page/n{{i}}_w{{w}}.jpg", f"https://archive.org/download/{IA}/page/n{{i}}.jpg"]
+pattern = None
+for p in patterns:
+    data = get(p.format(i=10, w=800), tries=2)
+    if data and data[:2] == b"\xff\xd8":
+        pattern = p; break
+log.append(f"  page image address: {pattern}")
+if pattern:
+    for i in range(n):
+        d = get(pattern.format(i=i, w=700))
+        if d: (OUT / "ia_preview" / f"n{i:03d}.jpg").write_bytes(d)
+        time.sleep(0.3)
+    for i in PAGES:
+        d = get(pattern.format(i=i, w=5000))
+        if d: (OUT / "ia" / f"n{i:03d}.jpg").write_bytes(d)
+        time.sleep(1)
 
-# 1. categories (and one level of subcategories)
-cats = ["Category:Atlas Coelestis", "Category:Atlas Coelestis (Flamsteed)", "Category:Atlas coelestis (1729)",
-        "Category:Atlas Coelestis by John Flamsteed", "Category:John Flamsteed", "Category:Atlas Coelestis (1753)"]
-seen = set()
-while cats:
-    c = cats.pop(0)
-    if c in seen: continue
-    seen.add(c)
-    cont = {}
-    while True:
-        r = api(action="query", list="categorymembers", cmtitle=c, cmlimit="500", **cont)
-        for m in r.get("query", {}).get("categorymembers", []):
-            if m["ns"] == 14 and ("Flamsteed" in m["title"] or "Coelestis" in m["title"]):
-                cats.append(m["title"])
-            add(m["title"], c)
-        if "continue" not in r: break
-        cont = r["continue"]
-    log.append(f"{c}: done")
-
-# 2. full-text search
-for q in ["Flamsteed Atlas Coelestis", "Atlas Coelestis 1729", "Flamsteed 1729", "Flamsteed 1753 Atlas", "Atlas coelestis Thornhill"]:
-    r = api(action="query", list="search", srsearch=q, srnamespace="6", srlimit="100")
-    for m in r.get("query", {}).get("search", []):
-        add(m["title"], "search: " + q)
-
-# 3. image info and download
-items = []
-names = list(titles)
-for i in range(0, len(names), 40):
-    r = api(action="query", titles="|".join(names[i:i + 40]), prop="imageinfo", iiprop="url|size|mime|extmetadata", iiurlwidth="4000")
-    for p in r["query"]["pages"]:
-        if "imageinfo" not in p: continue
-        ii = p["imageinfo"][0]
-        meta = ii.get("extmetadata", {})
-        items.append(dict(title=p["title"], found_by=titles[p["title"]], width=ii.get("width"), height=ii.get("height"),
-                          url=ii.get("thumburl") or ii.get("url"), page=ii.get("descriptionurl"),
-                          license=meta.get("LicenseShortName", {}).get("value", ""),
-                          date=re.sub("<[^>]+>", "", meta.get("DateTimeOriginal", {}).get("value", ""))[:80],
-                          description=re.sub("<[^>]+>", "", meta.get("ImageDescription", {}).get("value", ""))[:300]))
-items.sort(key=lambda x: x["title"])
-for it in items:
-    if (it["width"] or 0) < 1200: continue
-    fn = re.sub(r"[^A-Za-z0-9._-]+", "_", it["title"][5:])
-    if re.search(r"\.tiff?$", fn, re.I): fn = re.sub(r"\.tiff?$", ".jpg", fn, flags=re.I)
-    try:
-        data = urllib.request.urlopen(urllib.request.Request(it["url"], headers=UA), timeout=120).read()
-        (OUT / fn).write_bytes(data); it["file"] = fn
-        time.sleep(0.5)
-    except Exception as e:
-        it["error"] = repr(e)
-json.dump(items, open(OUT / "list.json", "w"), indent=1, ensure_ascii=False)
-(OUT / "log.txt").write_text("\n".join(log) + f"\n{len(items)} files found, {sum(1 for i in items if 'file' in i)} downloaded\n")
-print(len(items), "files found")
+# ---------------------------------------------------------------- 2. Wikimedia Commons, by direct address
+found = []
+for k in range(1, 61):
+    name = f"Atlas_Coelestis_by_John_Flamsteed_(1729)_{k:03d}.jpg"
+    h = hashlib.md5(name.encode()).hexdigest()
+    url = f"https://upload.wikimedia.org/wikipedia/commons/thumb/{h[0]}/{h[:2]}/{name}/3840px-{name}"
+    d = get(url, tries=4)
+    if d and d[:2] == b"\xff\xd8":
+        (OUT / "commons" / name).write_bytes(d); found.append(name)
+    time.sleep(2)
+log.append(f"Wikimedia Commons: {len(found)} plates downloaded: {found}")
+(OUT / "log.txt").write_text("\n".join(log) + "\n")
+print("\n".join(log))
