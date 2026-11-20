@@ -5,6 +5,16 @@ Students can rotate and zoom the globe, read latitude, longitude and elevation a
 switch between the surface map and a color elevation map, light the Moon from any Sun angle to see phases and
 relief, and turn feature names on or off.
 
+## Getting around
+
+- **Rotate**: drag the globe. **Zoom**: scroll, pinch, the **+** and **−** buttons at the lower right (hold a button
+  to keep zooming), or the + and − keys. The circle button (or the 0 key) shows the whole Moon again.
+  The number between the buttons is the height of your viewpoint above the surface.
+- **Labels** follow the zoom: from far away only the maria and large craters are named; as you come closer,
+  smaller craters, mountains, rilles and finally the lettered satellite craters (Copernicus A, B...) and the small
+  names used by the Apollo crews appear. **Label density** (Fewer / Normal / More) changes how crowded this gets.
+- **Click** the surface for latitude, longitude and elevation, or a label for details.
+
 ## What is in this folder
 
 | Path | What it is |
