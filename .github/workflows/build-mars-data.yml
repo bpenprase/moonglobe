@@ -1,0 +1,61 @@
+# Builds the Mars Globe Explorer data (mars/data/) from NASA and USGS sources:
+# Mars Trek tiles (THEMIS day IR, Viking color), MOLA topography from the PDS, and the IAU names.
+# Runs when the Mars scripts or region list change, or by hand from the Actions tab.
+name: Build Mars data
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - mars/tools/prepare_mars_data.py
+      - mars/tools/detail_regions.json
+      - .github/workflows/build-mars-data.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-mars-data
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: pip install numpy pillow scipy pyshp
+
+      - name: Global maps, elevation and names
+        run: python mars/tools/prepare_mars_data.py
+
+      - name: Close-up regions (THEMIS infrared)
+        continue-on-error: true
+        run: >
+          python tools/fetch_detail_tiles.py --body Mars --layers-json mars/data/layers.json
+          --radius 3389.5 --native-ppd 592.75
+          --regions mars/tools/detail_regions.json --features mars/data/features.json
+          --base mars/data/mars_ir_8k.jpg --out mars/data/detail --report mars/tools/detail_report.txt
+          --source "NASA Mars Trek, THEMIS daytime infrared global mosaic, about 100 m per pixel (NASA/JPL/ASU)"
+
+      - name: Save the results to the repository
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          rm -rf mars/data/detail_new
+          git add -A mars/data mars/tools/*.txt || true
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit"
+          else
+            git commit -m "Update Mars data from NASA and USGS"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

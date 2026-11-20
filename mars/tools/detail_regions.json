@@ -1,0 +1,36 @@
+{
+  "_help": "Close-up regions for the Mars Globe Explorer (THEMIS daytime infrared, about 100 m per pixel). Give either 'feature' (an IAU name, looked up in mars/data/features.json) or 'lat' and 'lon' (degrees, east positive). 'size_km' is the width of the square region. Edit and push to GitHub to fetch new regions automatically.",
+  "regions": [
+    {"name": "Curiosity in Gale crater", "lat": -5.0, "lon": 137.6, "size_km": 190, "group": "Landing sites"},
+    {"name": "Perseverance in Jezero crater", "lat": 18.4, "lon": 77.5, "size_km": 90, "group": "Landing sites"},
+    {"name": "Spirit in Gusev crater", "lat": -14.6, "lon": 175.5, "size_km": 190, "group": "Landing sites"},
+    {"name": "Opportunity at Meridiani Planum", "lat": -2.1, "lon": -5.4, "size_km": 90, "group": "Landing sites"},
+    {"name": "Pathfinder at Ares Vallis", "lat": 19.13, "lon": -33.22, "size_km": 120, "group": "Landing sites"},
+    {"name": "Viking 1 in Chryse Planitia", "lat": 22.27, "lon": -47.95, "size_km": 120, "group": "Landing sites"},
+    {"name": "Phoenix in the northern plains", "lat": 68.22, "lon": -125.75, "size_km": 120, "group": "Landing sites"},
+    {"name": "Zhurong in Utopia Planitia", "lat": 25.07, "lon": 109.93, "size_km": 120, "group": "Landing sites"},
+
+    {"name": "Olympus Mons", "feature": "Olympus Mons", "size_km": 750, "group": "Volcanoes"},
+    {"name": "Olympus Mons caldera", "feature": "Olympus Mons", "size_km": 130, "group": "Volcanoes"},
+    {"name": "Arsia Mons", "feature": "Arsia Mons", "size_km": 480, "group": "Volcanoes"},
+    {"name": "Pavonis Mons", "feature": "Pavonis Mons", "size_km": 420, "group": "Volcanoes"},
+    {"name": "Ascraeus Mons", "feature": "Ascraeus Mons", "size_km": 480, "group": "Volcanoes"},
+    {"name": "Elysium Mons", "feature": "Elysium Mons", "size_km": 420, "group": "Volcanoes"},
+
+    {"name": "Candor and Ophir Chasmata", "lat": -5.5, "lon": -72.0, "size_km": 520, "group": "Canyons and channels"},
+    {"name": "Melas Chasma", "feature": "Melas Chasma", "size_km": 520, "group": "Canyons and channels"},
+    {"name": "Coprates Chasma", "feature": "Coprates Chasma", "size_km": 600, "group": "Canyons and channels"},
+    {"name": "Noctis Labyrinthus", "feature": "Noctis Labyrinthus", "size_km": 560, "group": "Canyons and channels"},
+    {"name": "Kasei Valles", "feature": "Kasei Valles", "size_km": 700, "group": "Canyons and channels"},
+    {"name": "Nanedi Valles", "feature": "Nanedi Valles", "size_km": 260, "group": "Canyons and channels"},
+    {"name": "Eberswalde delta", "feature": "Eberswalde", "size_km": 140, "group": "Canyons and channels"},
+
+    {"name": "Huygens crater", "feature": "Huygens", "size_km": 540, "group": "Craters"},
+    {"name": "Schiaparelli crater", "feature": "Schiaparelli", "size_km": 560, "group": "Craters"},
+    {"name": "Holden crater", "feature": "Holden", "size_km": 220, "group": "Craters"},
+    {"name": "Lyot crater", "feature": "Lyot", "size_km": 330, "group": "Craters"},
+    {"name": "Endeavour crater", "feature": "Endeavour", "size_km": 60, "group": "Craters"},
+
+    {"name": "Cydonia (the 'Face on Mars')", "lat": 40.75, "lon": -9.46, "size_km": 120, "group": "Curiosities"}
+  ]
+}

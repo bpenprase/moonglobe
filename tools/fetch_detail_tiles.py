@@ -18,8 +18,10 @@ A summary is written to tools/detail_report.txt.
 This normally runs on GitHub (see .github/workflows/fetch-detail-tiles.yml) whenever this file or
 the region list changes. To run it yourself:  pip install numpy pillow scipy  then
 python3 tools/fetch_detail_tiles.py
+The same script makes the Mars close-ups (THEMIS daytime infrared) when run with --body Mars and the
+options listed in .github/workflows/build-mars-data.yml.
 """
-import io, json, math, os, re, shutil, sys, time, urllib.request
+import argparse, io, json, math, os, re, shutil, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -30,14 +32,34 @@ from scipy.ndimage import gaussian_filter
 
 Image.MAX_IMAGE_PIXELS = None
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "data" / "detail"
-REPORT = ROOT / "tools" / "detail_report.txt"
-LAYER = "LRO_WAC_Mosaic_Global_303ppd_v02"
-TREK = os.environ.get("TREK_BASE", "https://trek.nasa.gov/tiles/Moon/EQ")
+ap = argparse.ArgumentParser(description="Download close-up images from NASA Trek tiles")
+ap.add_argument("--body", default="Moon")
+ap.add_argument("--layer", default="LRO_WAC_Mosaic_Global_303ppd_v02")
+ap.add_argument("--layers-json", help="read --layer/--ext/--lon-shift from this file (key 'ir'), as written by prepare_mars_data.py")
+ap.add_argument("--ext", default="jpg")
+ap.add_argument("--radius", type=float, default=1737.4)
+ap.add_argument("--native-ppd", type=float, default=303.0)
+ap.add_argument("--max-level", type=int, default=8)
+ap.add_argument("--lon-shift", type=float, default=0.0)
+ap.add_argument("--regions", default=str(ROOT / "tools" / "detail_regions.json"))
+ap.add_argument("--features", default=str(ROOT / "data" / "features.json"))
+ap.add_argument("--base", default=str(ROOT / "data" / "moon_albedo_8k.jpg"))
+ap.add_argument("--out", default=str(ROOT / "data" / "detail"))
+ap.add_argument("--report", default=str(ROOT / "tools" / "detail_report.txt"))
+ap.add_argument("--source", default="NASA Moon Trek, LRO WAC global mosaic 303 ppd (NASA/GSFC/ASU)")
+ARGS = ap.parse_args()
+if ARGS.layers_json:
+    _L = json.load(open(ARGS.layers_json)).get("ir", {})
+    ARGS.layer, ARGS.ext = _L.get("layer", ARGS.layer), _L.get("ext", ARGS.ext)
+    ARGS.lon_shift, ARGS.max_level = _L.get("lon_shift_deg", 0.0), _L.get("max_level", ARGS.max_level)
+OUT = Path(ARGS.out)
+REPORT = Path(ARGS.report)
+LAYER = ARGS.layer
+TREK = os.environ.get("TREK_BASE", f"https://trek.nasa.gov/tiles/{ARGS.body}/EQ")
 BASE_URL = f"{TREK}/{LAYER}/1.0.0"
-KM_PER_DEG = 2 * math.pi * 1737.4 / 360          # 30.32 km per degree on the Moon
+KM_PER_DEG = 2 * math.pi * ARGS.radius / 360     # 30.32 km per degree on the Moon, 59.16 on Mars
 MAX_SIDE = 4096                                  # largest image side we keep
-NATIVE_PPD = 303.0
+NATIVE_PPD = ARGS.native_ppd
 SITE_ORIGIN = "https://bpenprase.github.io"
 
 log_lines = []
@@ -65,16 +87,17 @@ def http_get(url, headers=None, tries=3):
 # ---------------------------------------------------------------- 1. tile layout
 def standard_layout():
     """The usual Moon Trek layout: level z has 2^(z+1) x 2^z tiles of 256 px covering the whole Moon."""
-    template = BASE_URL + "/default/default028mm/{TileMatrix}/{TileRow}/{TileCol}.jpg"
-    levels = [dict(id=str(z), lon0=-180.0, lat0=90.0, mw=2 ** (z + 1), mh=2 ** z, tw=256, th=256,
-                   deg=180.0 / (256 * 2 ** z), deg_scale=None) for z in range(0, 9)]
+    template = BASE_URL + "/default/default028mm/{TileMatrix}/{TileRow}/{TileCol}." + ARGS.ext
+    levels = [dict(id=str(z), lon0=-180.0 + ARGS.lon_shift, lat0=90.0, mw=2 ** (z + 1), mh=2 ** z, tw=256, th=256,
+                   deg=180.0 / (256 * 2 ** z), deg_scale=None) for z in range(0, ARGS.max_level + 1)]
     return levels, template
 
 def read_layout():
     """Use the standard layout if its tiles load; otherwise read the WMTS capabilities file."""
     levels, template = standard_layout()
     try:
-        top, _ = http_get(tile_url(template, levels[8], 128, 256))
+        top_level = levels[-1]; n = top_level["mh"]
+        top, _ = http_get(tile_url(template, top_level, n // 2, n))
         if top and Image.open(io.BytesIO(top)).size == (256, 256):
             log("Using the standard Moon Trek tile layout (test tile loaded).")
             for L in levels:
@@ -140,7 +163,7 @@ def fetch_area(levels, template, L, west, north, wpx, hpx):
     return canvas.crop((ox, oy, ox + wpx, oy + hpx)), len(jobs), missing
 
 # ---------------------------------------------------------------- 2. base map helpers
-BASE = np.asarray(Image.open(ROOT / "data" / "moon_albedo_8k.jpg").convert("L"), dtype=np.float32)
+BASE = np.asarray(Image.open(ARGS.base).convert("L"), dtype=np.float32)
 BASE_PPD = BASE.shape[1] / 360.0
 
 def base_crop(west, north, wdeg, hdeg, size):
@@ -169,12 +192,12 @@ def check_alignment(levels, template):
         a, c = a[band] - a[band].mean(), c[band] - c[band].mean()
         return float((a * c).sum() / math.sqrt((a * a).sum() * (c * c).sum() + 1e-9))
     best = max(((corr(np.roll(t, k, axis=1), b), k) for k in range(-w // 2, w // 2, max(1, w // 720))), key=lambda x: x[0])
-    shift_deg = -best[1] * L["deg"]
+    shift_deg = best[1] * L["deg"]          # roll by +k lines the tiles up, so the true longitude is k pixels further east
     log(f"Alignment check at level {L['id']} ({w} x {h} px, {n} tiles, {len(missing)} missing): "
         f"correlation {corr(t, b):.3f} as is, best {best[0]:.3f} with a {shift_deg:+.2f} deg longitude correction")
     # fine search near zero in single pixels
     fine = max(((corr(np.roll(t, k, axis=1), b), k) for k in range(-6, 7)), key=lambda x: x[0])
-    log(f"  fine check: best correlation {fine[0]:.3f} at {-fine[1] * L['deg']:+.3f} deg")
+    log(f"  fine check: best correlation {fine[0]:.3f} at {fine[1] * L['deg']:+.3f} deg")
     if abs(shift_deg) > 1 and best[0] > corr(t, b) + 0.1:
         log("  Applying the longitude correction to all levels.")
         for l in levels:
@@ -211,8 +234,8 @@ def main():
         shutil.rmtree(work)
     work.mkdir(parents=True)
 
-    feats = {f[0].lower(): f for f in json.load(open(ROOT / "data" / "features.json"))["features"]}
-    spec = json.load(open(ROOT / "tools" / "detail_regions.json"))["regions"]
+    feats = {f[0].lower(): f for f in json.load(open(ARGS.features))["features"]}
+    spec = json.load(open(ARGS.regions))["regions"]
     out_regions = []
     for R in spec:
         if time.time() - START > TIME_LIMIT:
@@ -260,7 +283,7 @@ def main():
         log(f"{R['name']}: level {L['id']}, {p.shape[1]} x {p.shape[0]} px, {KM_PER_DEG * 1000 / ppd:.0f} m/px, "
             f"{n} tiles, {len(missing)} missing, {time.time() - t0:.1f} s")
 
-    info = dict(source="NASA Moon Trek, LRO WAC global mosaic 303 ppd (NASA/GSFC/ASU)", layer=LAYER,
+    info = dict(source=ARGS.source, layer=LAYER,
                 updated=time.strftime("%Y-%m-%d"), alignment_correlation=round(align_corr, 3), lon_correction_deg=shift,
                 live_tiles=cors, template=template,
                 levels=[{k: L[k] for k in ("id", "lon0", "lat0", "mw", "mh", "tw", "th", "deg")} for L in levels],
