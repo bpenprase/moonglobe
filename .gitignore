@@ -5,3 +5,5 @@ _test.html
 __pycache__/
 node_modules
 sky/_test.html
+moon/_test.html
+mars/_test.html

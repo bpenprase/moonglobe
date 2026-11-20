@@ -1,6 +1,6 @@
 """
 make_mars_page.py
-Builds mars/index.html from the Moon page (index.html) by swapping in everything that is specific to Mars:
+Builds mars/index.html from the Moon page (moon/index.html) by swapping in everything that is specific to Mars:
 data files, map modes (Viking color, THEMIS infrared, MOLA elevation), feature categories, landing sites,
 views and text. Run it after changing the Moon page so both globes keep the same features:
     python3 mars/tools/make_mars_page.py
@@ -8,7 +8,7 @@ views and text. Run it after changing the Moon page so both globes keep the same
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-s = (ROOT / "index.html").read_text()
+s = (ROOT / "moon" / "index.html").read_text().replace("'../data/", "'data/")
 
 def rep(a, b, count=1):
     global s
@@ -21,7 +21,7 @@ rep("<title>Lunar Globe Explorer</title>", "<title>Mars Globe Explorer</title>")
 rep('<div class="t">Lunar Globe Explorer</div>', '<div class="t">Mars Globe Explorer</div>')
 rep("Loading the Moon</div>", "Loading Mars</div>")
 rep("<h1>Lunar Globe Explorer</h1>", "<h1>Mars Globe Explorer</h1>")
-rep('<a class="xlink" href="mars/">Explore Mars &rarr;</a> &middot; <a class="xlink" href="sky/">Explore the sky &rarr;</a>', '<a class="xlink" href="../">Explore the Moon &rarr;</a> &middot; <a class="xlink" href="../sky/">Explore the sky &rarr;</a>')
+rep('<a class="xlink" href="../mars/">Explore Mars &rarr;</a> &middot; <a class="xlink" href="../sky/">Explore the sky &rarr;</a>', '<a class="xlink" href="../moon/">Explore the Moon &rarr;</a> &middot; <a class="xlink" href="../sky/">Explore the sky &rarr;</a>')
 rep('.xlink{color:#ffb68a;', '.xlink{color:#9cc8ff;')
 rep('placeholder="Find a crater, mare or landing site"', 'placeholder="Find a volcano, canyon, crater or lander"')
 rep("'Move over the Moon to read coordinates'", "'Move over Mars to read coordinates'")

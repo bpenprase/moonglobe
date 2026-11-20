@@ -1,3 +1,17 @@
+# Exploring Space: Interactive Apps for Models of Time and Space
+
+A suite of browser apps for Astronomy 150, "Models of Time and Space," taught by Bryan Penprase at Soka University
+of America. The course is based on the book *Models of Time and Space from Astrophysics and World Cultures* (Springer).
+
+| Address | App |
+|---|---|
+| https://bpenprase.github.io/moonglobe/ | The landing page (`index.html`, images in `assets/`) |
+| https://bpenprase.github.io/moonglobe/sky/ | Celestial Sphere Explorer (`sky/`) |
+| https://bpenprase.github.io/moonglobe/moon/ | Lunar Globe Explorer (`moon/`, with its data in `data/` and `tools/`) |
+| https://bpenprase.github.io/moonglobe/mars/ | Mars Globe Explorer (`mars/`) |
+
+The Moon globe used to live at the site's root address. Old links to it now open the landing page, one click away.
+
 # Lunar Globe Explorer
 
 An interactive 3D globe of the Moon for Astronomy 150 (Models of Time and Space) at Soka University of America.
@@ -19,7 +33,7 @@ relief, and turn feature names on or off.
 
 | Path | What it is |
 |---|---|
-| `index.html` | The whole app (HTML, CSS and JavaScript in one file). It loads three.js from the jsDelivr CDN. |
+| `moon/index.html` | The whole app (HTML, CSS and JavaScript in one file). It loads three.js from the jsDelivr CDN and its data from `data/`. |
 | `data/moon_albedo_4k.jpg` | Greyscale LROC WAC surface map, 4096 x 2048 (loads first). |
 | `data/moon_albedo_8k.jpg` | Greyscale LROC WAC surface map, 8192 x 4096 (loads second, about 1.3 km per pixel). |
 | `data/moon_height.png` | LOLA elevation, 2880 x 1440, packed into 16 bits: elevation in meters = (red x 256 + green) x 8 - 10000. |
@@ -33,7 +47,7 @@ relief, and turn feature names on or off.
 
 1. Create a repository (for example `moonglobe`) and upload every file in this folder, keeping the `data` and `tools` folders.
 2. In the repository, open **Settings > Pages**, choose **Deploy from a branch**, pick `main` and `/ (root)`, and save.
-3. After a minute the globe is live at `https://<your-user-name>.github.io/moonglobe/`.
+3. After a minute the site is live at `https://<your-user-name>.github.io/moonglobe/`, with the Moon at `moon/`.
 
 The `.nojekyll` file tells GitHub Pages to serve the files as they are.
 

@@ -3,946 +3,210 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lunar Globe Explorer</title>
+<title>Exploring Space · Interactive Apps for Models of Time and Space</title>
+<meta name="description" content="Interactive apps for Astronomy 150, Models of Time and Space, at Soka University of America: a celestial sphere with Flamsteed's Atlas Coelestis, and 3D globes of the Moon and Mars.">
+<meta property="og:title" content="Exploring Space · Interactive Apps for Models of Time and Space">
+<meta property="og:description" content="A celestial sphere and 3D globes of the Moon and Mars, made for Astronomy 150 at Soka University of America.">
+<meta property="og:image" content="assets/app_sky.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#05070d; --panel:rgba(14,19,32,.86); --line:rgba(160,180,220,.16); --text:#e6ebf5; --muted:#9aa6bd;
-  --gold:#e2b45c; --mare:#9cc8ff; --crater:#f3f5fa; --mount:#e8c48f; --other:#9fe0b8; --sat:#b7bfcf; --l100:#ffd166; --land:#ff9a62;
+  --bg:#05070d; --ink:#e8ebf2; --muted:#9aa3b5; --faint:#6b7488;
+  --line:rgba(255,255,255,.09); --card:rgba(16,21,34,.72);
+  --gold:#e9c98f; --sky:#9cc8ff; --moon:#d9dde6; --mars:#ffb68a;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
-#scene{position:fixed;inset:0;display:block;cursor:grab}
-#scene:active{cursor:grabbing}
-#labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
-.lbl{position:absolute;left:0;top:0;white-space:nowrap;pointer-events:auto;cursor:pointer;user-select:none;
-  text-shadow:0 0 3px #000,0 0 6px #000,0 1px 2px #000;transition:opacity .15s;will-change:transform}
-.lbl:hover{text-decoration:underline}
-.k-mare{color:var(--mare);font-family:Spectral,serif;font-style:italic;font-size:15px;letter-spacing:.06em}
-.k-crater{color:var(--crater);font-size:12px}
-.k-mount{color:var(--mount);font-size:12px}
-.k-other{color:var(--other);font-size:11.5px}
-.k-satellite{color:var(--sat);font-size:10.5px;opacity:.9}
-.k-l100{color:var(--l100);font-size:11.5px;font-weight:500}
-.k-l100::before{content:"\25C6";font-size:9px;margin-right:4px;vertical-align:1px}
-.lbl.l100::after{content:"\25C6";color:var(--l100);font-size:8px;margin-left:4px;vertical-align:2px}
-.k-land{color:var(--land);font-size:11.5px;font-weight:600}
-.k-land::before{content:"\25B2";font-size:9px;margin-right:4px;vertical-align:1px}
-.k-det{color:#7fe3ff;font-size:11.5px;font-weight:600}
-.k-det::before{content:"\25A3";font-size:10px;margin-right:4px;vertical-align:0}
-.xlink{color:#ffb68a;text-decoration:none}.xlink:hover{text-decoration:underline}
-.k-grid{color:var(--gold);font-size:10.5px;opacity:.85;pointer-events:none;font-variant-numeric:tabular-nums}
-
-#panel{position:fixed;top:14px;left:14px;width:300px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);
-  border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:16px 16px 12px;
-  box-shadow:0 10px 40px rgba(0,0,0,.45);scrollbar-width:thin;transition:transform .25s}
-#panel.hidden{transform:translateX(calc(-100% - 20px))}
-h1{font-family:Spectral,serif;font-weight:600;font-size:24px;margin:0 0 2px;letter-spacing:.01em}
-.sub{color:var(--muted);font-size:12px;margin-bottom:12px}
-.sec{border-top:1px solid var(--line);padding:11px 0 9px}
-.sec h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin:0 0 8px;font-weight:600}
-.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
-.row label{flex:1}
-.seg{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:2px}
-.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px Inter,sans-serif;padding:6px 4px;border-radius:7px;cursor:pointer}
-.seg button.on{background:rgba(226,180,92,.18);color:var(--text)}
-input[type=range]{width:100%;accent-color:var(--gold)}
-.val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:44px;text-align:right}
-.chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0;cursor:pointer}
-.chk input{accent-color:var(--gold);width:15px;height:15px;margin:0}
-.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
-.count{margin-left:auto;color:var(--muted);font-size:11px}
-.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.btn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);font:500 12px Inter,sans-serif;padding:7px 6px;border-radius:8px;cursor:pointer}
-.btn:hover{border-color:rgba(226,180,92,.5)}
-#search{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;color:var(--text);font:14px Inter,sans-serif;padding:9px 11px;outline:none}
-#search:focus{border-color:rgba(226,180,92,.6)}
-#results{margin-top:4px}
-#results div{padding:6px 9px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;gap:8px}
-#results div:hover,#results div.sel{background:rgba(226,180,92,.14)}
-#results small{color:var(--muted);margin-left:auto;font-size:11px}
-details{font-size:11.5px;color:var(--muted);line-height:1.5}
-details summary{cursor:pointer;color:var(--text);font-size:12px}
-details a{color:#9cc8ff}
-#toggle{position:fixed;top:14px;left:14px;z-index:5;display:none;background:var(--panel);border:1px solid var(--line);color:var(--text);
-  border-radius:10px;padding:8px 12px;font:600 13px Inter,sans-serif;cursor:pointer}
-#hide{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
-
-#info{position:fixed;top:14px;right:14px;width:300px;background:var(--panel);border:1px solid var(--line);border-radius:14px;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:14px 16px;display:none;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-#info h3{font-family:Spectral,serif;font-size:21px;margin:0 22px 2px 0;font-weight:600}
-#info .kind{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
-#info .desc{font-size:13px;line-height:1.5;margin:6px 0}
-#info table{font-size:12.5px;border-collapse:collapse;width:100%}
-#info td{padding:2px 0}#info td:first-child{color:var(--muted);width:44%}
-#info a{color:#9cc8ff;font-size:12px}
-#info .x{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer}
-
-#readout{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);
-  border-radius:999px;padding:7px 16px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-#readout b{color:var(--text);font-weight:500}
-#detBadge{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:rgba(10,40,52,.85);border:1px solid rgba(127,227,255,.35);
-  color:#bdf1ff;border-radius:999px;padding:5px 14px;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .4s;pointer-events:none}
-#regionSel{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;color:var(--text);font:13px Inter,sans-serif;padding:8px 9px;outline:none}
-#regionSel option,#regionSel optgroup{background:#121826;color:var(--text)}
-.note{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
-#zoomCtl{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel);
-  border:1px solid var(--line);border-radius:14px;padding:6px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:3}
-#zoomCtl button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);
-  font:500 22px/1 Inter,sans-serif;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
-#zoomCtl button:hover{border-color:rgba(226,180,92,.55)}
-#zoomCtl button:active{background:rgba(226,180,92,.2)}
-#zoomCtl #zAll{font-size:15px;height:32px}
-#zAlt{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.25;font-variant-numeric:tabular-nums;padding:2px 0;min-width:52px}
-#zAlt b{display:block;color:var(--text);font-weight:500;font-size:11.5px}
-#legend{position:fixed;right:78px;bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:11px;color:var(--muted);display:none;width:220px}
-#legend .bar{height:10px;border-radius:5px;margin:6px 0 3px}
-#legend .ticks{display:flex;justify-content:space-between}
-#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);z-index:10;transition:opacity .6s}
-#loader .t{font-family:Spectral,serif;font-size:26px}
-#loader .bar{width:240px;height:3px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
-#loader .bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
-#loader .s{font-size:12px;color:var(--muted)}
-#hint{position:fixed;left:50%;top:16px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;transition:opacity 1s}
-@media (max-width:720px){
-  #panel{width:calc(100% - 28px);max-height:58%;top:auto;bottom:14px}
-  #panel.hidden{transform:translateY(calc(100% + 20px))}
-  #info{width:calc(100% - 28px)}
-  #readout{bottom:auto;top:16px;left:auto;right:14px;transform:none;font-size:11px;padding:6px 12px}
-  #hint{display:none}
-  #legend{display:none!important}
-  #zoomCtl{bottom:auto;top:56px}
-  #zoomCtl button{width:36px;height:36px}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.65 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--sky)}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 28px}
+header.hero{padding:96px 0 56px;text-align:center}
+.eyebrow{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:0 0 18px}
+h1{font-family:Spectral,Georgia,serif;font-weight:500;font-size:clamp(44px,7vw,76px);line-height:1.04;margin:0;letter-spacing:-.01em}
+.subtitle{font-family:Spectral,Georgia,serif;font-style:italic;font-size:clamp(19px,2.4vw,25px);color:#c9cfdb;margin:14px 0 0}
+.lede{max-width:700px;margin:30px auto 0;color:var(--muted);font-size:17px}
+.jump{display:inline-block;margin-top:30px;padding:10px 20px;border:1px solid rgba(233,201,143,.45);border-radius:999px;color:var(--gold);text-decoration:none;font-size:14.5px;font-weight:500}
+.jump:hover{background:rgba(233,201,143,.1)}
+section{padding:56px 0;border-top:1px solid var(--line)}
+h2{font-family:Spectral,Georgia,serif;font-weight:500;font-size:clamp(28px,3.4vw,36px);margin:0 0 8px}
+.kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 10px}
+.course{display:grid;grid-template-columns:1fr 250px;gap:52px;align-items:start}
+.course p{margin:0 0 16px;color:#cfd4de}
+.book{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;position:sticky;top:24px}
+.book img{display:block;width:100%;height:auto;border-radius:4px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
+.book .note{font-size:13.5px;color:var(--muted);margin:14px 0 12px;line-height:1.55}
+.book .note i{color:var(--ink)}
+.book .links{display:flex;gap:8px}
+.book .links a{flex:1;text-align:center;font-size:13px;font-weight:500;text-decoration:none;padding:8px 6px;border-radius:8px;border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.04)}
+.book .links a:hover{border-color:rgba(156,200,255,.5);color:var(--sky)}
+.apps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:28px}
+.app{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;transition:transform .25s ease,border-color .25s ease}
+.app:hover{transform:translateY(-4px);border-color:var(--accent)}
+.app .pic{aspect-ratio:16/10;background:#000 center/cover no-repeat;border-bottom:1px solid var(--line)}
+.app .body{padding:20px 22px 22px;display:flex;flex-direction:column;flex:1}
+.app h3{font-family:Spectral,Georgia,serif;font-weight:500;font-size:24px;margin:0 0 8px}
+.app p{margin:0 0 16px;font-size:14.5px;color:var(--muted);line-height:1.6}
+.app ul{margin:0 0 18px;padding:0;list-style:none;font-size:13.5px;color:#c3c9d5}
+.app li{padding-left:16px;position:relative;margin:4px 0}
+.app li:before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.app .go{margin-top:auto;font-weight:600;font-size:14.5px;color:var(--accent)}
+.sky{--accent:var(--sky)} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
+.more{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:28px}
+.res{display:block;padding:24px 26px;background:var(--card);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:inherit;transition:border-color .25s}
+.res:hover{border-color:rgba(233,201,143,.5)}
+.res h3{font-family:Spectral,Georgia,serif;font-weight:500;font-size:22px;margin:0 0 6px}
+.res p{margin:0 0 12px;color:var(--muted);font-size:14.5px}
+.res .go{color:var(--gold);font-weight:600;font-size:14px}
+.closing{text-align:center;max-width:680px;margin:0 auto;color:#cfd4de;font-family:Spectral,Georgia,serif;font-size:21px;line-height:1.55}
+footer{padding:36px 0 48px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);text-align:center}
+footer a{color:var(--muted)}
+@media (max-width:900px){
+  .course{grid-template-columns:1fr;gap:28px}
+  .book{position:static;display:grid;grid-template-columns:130px 1fr;gap:18px;align-items:center}
+  .book .note{margin-top:0}
+  .apps{grid-template-columns:1fr;max-width:560px;margin-left:auto;margin-right:auto}
+  .more{grid-template-columns:1fr}
 }
+@media (max-width:520px){
+  header.hero{padding:64px 0 40px}
+  .wrap{padding:0 20px}
+  .book{grid-template-columns:96px 1fr}
+}
+@media (prefers-reduced-motion:reduce){.app{transition:none}.app:hover{transform:none}}
 </style>
 </head>
 <body>
-<canvas id="scene"></canvas>
-<div id="labels"></div>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="wrap">
 
-<div id="loader"><div class="t">Lunar Globe Explorer</div><div class="bar"><i id="lbar"></i></div><div class="s" id="lstat">Loading the Moon</div></div>
-<div id="hint">Drag to rotate &middot; scroll or pinch to zoom &middot; click the surface or a label for details</div>
+<header class="hero">
+  <p class="eyebrow">Astronomy 150 &middot; Soka University of America</p>
+  <h1>Exploring Space</h1>
+  <p class="subtitle">Interactive Apps for Models of Time and Space</p>
+  <p class="lede">These apps are part of a suite of programs developed for Bryan Penprase&rsquo;s Astronomy 150 course at Soka University of America, entitled &ldquo;Models of Time and Space.&rdquo; Each one runs in a web browser on a computer, tablet or phone, with nothing to install.</p>
+  <a class="jump" href="#apps">Open the apps &darr;</a>
+</header>
 
-<button id="toggle">&#9776; Controls</button>
-<aside id="panel">
-  <button id="hide" title="Hide panel">&times;</button>
-  <h1>Lunar Globe Explorer</h1>
-  <div class="sub">Astronomy 150 &middot; Models of Time and Space &middot; <a class="xlink" href="mars/">Explore Mars &rarr;</a> &middot; <a class="xlink" href="sky/">Explore the sky &rarr;</a></div>
-
-  <div class="sec">
-    <input id="search" placeholder="Find a crater, mare or landing site" autocomplete="off" spellcheck="false">
-    <div id="results"></div>
-  </div>
-
-  <div class="sec">
-    <h2>Base map</h2>
-    <div class="seg" id="mode"><button data-v="0" class="on">Surface</button><button data-v="1">Elevation</button><button data-v="2">Blend</button></div>
-  </div>
-
-  <div class="sec">
-    <h2>Lighting</h2>
-    <div class="seg" id="light"><button data-v="0" class="on">Even light</button><button data-v="1">Sunlight</button></div>
-    <div class="row" id="angRow"><label>Relief light angle</label><span class="val" id="angV">40&deg;</span></div>
-    <input type="range" id="ang" min="0" max="80" value="40">
-    <div class="row" id="sunRow" style="display:none"><label>Sun over longitude</label><span class="val" id="sunV">0&deg;</span></div>
-    <input type="range" id="sun" min="-180" max="180" value="-60" style="display:none">
-  </div>
-
-  <div class="sec">
-    <h2>Relief</h2>
-    <div class="row"><label>Vertical exaggeration</label><span class="val" id="exV">4&times;</span></div>
-    <input type="range" id="ex" min="0" max="25" step="0.5" value="4">
-  </div>
-
-  <div class="sec">
-    <h2>Layers</h2>
-    <label class="chk"><input type="checkbox" id="L-grid" checked><span class="sw" style="background:var(--gold)"></span>Latitude / longitude grid<span class="count" id="gridStep">30&deg;</span></label>
-    <label class="chk"><input type="checkbox" id="L-mare" checked><span class="sw" style="background:var(--mare)"></span>Maria, lakes &amp; bays</label>
-    <label class="chk"><input type="checkbox" id="L-crater" checked><span class="sw" style="background:var(--crater)"></span>Craters</label>
-    <label class="chk"><input type="checkbox" id="L-mount" checked><span class="sw" style="background:var(--mount)"></span>Mountains &amp; capes</label>
-    <label class="chk"><input type="checkbox" id="L-other" checked><span class="sw" style="background:var(--other)"></span>Valleys, rilles &amp; ridges</label>
-    <label class="chk"><input type="checkbox" id="L-satellite" checked><span class="sw" style="background:var(--sat)"></span>Satellite craters (A, B, C&hellip;) up close</label>
-    <label class="chk"><input type="checkbox" id="L-l100" checked><span class="sw" style="background:var(--l100)"></span>Lunar 100 (Charles Wood)</label>
-    <label class="chk"><input type="checkbox" id="L-land" checked><span class="sw" style="background:var(--land)"></span>Landing sites</label>
-    <label class="chk"><input type="checkbox" id="L-det" checked><span class="sw" style="background:#7fe3ff"></span>Close-up regions</label>
-    <div class="row" style="margin-top:9px"><label>Label density</label><span class="val" id="lblCount"></span></div>
-    <div class="seg" id="density"><button data-v="1.6">Fewer</button><button data-v="1" class="on">Normal</button><button data-v="0.6">More</button></div>
-    <div class="note">More names appear as you zoom in. Up close, every IAU-named feature is shown.</div>
-  </div>
-
-  <div class="sec">
-    <h2>Views</h2>
-    <div class="btns">
-      <button class="btn" data-view="near">Near side</button><button class="btn" data-view="far">Far side</button>
-      <button class="btn" data-view="north">North pole</button><button class="btn" data-view="south">South pole</button>
-      <button class="btn" data-view="east">East limb</button><button class="btn" data-view="west">West limb</button>
+<section id="course">
+  <div class="course">
+    <div>
+      <p class="kicker">The course</p>
+      <h2>Models of Time and Space</h2>
+      <p>This course introduces both astrophysics and physics, exploring models of time and space that describe the universe&rsquo;s origins and evolution. The course will delve into both classical and modern concepts, starting with how people through the centuries found their place on earth, navigated across the largest expanses of space available to them in ships, and began to map the planet and the skies. These maps improved with time to include accurate scales and angular measurements that enabled precise navigation and precise positions of stars, planets, and galaxies. From this improved understanding arose the ideas of physics &ndash; the laws of Kepler and Newton and the stunning images produced by Galileo, Cassini and other astronomers. From these astronomical observations came an awareness of our location in a larger galaxy, and eventually the understanding of the vastness of the galaxy and the universe, and our origins in a cosmic Big Bang event that put the universe (and space and time) into motion.</p>
+      <p>The course also will explore some of the most interesting parts of physics that connect to astronomy, including Einstein&rsquo;s theories of relativity, the Big Bang, black holes, particle physics, and the discovery of the Higgs Boson at CERN. Students will learn how these models help us understand the fundamental forces and particles that govern the universe, and key discoveries made possible by the development of particle accelerators, gravitational wave detectors, and new space telescopes. The course will balance theoretical understanding with practical exploration of astronomical and cosmological phenomena, empowering students to think critically about the universe and its underlying physics. The course will be taught at a level that minimizes the use of mathematics and explores the most profound concepts of how physics and astrophysics shape our conceptions of reality and have enabled us to map the physical universe from the smallest possible scales to the limits of the observable universe.</p>
     </div>
-    <label class="chk" style="margin-top:9px"><input type="checkbox" id="spin">Slow rotation</label>
+    <aside class="book">
+      <img src="assets/book_cover.jpg" alt="Cover of Models of Time and Space from Astrophysics and World Cultures by Bryan E. Penprase (Springer)" width="292" height="443">
+      <div>
+        <p class="note">The course is based on the book <i>Models of Time and Space from Astrophysics and World Cultures</i> by Bryan Penprase.</p>
+        <div class="links">
+          <a href="https://link.springer.com/book/10.1007/978-3-031-27890-7" target="_blank" rel="noopener">Springer</a>
+          <a href="https://www.amazon.com/Models-Space-Astrophysics-World-Cultures/dp/3031278895" target="_blank" rel="noopener">Amazon</a>
+        </div>
+      </div>
+    </aside>
   </div>
+</section>
 
-  <div class="sec" id="detSec" style="display:none">
-    <h2>Close-up regions</h2>
-    <select id="regionSel"><option value="">Choose a region to zoom into&hellip;</option></select>
-    <div class="note" id="detNote">Sharp LROC images (about 100 m per pixel) fade in as you zoom into these regions.</div>
+<section id="apps">
+  <p class="kicker">The apps</p>
+  <h2>Explore the sky, the Moon and Mars</h2>
+  <div class="apps">
+    <a class="app sky" href="sky/">
+      <div class="pic" style="background-image:url(assets/app_sky.jpg)" role="img" aria-label="The constellations around Orion with Flamsteed's figures"></div>
+      <div class="body">
+        <h3>Celestial Sphere</h3>
+        <p>The whole sky on a sphere. Look out from the center as we see it from Earth, or turn it around like an antique celestial globe.</p>
+        <ul>
+          <li>Stars, constellation figures and IAU boundaries</li>
+          <li>All 25 constellation plates of Flamsteed&rsquo;s <i>Atlas Coelestis</i> (1729)</li>
+          <li>Messier objects, bright galaxies and the Milky Way</li>
+        </ul>
+        <span class="go">Open the Celestial Sphere &rarr;</span>
+      </div>
+    </a>
+    <a class="app moon" href="moon/">
+      <div class="pic" style="background-image:url(assets/app_moon.jpg)" role="img" aria-label="The Lunar Globe with feature names and landing sites"></div>
+      <div class="body">
+        <h3>Lunar Globe</h3>
+        <p>A 3D Moon built from Lunar Reconnaissance Orbiter images and laser altimetry, with elevation everywhere on the surface.</p>
+        <ul>
+          <li>Thousands of named craters, maria and mountains</li>
+          <li>Apollo and other landing sites</li>
+          <li>Sharp close-ups of about 30 famous regions</li>
+        </ul>
+        <span class="go">Open the Lunar Globe &rarr;</span>
+      </div>
+    </a>
+    <a class="app mars" href="mars/">
+      <div class="pic" style="background-image:url(assets/app_mars.jpg)" role="img" aria-label="The Mars Globe with named features and lander sites"></div>
+      <div class="body">
+        <h3>Mars Globe</h3>
+        <p>Mars in Viking color or THEMIS infrared, shaped by MOLA elevation data, with named features across the planet.</p>
+        <ul>
+          <li>Landers and rovers from Viking to Perseverance</li>
+          <li>Olympus Mons, Valles Marineris and other major features</li>
+          <li>Close-ups of 26 regions, including Gale and Jezero craters</li>
+        </ul>
+        <span class="go">Open the Mars Globe &rarr;</span>
+      </div>
+    </a>
   </div>
+</section>
 
-  <div class="sec">
-    <details>
-      <summary>About the data</summary>
-      <p>Surface: LRO Camera (LROC) Wide Angle Camera global mosaic, NASA/GSFC/Arizona State University, via the NASA Scientific Visualization Studio
-      <a href="https://svs.gsfc.nasa.gov/4720" target="_blank" rel="noopener">CGI Moon Kit</a>. About 1.3 km per pixel at the equator.</p>
-      <p>Elevation: Lunar Orbiter Laser Altimeter (LOLA) gridded topography, resampled to 8 pixels per degree. Heights are relative to a 1737.4 km sphere.</p>
-      <p>Names: IAU <a href="https://planetarynames.wr.usgs.gov/" target="_blank" rel="noopener">Gazetteer of Planetary Nomenclature</a> (USGS). Lunar 100 list by Charles Wood (<i>Sky &amp; Telescope</i>, 2004).</p>
-      <p>Close-ups: LROC Wide Angle Camera global mosaic at 303 pixels per degree (about 100 m per pixel), NASA/GSFC/Arizona State University, from the NASA
-      <a href="https://trek.nasa.gov/moon/" target="_blank" rel="noopener">Moon Trek</a> tile service.</p>
-      <p>Longitudes are east positive. Lunar near side faces you at the start.</p>
-    </details>
+<section id="observatory">
+  <p class="kicker">Observing at Soka</p>
+  <h2>The Soka Nieves Observatory</h2>
+  <div class="more">
+    <a class="res" href="https://sites.soka.edu/suo/" target="_blank" rel="noopener">
+      <h3>Soka Nieves Observatory</h3>
+      <p>The observatory and telescopes students use to observe and image the sky at Soka University of America.</p>
+      <span class="go">Visit the observatory site &rarr;</span>
+    </a>
+    <a class="res" href="https://bpenprase.github.io/bpenprase/Nieves_Observatory_Repository/" target="_blank" rel="noopener">
+      <h3>Nieves Software Repository</h3>
+      <p>Software for processing and analyzing images taken with the Nieves Observatory telescopes.</p>
+      <span class="go">Open the repository &rarr;</span>
+    </a>
   </div>
-</aside>
+</section>
 
-<div id="info"><button class="x" id="infoX">&times;</button><div id="infoBody"></div></div>
-<div id="detBadge"></div>
-<div id="readout">Move over the Moon to read coordinates</div>
-<div id="zoomCtl" aria-label="Zoom">
-  <button id="zIn" title="Zoom in (+ key). Hold to keep zooming.">+</button>
-  <div id="zAlt" title="Height of your viewpoint above the surface"><b>&hellip;</b>height</div>
-  <button id="zOut" title="Zoom out (&minus; key). Hold to keep zooming.">&minus;</button>
-  <button id="zAll" title="Show the whole Moon (0 key)">&#9711;</button>
+<section>
+  <p class="closing">We will continue to add to the suite of programs to support the course and also to share with other educators who might find it useful.</p>
+</section>
+
+<footer>
+  Exploring Space &middot; Bryan Penprase, Soka University of America<br>
+  Data from NASA, the USGS and IAU planetary nomenclature, Hipparcos via d3-celestial, and John Flamsteed&rsquo;s <i>Atlas Coelestis</i> (1729). Details are in each app.
+</footer>
+
 </div>
-<div id="legend"><div>Elevation relative to 1737.4 km</div><div class="bar" id="lgBar"></div><div class="ticks"><span>&minus;9 km</span><span>0</span><span>+10.7 km</span></div></div>
-
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-} }
-</script>
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-const R_KM = 1737.4, HMIN = -9.0, HMAX = 10.7;
-const $ = id => document.getElementById(id);
-const DEG = Math.PI / 180;
-let dirty = true;
-
-// ---------------------------------------------------------------- loading helpers
-const setLoad = (f, s) => { $('lbar').style.width = (f * 100).toFixed(0) + '%'; if (s) $('lstat').textContent = s; };
-async function fetchBlob(url, onp) {
-  const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status);
-  const len = +r.headers.get('content-length') || 0;
-  if (!r.body || !len) return await r.blob();
-  const rd = r.body.getReader(); const chunks = []; let got = 0;
-  for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); got += value.length; onp && onp(got / len); }
-  return new Blob(chunks);
-}
-async function bitmap(blob) {
-  try { return await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
-  catch (e) { return await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(blob); }); }
-}
-
-// ---------------------------------------------------------------- renderer, scene
-const canvas = $('scene');
-let renderer;
-try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
-catch (e) {
-  $('lstat').innerHTML = 'This browser has 3D graphics (WebGL) turned off, so the globe cannot be drawn.<br>Try Chrome, Edge, Firefox or Safari with hardware acceleration switched on.';
-  $('lbar').parentNode.style.display = 'none';
-  throw e;
-}
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.002, 200);
-const fitK = () => Math.max(1, 0.92 / camera.aspect);   // back off on tall, narrow screens so the whole Moon fits
-camera.position.set(0, 0, 4.2 * fitK());
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
-controls.minDistance = 1.03 + 4 * 0.0065; controls.maxDistance = 14; controls.zoomSpeed = 0.9;
-
-// stars
-{
-  const n = 4000, p = new Float32Array(n * 3), c = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const v = new THREE.Vector3().randomDirection().multiplyScalar(90);
-    p.set([v.x, v.y, v.z], i * 3); const b = 0.35 + Math.random() ** 3 * 0.65; c.set([b, b, b * (0.9 + Math.random() * 0.2)], i * 3);
-  }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.4, sizeAttenuation: false, vertexColors: true })));
-}
-
-// globe geometry: a lat/lon grid with uv.y = 0 at the north pole
-function globeGeometry(nx, ny) {
-  const pos = new Float32Array((nx + 1) * (ny + 1) * 3), uv = new Float32Array((nx + 1) * (ny + 1) * 2);
-  let k = 0;
-  for (let j = 0; j <= ny; j++) {
-    const v = j / ny, lat = (0.5 - v) * Math.PI, cl = Math.cos(lat), sl = Math.sin(lat);
-    for (let i = 0; i <= nx; i++, k++) {
-      const u = i / nx, lon = (u - 0.5) * 2 * Math.PI;
-      pos[k * 3] = cl * Math.sin(lon); pos[k * 3 + 1] = sl; pos[k * 3 + 2] = cl * Math.cos(lon);
-      uv[k * 2] = u; uv[k * 2 + 1] = v;
+<script>
+// a quiet field of stars behind the page
+(function(){
+  const c = document.getElementById('stars'), x = c.getContext('2d');
+  let stars = [];
+  function seed(n){ let s = n; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+  function draw(){
+    const d = Math.min(window.devicePixelRatio || 1, 2), W = innerWidth, H = innerHeight;
+    c.width = W * d; c.height = H * d; c.style.width = W + 'px'; c.style.height = H + 'px';
+    x.setTransform(d, 0, 0, d, 0, 0);
+    const g = x.createRadialGradient(W * 0.5, -H * 0.2, 0, W * 0.5, -H * 0.2, H * 1.2);
+    g.addColorStop(0, '#121a33'); g.addColorStop(1, '#05070d');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const r = seed(7), n = Math.round(W * H / 2600);
+    for (let i = 0; i < n; i++) {
+      const m = Math.pow(r(), 3);
+      x.globalAlpha = 0.25 + 0.75 * m;
+      x.fillStyle = r() < 0.15 ? '#ffe2b8' : r() < 0.3 ? '#c8dcff' : '#ffffff';
+      x.beginPath(); x.arc(r() * W, r() * H, 0.35 + m * 1.2, 0, 6.283); x.fill();
     }
+    x.globalAlpha = 1;
   }
-  const idx = new Uint32Array(nx * ny * 6); k = 0;
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
-    idx.set([a, c, b, b, c, d], k); k += 6;
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1.02);
-  return g;
-}
-
-const uniforms = {
-  albedoTex: { value: null }, heightTex: { value: null }, hTexel: { value: new THREE.Vector2(1 / 2880, 1 / 1440) },
-  exag: { value: 4 }, lightDir: { value: new THREE.Vector3(0, 0, 1) }, ambient: { value: 0.18 }, mode: { value: 0 },
-  gridOn: { value: 1 }, gridStep: { value: 30 }, sunMode: { value: 0 },
-  det0: { value: null }, det1: { value: null }, box0: { value: new THREE.Vector4() }, box1: { value: new THREE.Vector4() },
-  amt0: { value: 0 }, amt1: { value: 0 }, dg0: { value: new THREE.Vector2(1, 0) }, dg1: { value: new THREE.Vector2(1, 0) }
-};
-{ const blank = new THREE.DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1); blank.needsUpdate = true; uniforms.det0.value = uniforms.det1.value = blank; }
-
-const vert = /* glsl */`
-uniform sampler2D heightTex; uniform float exag;
-varying vec2 vUv; varying vec3 vDir; varying float vH;
-void main(){
-  vUv = uv; vDir = normalize(position);
-  float h = texture(heightTex, uv).r;
-  vH = h;
-  vec3 p = vDir * (1.0 + exag * h / ${R_KM.toFixed(1)});
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-}`;
-
-const frag = /* glsl */`
-uniform sampler2D albedoTex, heightTex; uniform vec2 hTexel; uniform float exag, ambient, gridOn, gridStep, sunMode;
-uniform vec3 lightDir; uniform int mode;
-uniform sampler2D det0, det1; uniform vec4 box0, box1; uniform float amt0, amt1; uniform vec2 dg0, dg1;
-varying vec2 vUv; varying vec3 vDir; varying float vH;
-const float PI = 3.14159265359;
-// weight of a close-up patch (box = west, north, width, height in degrees) at this point
-float detW(vec4 box, float amt, float lonD, float latD, out vec2 duv){
-  float u = mod(lonD - box.x + 720.0, 360.0) / box.z;
-  float v = (box.y - latD) / box.w;
-  duv = vec2(u, v);
-  if (amt <= 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) return 0.0;
-  float e = min(min(u, 1.0 - u) * box.z * cos(radians(latD)), min(v, 1.0 - v) * box.w) / max(box.w, 1e-3);
-  return amt * smoothstep(0.0, 0.08, e);
-}
-vec3 ramp(float t){
-  t = clamp(t, 0.0, 1.0);
-  vec3 c0=vec3(.10,.12,.42), c1=vec3(.13,.43,.78), c2=vec3(.25,.72,.72), c3=vec3(.48,.78,.36), c4=vec3(.93,.83,.36), c5=vec3(.86,.45,.22), c6=vec3(.62,.22,.20), c7=vec3(.97,.95,.93);
-  float s = t * 7.0;
-  if (s < 1.0) return mix(c0,c1,s); if (s < 2.0) return mix(c1,c2,s-1.0); if (s < 3.0) return mix(c2,c3,s-2.0);
-  if (s < 4.0) return mix(c3,c4,s-3.0); if (s < 5.0) return mix(c4,c5,s-4.0); if (s < 6.0) return mix(c5,c6,s-5.0); return mix(c6,c7,s-6.0);
-}
-void main(){
-  float lat = (0.5 - vUv.y) * PI, lon = (vUv.x - 0.5) * 2.0 * PI;
-  float lonD = degrees(lon), latD = degrees(lat);
-  vec2 d0uv, d1uv;
-  float w1 = detW(box1, amt1, lonD, latD, d1uv), w0 = detW(box0, amt0, lonD, latD, d0uv);
-  vec4 T1 = texture(det1, d1uv), T0 = texture(det0, d0uv);
-  float t1 = T1.r, t0 = T0.r;
-  w1 *= T1.a; w0 *= T0.a;                       // gaps in a live patch (missing tiles) show the base map
-  float dw = max(w0, w1);
-  // relief normal from the elevation grid
-  float hE = texture(heightTex, vUv + vec2(hTexel.x, 0.0)).r, hW = texture(heightTex, vUv - vec2(hTexel.x, 0.0)).r;
-  float hN = texture(heightTex, vUv - vec2(0.0, hTexel.y)).r, hS = texture(heightTex, vUv + vec2(0.0, hTexel.y)).r;
-  float cl = max(cos(lat), 0.03);
-  float sE = (hE - hW) / (2.0 * hTexel.x * 2.0 * PI * ${R_KM.toFixed(1)} * cl);
-  float sN = (hN - hS) / (2.0 * hTexel.y * PI * ${R_KM.toFixed(1)});
-  vec3 up = normalize(vDir);
-  vec3 east = normalize(vec3(cos(lon), 0.0, -sin(lon)));
-  vec3 north = cross(up, east);
-  float k = max(exag, 0.0) * (1.0 - 0.45 * dw);
-  vec3 n = normalize(up - k * (sE * east + sN * north));
-
-  float alb = texture(albedoTex, vUv).r;
-  alb = mix(alb, clamp(t1 * dg1.x + dg1.y, 0.0, 1.0), w1);
-  alb = mix(alb, clamp(t0 * dg0.x + dg0.y, 0.0, 1.0), w0);
-  vec3 base;
-  if (mode == 0) base = vec3(alb) * 1.15;
-  else if (mode == 1) base = ramp((vH - ${HMIN.toFixed(1)}) / ${(HMAX - HMIN).toFixed(1)});
-  else base = ramp((vH - ${HMIN.toFixed(1)}) / ${(HMAX - HMIN).toFixed(1)}) * (0.35 + 1.05 * alb);
-
-  float d = dot(n, lightDir);
-  float lit = sunMode > 0.5 ? max(d, 0.0) : (0.55 + 0.45 * d);
-  float sunTerm = sunMode > 0.5 ? smoothstep(-0.02, 0.06, dot(up, lightDir)) : 1.0;
-  vec3 col = base * (ambient + (1.0 - ambient) * lit * sunTerm);
-  if (sunMode > 0.5) col = max(col, base * 0.035);
-
-  if (gridOn > 0.5) {
-    vec2 g = vec2(lon, lat) / PI * 180.0;
-    float lonB = fract(vUv.x) * 360.0;  // seam-free copy of longitude for the derivative
-    vec2 w = fwidth(g); w.x = min(w.x, fwidth(lonB));
-    vec2 dist = abs(fract(g / gridStep + 0.5) - 0.5) * gridStep;
-    vec2 ln = 1.0 - smoothstep(0.35 * w, 1.25 * w, dist);
-    float a = max(ln.x * (cl > 0.04 ? 1.0 : 0.0), ln.y);
-    vec2 dz = abs(g); vec2 lz = 1.0 - smoothstep(0.6 * w, 1.8 * w, dz);
-    float z = max(lz.x, lz.y);
-    float night = sunMode > 0.5 ? 0.3 + 0.7 * smoothstep(-0.05, 0.05, dot(up, lightDir)) : 1.0;
-    col = mix(col, vec3(0.89, 0.71, 0.36), 0.38 * a * night);
-    col = mix(col, vec3(1.0, 0.80, 0.42), 0.75 * z * night);
-  }
-  gl_FragColor = vec4(col, 1.0);
-}`;
-
-const material = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag });
-material.extensions = { derivatives: true };
-const globe = new THREE.Mesh(globeGeometry(1440, 720), material);
-scene.add(globe);
-
-// ---------------------------------------------------------------- data
-let heightKm = null, HW = 2880, HH = 1440;
-const items = [];      // every label: {name, lat, lon, diam, kind, id, desc, x,y,z, r}
-const KIND_TEXT = { Mare: 'Sea (mare)', Oceanus: 'Ocean', Lacus: 'Lake', Sinus: 'Bay', Palus: 'Marsh', Mons: 'Mountain', Montes: 'Mountain range',
-  Promontorium: 'Cape', Vallis: 'Valley', Rima: 'Rille', Rimae: 'Rille system', Rupes: 'Scarp', Dorsum: 'Wrinkle ridge', Dorsa: 'Wrinkle ridges',
-  Catena: 'Crater chain', Statio: 'Landing station', Planitia: 'Plain' };
-function vec(lat, lon) { const cl = Math.cos(lat * DEG); return [cl * Math.sin(lon * DEG), Math.sin(lat * DEG), cl * Math.cos(lon * DEG)]; }
-function sampleH(lat, lon) {
-  if (!heightKm) return NaN;
-  lon = ((lon + 540) % 360 + 360) % 360 - 180;
-  const x = Math.min(HW - 1, Math.max(0, Math.floor((lon + 180) / 360 * HW))), y = Math.min(HH - 1, Math.max(0, Math.floor((90 - lat) / 180 * HH)));
-  return heightKm[y * HW + x];
-}
-const fmtLat = v => Math.abs(v).toFixed(2) + '° ' + (v >= 0 ? 'N' : 'S');
-const fmtLon = v => Math.abs(v).toFixed(2) + '° ' + (v >= 0 ? 'E' : 'W');
-const fmtH = v => isNaN(v) ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + ' km';
-
-async function loadAll() {
-  setLoad(0.02, 'Loading surface map');
-  const maxTex = renderer.capabilities.maxTextureSize;
-  const albBlob = await fetchBlob('data/moon_albedo_4k.jpg', f => setLoad(0.02 + f * 0.3)); detail.albBlob = albBlob;
-  const albTex = new THREE.Texture(await bitmap(albBlob));
-  albTex.flipY = false; albTex.wrapS = THREE.RepeatWrapping; albTex.colorSpace = THREE.NoColorSpace;
-  albTex.anisotropy = renderer.capabilities.getMaxAnisotropy(); albTex.needsUpdate = true;
-  uniforms.albedoTex.value = albTex;
-
-  setLoad(0.33, 'Loading elevation (LOLA)');
-  const hBlob = await fetchBlob('data/moon_height.png', f => setLoad(0.33 + f * 0.45));
-  const hb = await bitmap(hBlob); HW = hb.width; HH = hb.height;
-  const cv = document.createElement('canvas'); cv.width = HW; cv.height = HH;
-  const cx = cv.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' }); cx.drawImage(hb, 0, 0);
-  const px = cx.getImageData(0, 0, HW, HH).data;
-  heightKm = new Float32Array(HW * HH); const half = new Uint16Array(HW * HH);
-  for (let i = 0, j = 0; i < heightKm.length; i++, j += 4) {
-    const km = (((px[j] << 8) | px[j + 1]) * 8 - 10000) / 1000;
-    heightKm[i] = km; half[i] = THREE.DataUtils.toHalfFloat(km);
-  }
-  const hTex = new THREE.DataTexture(half, HW, HH, THREE.RedFormat, THREE.HalfFloatType);
-  hTex.wrapS = THREE.RepeatWrapping; hTex.wrapT = THREE.ClampToEdgeWrapping;
-  hTex.magFilter = hTex.minFilter = THREE.LinearFilter; hTex.generateMipmaps = false; hTex.needsUpdate = true;
-  uniforms.heightTex.value = hTex; uniforms.hTexel.value.set(1 / HW, 1 / HH);
-
-  setLoad(0.8, 'Loading feature names');
-  const fj = await (await fetch('data/features.json')).json();
-  for (const [name, lat, lon, diam, kind, id] of fj.features) items.push({ name, lat, lon, diam: diam || 1, kind, id });
-  const byName = new Map(items.map(it => [it.name.toLowerCase(), it]));
-  for (const [name, lat, lon, desc] of fj.lunar100) {
-    const m = byName.get(name.toLowerCase());
-    if (m) { m.desc = desc; m.l100 = true; }               // same feature as an IAU name: keep one label
-    else items.push({ name, lat, lon, diam: 0, kind: 'l100', desc });
-  }
-  for (const [name, lat, lon, desc] of fj.landings) items.push({ name, lat, lon, diam: 0, kind: 'land', desc });
-  for (const it of items) { const v = vec(it.lat, it.lon); it.x = v[0]; it.y = v[1]; it.z = v[2]; it.r = it.diam / R_KM; it.el = null; it.lc = it.name.toLowerCase(); }
-  await loadDetailInfo();
-  setLoad(1, 'Ready');
-  $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 700);
-  setTimeout(() => { $('hint').style.opacity = 0; }, 7000);
-  dirty = true;
-
-  if (maxTex >= 8192) { // sharper surface map for zooming in
-    try {
-      const b8 = await fetchBlob('data/moon_albedo_8k.jpg');
-      const t8 = new THREE.Texture(await bitmap(b8));
-      t8.flipY = false; t8.wrapS = THREE.RepeatWrapping; t8.colorSpace = THREE.NoColorSpace; t8.anisotropy = albTex.anisotropy; t8.needsUpdate = true;
-      uniforms.albedoTex.value = t8; albTex.dispose(); dirty = true;
-    } catch (e) { console.warn('8k map not loaded', e); }
-  }
-}
-
-// ---------------------------------------------------------------- labels
-const layer = { mare: true, crater: true, mount: true, other: true, satellite: true, l100: true, land: true, det: true };
-let density = 1;   // label density: 1.6 fewer, 1 normal, 0.6 more (multiplies the minimum on-screen size of a labelled feature)
-const labelBox = $('labels'); const pool = []; let used = 0;
-function getLabel() {
-  let el = pool[used];
-  if (!el) { el = document.createElement('div'); el.className = 'lbl'; el.addEventListener('click', e => { e.stopPropagation(); if (el._it) select(el._it, true); }); labelBox.appendChild(el); pool.push(el); }
-  used++; el.style.display = ''; return el;
-}
-const gridLabels = []; let lastCount = -1;
-const tmp = new THREE.Vector3();
-
-function updateLabels() {
-  used = 0;
-  const W = innerWidth, H = innerHeight, C = camera.position, dist = C.length();
-  const focal = H / (2 * Math.tan(camera.fov * DEG / 2));
-  const cand = [];
-  // Far away only big features get names; closer in, the size needed for a label drops and the cap rises,
-  // so up close every named feature (including lettered satellite craters) can appear.
-  const alt = dist - 1;
-  const zf = (alt > 1.5 ? 1.5 : alt > 0.6 ? 1.15 : alt > 0.3 ? 0.9 : alt > 0.1 ? 0.7 : 0.5) * density;
-  const satOK = alt < 0.5;
-  const maxLabels = Math.round((alt > 2 ? 70 : alt > 0.6 ? 130 : alt > 0.2 ? 200 : 280) / Math.sqrt(density) * Math.min(1.3, Math.max(0.6, W * H / 1.2e6)));
-  for (const it of items) {
-    const viaL100 = it.l100 && layer.l100;
-    if (!layer[it.kind] && !viaL100) continue;
-    const dd = it.x * C.x + it.y * C.y + it.z * C.z;
-    if (dd < 1.0005) continue;                                   // behind the limb
-    const dx = it.x - C.x, dy = it.y - C.y, dz = it.z - C.z, rng = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    const px = it.r / rng * focal;                                 // apparent diameter in pixels
-    let pri;
-    if (it.kind === 'land') pri = 1e6;
-    else if (it.kind === 'l100') { if (dist > 3.2) continue; pri = 5e5; }
-    else if (it.kind === 'det') { if (dist > 3.4 || px > H * 0.4) continue; pri = 8e5; }
-    else if (it.kind === 'mare') { if (px < 40) continue; pri = 9e5 + Math.min(px, 2000); }
-    else if (it.kind === 'satellite') { if (!satOK || px < 30 * zf) continue; pri = px * 0.5; }
-    else if (viaL100 && dist < 3.2) pri = 5e5 + px;
-    else { if (!layer[it.kind] || px < (it.kind === 'crater' ? 26 : it.kind === 'mount' ? 34 : 55) * zf) continue; pri = it.kind === 'crater' ? px : px * 0.6; }
-    tmp.set(it.x, it.y, it.z).project(camera);
-    if (tmp.z > 1) continue;
-    const sx = (tmp.x * 0.5 + 0.5) * W, sy = (-tmp.y * 0.5 + 0.5) * H;
-    if (sx < -60 || sx > W + 60 || sy < -20 || sy > H + 20) continue;
-    const limb = Math.min(1, (dd - 1) / Math.max(0.02, dist - 1) * 6);
-    cand.push({ it, sx, sy, pri, op: Math.max(0.25, limb) });
-  }
-  cand.sort((a, b) => b.pri - a.pri);
-  const boxes = [];
-  for (const c of cand) {
-    if (used >= maxLabels) break;
-    const fs = c.it.kind === 'mare' ? 15 : c.it.kind === 'satellite' ? 10.5 : 12;
-    const w = c.it.name.length * fs * (c.it.kind === 'mare' ? 0.6 : 0.56) + (c.it.kind === 'l100' || c.it.kind === 'land' || c.it.kind === 'det' ? 14 : 4), h = fs + 4;
-    const point = c.it.kind === 'l100' || c.it.kind === 'land' || c.it.kind === 'det';
-    const x0 = point ? c.sx - 5 : c.sx - w / 2, y0 = c.sy - h / 2;
-    let hit = false;
-    for (const b of boxes) if (x0 < b[2] && x0 + w > b[0] && y0 < b[3] && y0 + h > b[1]) { hit = true; break; }
-    if (hit) continue;
-    boxes.push([x0 - 3, y0 - 2, x0 + w + 3, y0 + h + 2]);
-    const el = getLabel();
-    if (el._it !== c.it) { el._it = c.it; el.textContent = c.it.name; el.className = 'lbl k-' + c.it.kind + (c.it.l100 && layer.l100 ? ' l100' : ''); }
-    el.style.transform = `translate(${x0.toFixed(1)}px,${y0.toFixed(1)}px)`;
-    el.style.opacity = c.op;
-  }
-  const nl = used; if (nl !== lastCount) { lastCount = nl; $('lblCount').textContent = nl + ' shown'; }
-  // grid degree labels along the meridian and parallel nearest the view center
-  if (uniforms.gridOn.value > 0.5) {
-    const cd = C.clone().normalize(); const cLat = Math.asin(cd.y) / DEG, cLon = Math.atan2(cd.x, cd.z) / DEG, s = uniforms.gridStep.value;
-    const mLon = Math.round(cLon / s) * s + s / 2, pLat = Math.max(-80, Math.min(80, Math.round(cLat / s) * s + s / 2));
-    const put = (lat, lon, text) => {
-      const v = vec(lat, lon); if (v[0] * C.x + v[1] * C.y + v[2] * C.z < 1.01) return;
-      tmp.set(v[0], v[1], v[2]).project(camera); const sx = (tmp.x * 0.5 + 0.5) * W, sy = (-tmp.y * 0.5 + 0.5) * H;
-      if (sx < 0 || sx > W || sy < 0 || sy > H) return;
-      const el = getLabel(); el._it = null; el.textContent = text; el.className = 'lbl k-grid';
-      el.style.transform = `translate(${(sx + 3).toFixed(1)}px,${(sy - 7).toFixed(1)}px)`; el.style.opacity = 1;
-    };
-    for (let la = -90 + s; la < 90; la += s) put(la, mLon, la === 0 ? '0°' : Math.abs(la) + '°' + (la > 0 ? 'N' : 'S'));
-    for (let lo = -180; lo < 180; lo += s) { let L = ((lo + 540) % 360) - 180; put(pLat, L, L === 0 ? '0°' : (L === -180 ? '180°' : Math.abs(L) + '°' + (L > 0 ? 'E' : 'W'))); }
-  }
-  for (let i = used; i < pool.length; i++) { if (pool[i].style.display !== 'none') pool[i].style.display = 'none'; pool[i]._it = undefined; }
-}
-
-// ---------------------------------------------------------------- info card and fly-to
-function kindText(it) {
-  if (it.kind === 'det') return 'Close-up region';
-  if (it.kind === 'land') return 'Landing site';
-  if (it.kind === 'l100') return 'Lunar 100 feature';
-  if (it.l100) return (KIND_TEXT[it.name.split(' ')[0]] || 'Crater') + ' \u00B7 Lunar 100';
-  if (it.kind === 'satellite') return 'Satellite crater';
-  return KIND_TEXT[it.name.split(' ')[0]] || 'Crater';
-}
-function select(it, fly) {
-  if (it.kind === 'det') return selectRegion(it.reg, fly);
-  const h = sampleH(it.lat, it.lon);
-  let html = `<h3>${esc(it.name)}</h3><div class="kind">${kindText(it)}</div>`;
-  if (it.desc) html += `<div class="desc">${esc(it.desc)}</div>`;
-  html += '<table>';
-  if (it.diam > 1 && it.kind !== 'l100' && it.kind !== 'land') html += `<tr><td>${/^(Rima|Rimae|Vallis|Valles|Catena|Dorsum|Dorsa|Rupes|Montes)\b/.test(it.name) ? 'Length' : 'Diameter'}</td><td>${it.diam.toFixed(it.diam < 20 ? 1 : 0)} km</td></tr>`;
-  html += `<tr><td>Latitude</td><td>${fmtLat(it.lat)}</td></tr><tr><td>Longitude</td><td>${fmtLon(it.lon)}</td></tr>`;
-  if (!isNaN(h)) html += `<tr><td>Elevation at center</td><td>${fmtH(h)}</td></tr>`;
-  if (it.diam > 1 && it.kind !== 'l100' && it.kind !== 'land') html += `<tr><td>Angular size from Earth</td><td>${(it.diam / 384400 * 206265).toFixed(0)}&Prime;</td></tr>`;
-  html += '</table>';
-  if (it.id) html += `<div style="margin-top:8px"><a href="https://planetarynames.wr.usgs.gov/Feature/${it.id}" target="_blank" rel="noopener">IAU Gazetteer entry &rarr;</a></div>`;
-  $('infoBody').innerHTML = html; $('info').style.display = 'block';
-  if (fly) flyTo(it.lat, it.lon, it.diam > 1 ? 1 + Math.min(3.2, Math.max(0.16, it.diam / R_KM * 4.2)) : 1.3);
-}
-const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-$('infoX').onclick = () => { $('info').style.display = 'none'; };
-
-let anim = null;
-function flyTo(lat, lon, distTo) {
-  zoomGoal = null;
-  const from = camera.position.clone(), d0 = from.length(), dir0 = from.clone().normalize();
-  const v = vec(lat, lon), dir1 = new THREE.Vector3(v[0], v[1], v[2]);
-  const q = new THREE.Quaternion().setFromUnitVectors(dir0, dir1), q0 = new THREE.Quaternion();
-  anim = { t0: performance.now(), dur: 1600, d0, d1: Math.max(distTo, controls.minDistance + 0.01), dir0, q, q0, ang: dir0.angleTo(dir1) };
-}
-function stepAnim(now) {
-  if (!anim) return;
-  let t = Math.min(1, (now - anim.t0) / anim.dur); const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-  const q = anim.q0.clone().slerp(anim.q, e);
-  const lift = Math.sin(Math.PI * e) * anim.ang * 0.35 * Math.max(0, 2.5 - Math.min(anim.d0, anim.d1));
-  const d = anim.d0 + (anim.d1 - anim.d0) * e + lift;
-  camera.position.copy(anim.dir0.clone().applyQuaternion(q).multiplyScalar(d));
-  camera.lookAt(0, 0, 0); dirty = true;
-  if (t >= 1) { anim = null; controls.update(); }
-}
-
-// ---------------------------------------------------------------- search
-const sInput = $('search'), sRes = $('results'); let sList = [], sSel = 0;
-sInput.addEventListener('input', () => {
-  const q = sInput.value.trim().toLowerCase(); sList = [];
-  if (q.length >= 2) {
-    const a = [], b = [];
-    for (const it of items) { if (it.lc.startsWith(q)) a.push(it); else if (it.lc.includes(q)) b.push(it); }
-    const rank = it => (it.lc === q ? 1e7 : 0) + (it.kind === 'land' || it.kind === 'l100' || it.l100 || it.kind === 'mare' ? 1e5 : 0) + (it.kind === 'satellite' ? -1e4 : 0) + it.diam;
-    a.sort((x, y) => rank(y) - rank(x)); b.sort((x, y) => rank(y) - rank(x));
-    sList = a.concat(b).slice(0, 8);
-  }
-  sSel = 0; drawRes();
-});
-function drawRes() {
-  sRes.innerHTML = sList.map((it, i) => `<div data-i="${i}" class="${i === sSel ? 'sel' : ''}"><span>${esc(it.name)}</span><small>${kindText(it)}</small></div>`).join('');
-}
-sRes.addEventListener('click', e => { const d = e.target.closest('[data-i]'); if (d) pick(+d.dataset.i); });
-sInput.addEventListener('keydown', e => {
-  if (e.key === 'ArrowDown') { sSel = Math.min(sList.length - 1, sSel + 1); drawRes(); e.preventDefault(); }
-  else if (e.key === 'ArrowUp') { sSel = Math.max(0, sSel - 1); drawRes(); e.preventDefault(); }
-  else if (e.key === 'Enter' && sList.length) pick(sSel);
-  else if (e.key === 'Escape') { sList = []; drawRes(); }
-});
-function pick(i) { const it = sList[i]; if (!it) return; if (!layer[it.kind] && !(it.l100 && layer.l100)) { layer[it.kind] = true; const c = $('L-' + it.kind); if (c) c.checked = true; } select(it, true); sList = []; drawRes(); sInput.blur(); }
-
-// ---------------------------------------------------------------- pointer readout and click
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), unit = new THREE.Sphere(new THREE.Vector3(), 1), hitP = new THREE.Vector3();
-function pick3D(e) {
-  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
-  if (!ray.ray.intersectSphere(unit, hitP)) return null;
-  const lat = Math.asin(Math.max(-1, Math.min(1, hitP.y))) / DEG, lon = Math.atan2(hitP.x, hitP.z) / DEG;
-  return { lat, lon, h: sampleH(lat, lon) };
-}
-function containing(lat, lon) {
-  const v = vec(lat, lon); let best = null;
-  for (const it of items) {
-    if (it.kind === 'l100' || it.kind === 'land' || it.diam < 2) continue;
-    if (!layer[it.kind] && it.kind !== 'crater') continue;
-    const ang = Math.acos(Math.min(1, v[0] * it.x + v[1] * it.y + v[2] * it.z)) * R_KM;
-    if (ang < it.diam / 2 && (!best || it.diam < best.diam)) best = it;
-  }
-  return best;
-}
-let lastMove = 0;
-canvas.addEventListener('pointermove', e => {
-  const now = performance.now(); if (now - lastMove < 40) return; lastMove = now;
-  const p = pick3D(e);
-  $('readout').innerHTML = p ? `<b>${fmtLat(p.lat)}</b> &nbsp; <b>${fmtLon(p.lon)}</b> &nbsp; Elevation <b>${fmtH(p.h)}</b>` : 'Move over the Moon to read coordinates';
-});
-let downAt = null;
-canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; anim = null; zoomGoal = null; spin = false; $('spin').checked = false; });
-canvas.addEventListener('pointerup', e => {
-  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
-  const p = pick3D(e); if (!p) return;
-  const f = containing(p.lat, p.lon);
-  let html = `<h3>${f ? 'Inside ' + esc(f.name) : 'Surface point'}</h3><div class="kind">${f ? kindText(f) + ' &middot; ' + f.diam.toFixed(0) + ' km' : 'Clicked location'}</div><table>
-    <tr><td>Latitude</td><td>${fmtLat(p.lat)}</td></tr><tr><td>Longitude</td><td>${fmtLon(p.lon)}</td></tr><tr><td>Elevation</td><td>${fmtH(p.h)}</td></tr></table>`;
-  if (f) html += `<div style="margin-top:8px"><a href="#" id="goF">Show ${esc(f.name)} details</a></div>`;
-  $('infoBody').innerHTML = html; $('info').style.display = 'block';
-  if (f) $('goF').onclick = ev => { ev.preventDefault(); select(f, true); };
-});
-
-// ---------------------------------------------------------------- controls panel
-function seg(id, fn) { const el = $(id); el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(+b.dataset.v); dirty = true; }); }
-seg('mode', v => { uniforms.mode.value = v; $('legend').style.display = v ? 'block' : 'none'; });
-seg('light', v => {
-  uniforms.sunMode.value = v; uniforms.ambient.value = v ? 0.0 : 0.18;
-  for (const id of ['angRow', 'ang']) $(id).style.display = v ? 'none' : '';
-  for (const id of ['sunRow', 'sun']) $(id).style.display = v ? '' : 'none';
-});
-$('ang').oninput = e => { $('angV').textContent = e.target.value + '°'; dirty = true; };
-$('sun').oninput = e => { const s = +e.target.value; $('sunV').textContent = s === 0 ? '0°' : Math.abs(s) + '°' + (s > 0 ? 'E' : 'W'); dirty = true; };
-$('sun').dispatchEvent(new Event('input'));
-$('ex').oninput = e => { uniforms.exag.value = +e.target.value; $('exV').textContent = e.target.value + '×'; dirty = true; };
-$('L-grid').onchange = e => { uniforms.gridOn.value = e.target.checked ? 1 : 0; dirty = true; };
-for (const k of Object.keys(layer)) { const c = $('L-' + k); c.checked = layer[k]; c.onchange = () => { layer[k] = c.checked; dirty = true; }; }
-let spin = false; $('spin').onchange = e => { spin = e.target.checked; };
-const VIEWS = { near: [0, 0, 4.2], far: [0, 180, 4.2], north: [89.4, 0, 3.6], south: [-89.4, 0, 3.6], east: [0, 90, 3.6], west: [0, -90, 3.6] };
-document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { const [la, lo, d] = VIEWS[b.dataset.view]; flyTo(la, lo, d * fitK()); });
-$('hide').onclick = () => { $('panel').classList.add('hidden'); $('toggle').style.display = 'block'; };
-$('toggle').onclick = () => { $('panel').classList.remove('hidden'); $('toggle').style.display = 'none'; };
-if (innerWidth < 720) $('hide').click();
-// legend gradient from the same ramp as the shader
-{
-  const st = [[.10,.12,.42],[.13,.43,.78],[.25,.72,.72],[.48,.78,.36],[.93,.83,.36],[.86,.45,.22],[.62,.22,.20],[.97,.95,.93]];
-  $('lgBar').style.background = 'linear-gradient(90deg,' + st.map((c, i) => `rgb(${c.map(x => Math.round(x * 255)).join(',')}) ${(i / 7 * 100).toFixed(0)}%`).join(',') + ')';
-}
-
-// ---------------------------------------------------------------- close-up detail
-// Regional close-ups: data/detail/regions.json lists stitched LROC images (made by tools/fetch_detail_tiles.py).
-// Live close-ups: if NASA Moon Trek allows it (checked by the same script), tiles for the current view are loaded on the fly.
-const detail = { info: null, regions: [], cache: new Map(), live: null, liveBusy: false, liveOff: false, liveFails: 0, albBlob: null, albCPU: null, lastCam: 0, status: '' };
-const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-
-async function loadDetailInfo() {
-  try {
-    const r = await fetch('data/detail/regions.json'); if (!r.ok) return;
-    const info = await r.json(); detail.info = info;
-    const sel = $('regionSel'); const groups = new Map();
-    for (const g of info.regions) {
-      const v = vec(g.lat, g.lon);
-      const reg = { ...g, v: new THREE.Vector3(...v), box: new THREE.Vector4(g.west, g.north, g.wdeg, g.hdeg),
-        ang: g.size_km / R_KM, tex: null, loading: false, used: 0, shownAt: 0 };
-      detail.regions.push(reg);
-      const it = { name: g.name, lat: g.lat, lon: g.lon, diam: 0, kind: 'det', reg, desc: '' };
-      it.x = v[0]; it.y = v[1]; it.z = v[2]; it.r = g.size_km / R_KM; it.lc = g.name.toLowerCase(); reg.item = it;
-      items.push(it);
-      if (!groups.has(g.group)) { const og = document.createElement('optgroup'); og.label = g.group || 'Regions'; groups.set(g.group, og); sel.appendChild(og); }
-      const o = document.createElement('option'); o.value = detail.regions.length - 1; o.textContent = g.name; groups.get(g.group).appendChild(o);
-    }
-    sel.onchange = () => { const reg = detail.regions[+sel.value]; if (reg) selectRegion(reg, true); sel.value = ''; sel.blur(); };
-    $('detSec').style.display = '';
-    if (info.live_tiles) $('detNote').textContent = 'Sharp LROC images (about 100 m per pixel) fade in as you zoom into these regions. Live close-ups from NASA Moon Trek also load anywhere you zoom in.';
-  } catch (e) { console.warn('No close-up regions', e); }
-}
-
-function selectRegion(reg, fly) {
-  const h = sampleH(reg.lat, reg.lon);
-  $('infoBody').innerHTML = `<h3>${esc(reg.name)}</h3><div class="kind">Close-up region${reg.group ? ' &middot; ' + esc(reg.group) : ''}</div>
-    <div class="desc">A sharp LROC Wide Angle Camera image of this area fades in as you zoom in. Keep zooming to see small craters, rilles and boulder-strewn slopes.</div>
-    <table><tr><td>Area covered</td><td>${reg.size_km} &times; ${reg.size_km} km</td></tr>
-    <tr><td>Image detail</td><td>about ${reg.m_per_px} m per pixel</td></tr>
-    <tr><td>Center</td><td>${fmtLat(reg.lat)}, ${fmtLon(reg.lon)}</td></tr>${isNaN(h) ? '' : `<tr><td>Elevation at center</td><td>${fmtH(h)}</td></tr>`}</table>`;
-  $('info').style.display = 'block';
-  if (fly) flyTo(reg.lat, reg.lon, 1 + Math.max(0.03, reg.ang * 1.9));
-}
-
-function regionTex(reg, now) {
-  reg.used = now;
-  if (reg.tex) return reg.tex;
-  if (!reg.loading) {
-    reg.loading = true;
-    fetch('data/detail/' + reg.file).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(bitmap).then(bm => {
-      const t = new THREE.Texture(bm); t.flipY = false; t.colorSpace = THREE.NoColorSpace;
-      t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.minFilter = THREE.LinearMipmapLinearFilter; t.needsUpdate = true;
-      reg.tex = t; reg.shownAt = performance.now(); dirty = true;
-      const loaded = detail.regions.filter(r => r.tex).sort((a, b) => a.used - b.used);   // keep at most 6 in memory
-      while (loaded.length > 6) { const old = loaded.shift(); old.tex.dispose(); old.tex = null; old.loading = false; }
-    }).catch(e => { console.warn('close-up not loaded', reg.file, e); });
-  }
-  return null;
-}
-
-const cd = new THREE.Vector3();
-function updateDetail(now) {
-  const C = camera.position, a = C.length() - 1;
-  cd.copy(C).normalize();
-  const viewRad = a * Math.tan(camera.fov * DEG / 2) * Math.max(1, camera.aspect);
-  const act = [];
-  for (const reg of detail.regions) {
-    let amt = 1 - smooth(reg.ang * 2.0, reg.ang * 3.6, a);
-    if (amt <= 0.001) continue;
-    const ang = Math.acos(Math.min(1, cd.dot(reg.v)));
-    if (ang > viewRad * 1.6 + reg.ang) continue;
-    act.push({ reg, amt, ang });
-  }
-  act.sort((p, q) => p.ang - q.ang);
-  const slots = [];
-  for (const c of act) {
-    const t = regionTex(c.reg, now); if (!t) continue;
-    const f = smooth(0, 700, now - c.reg.shownAt);
-    if (f < 1) dirty = true;
-    slots.push({ tex: t, box: c.reg.box, amt: c.amt * f, g: [1, 0], name: c.reg.name, mpp: c.reg.m_per_px, reg: c.reg });
-    if (slots.length === 2) break;
-  }
-  // live close-up for the current view
-  if (detail.info && detail.info.live_tiles && !detail.liveOff) {
-    maybeLive(now, a, slots);
-    const L = detail.live;
-    if (L && slots.length < 2) {
-      const amt = (1 - smooth(L.alt * 2.2, L.alt * 4, a)) * smooth(0, 600, now - L.t);
-      if (amt < 1) dirty = true;
-      if (amt > 0.001) slots.push({ tex: L.tex, box: L.box, amt, g: L.g, name: 'Live LROC close-up', mpp: L.mpp });
-    }
-  }
-  const s0 = slots[0], s1 = slots[1];
-  const sig = (s0 ? s0.amt.toFixed(3) + s0.tex.id : '-') + '|' + (s1 ? s1.amt.toFixed(3) + s1.tex.id : '-');
-  if (sig !== detail.sig) { detail.sig = sig; dirty = true; }       // redraw whenever a close-up changes
-  uniforms.amt0.value = s0 ? s0.amt : 0; uniforms.amt1.value = s1 ? s1.amt : 0;
-  if (s0) { uniforms.det0.value = s0.tex; uniforms.box0.value.copy(s0.box); uniforms.dg0.value.set(...s0.g); }
-  if (s1) { uniforms.det1.value = s1.tex; uniforms.box1.value.copy(s1.box); uniforms.dg1.value.set(...s1.g); }
-  // badge: the patch under the view center
-  const cLat = Math.asin(cd.y) / DEG, cLon = Math.atan2(cd.x, cd.z) / DEG;
-  const under = slots.find(s => s.amt > 0.5 && inBox(s.box, cLat, cLon));
-  const txt = under ? `Close-up: ${under.name} &middot; about ${under.mpp} m per pixel` : '';
-  if (txt !== detail.status) { detail.status = txt; const b = $('detBadge'); if (txt) b.innerHTML = txt; b.style.opacity = txt ? 1 : 0; }
-}
-function inBox(box, lat, lon) {
-  const u = (((lon - box.x) % 360) + 360) % 360;
-  return u <= box.z && lat <= box.y && lat >= box.y - box.w;
-}
-
-// ---- live tiles (only when the tile service allows browser access)
-async function albedoCPU() {
-  if (detail.albCPU) return detail.albCPU;
-  const bm = await bitmap(detail.albBlob);
-  const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
-  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bm, 0, 0);
-  const d = x.getImageData(0, 0, c.width, c.height).data, g = new Uint8Array(c.width * c.height);
-  for (let i = 0; i < g.length; i++) g[i] = d[i * 4];
-  return (detail.albCPU = { w: c.width, h: c.height, g });
-}
-function maybeLive(now, a, slots) {
-  if (detail.liveBusy || a > 0.16 || now - detail.lastCam < 350) return;
-  const cLat = Math.asin(cd.y) / DEG, cLon = Math.atan2(cd.x, cd.z) / DEG;
-  if (slots.some(s => s.amt > 0.95 && s.reg && inBox(s.box, cLat, cLon) && s.reg.ang * 1.2 > a)) return;  // a stored close-up already covers it
-  const L = detail.live;
-  if (L && inBox(L.innerBox, cLat, cLon) && a > L.alt * 0.55 && a < L.alt * 1.6) return;                  // current live patch still fits
-  buildLive(cLat, cLon, a).then(() => { detail.liveFails = 0; }).catch(e => {
-    console.warn('live tiles not loaded', e); detail.liveBusy = false; detail.lastCam = performance.now() + 3000;   // wait before trying again
-    if (++detail.liveFails >= 3) detail.liveOff = true;                                                           // give up after repeated failures
-  });
-}
-async function buildLive(lat, lon, a) {
-  detail.liveBusy = true;
-  const info = detail.info, levels = info.levels;
-  const viewRad = a * Math.tan(camera.fov * DEG / 2) * Math.max(1, camera.aspect) * 1.5;
-  const hdeg = Math.min(40, 2 * viewRad / DEG), wdeg = Math.min(80, hdeg / Math.max(0.15, Math.cos(lat * DEG)));
-  const north = Math.min(90, lat + hdeg / 2), west = lon - wdeg / 2;
-  const needPpd = Math.min(303, innerHeight * Math.min(devicePixelRatio, 2) / (hdeg / 1.5));
-  let li = levels.findIndex(l => 1 / l.deg >= needPpd * 0.9); if (li < 0) li = levels.length - 1;
-  while (li > 0 && (wdeg / levels[li].deg > 2048 || hdeg / levels[li].deg > 2048)) li--;
-  const Lv = levels[li];
-  const wpx = Math.round(wdeg / Lv.deg), hpx = Math.round(hdeg / Lv.deg);
-  const x0 = (west - Lv.lon0) / Lv.deg, y0 = (Lv.lat0 - north) / Lv.deg;
-  const c0 = Math.floor(x0 / Lv.tw), r0 = Math.floor(y0 / Lv.th), c1 = Math.floor((x0 + wpx - 1) / Lv.tw), r1 = Math.floor((y0 + hpx - 1) / Lv.th);
-  const cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
-  const ctx = cv.getContext('2d', { willReadFrequently: true });
-  const jobs = []; let ok = 0;
-  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
-    if (r < 0 || r >= Lv.mh) continue;
-    const url = info.template.replace('{TileMatrix}', Lv.id).replace('{TileRow}', r).replace('{TileCol}', ((c % Lv.mw) + Lv.mw) % Lv.mw);
-    jobs.push(fetch(url, { mode: 'cors' }).then(res => { if (!res.ok) throw new Error('tile ' + res.status); return res.blob(); }).then(bitmap)
-      .then(bm => { ctx.drawImage(bm, Math.round((c - c0) * Lv.tw - (x0 - c0 * Lv.tw)), Math.round((r - r0) * Lv.th - (y0 - r0 * Lv.th))); ok++; })
-      .catch(() => {}));                                     // a missing tile just leaves a gap that shows the base map
-  }
-  await Promise.all(jobs);
-  if (!ok) throw new Error('no tiles could be loaded');
-  // match brightness and contrast to the base map over the same area
-  const A = await albedoCPU(), img = ctx.getImageData(0, 0, wpx, hpx).data;
-  let sp = 0, sp2 = 0, sb = 0, sb2 = 0, n = 0;
-  for (let j = 0; j < 40; j++) for (let i = 0; i < 40; i++) {
-    const u = (i + 0.5) / 40, v = (j + 0.5) / 40;
-    const p = img[(Math.floor(v * hpx) * wpx + Math.floor(u * wpx)) * 4]; if (p < 3) continue;
-    const blon = west + u * wdeg, blat = north - v * hdeg;
-    const bx = ((Math.floor((blon + 180) / 360 * A.w) % A.w) + A.w) % A.w, by = Math.min(A.h - 1, Math.max(0, Math.floor((90 - blat) / 180 * A.h)));
-    const b = A.g[by * A.w + bx]; sp += p; sp2 += p * p; sb += b; sb2 += b * b; n++;
-  }
-  let g = [1, 0];
-  if (n > 50) {
-    const mp = sp / n, mb = sb / n, vp = Math.sqrt(Math.max(1, sp2 / n - mp * mp)), vb = Math.sqrt(Math.max(1, sb2 / n - mb * mb));
-    const gain = Math.min(1.4, Math.max(0.75, vb / vp)); g = [gain, (mb - gain * mp) / 255];
-  }
-  const tex = new THREE.CanvasTexture(cv); tex.flipY = false; tex.colorSpace = THREE.NoColorSpace;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); tex.minFilter = THREE.LinearMipmapLinearFilter;
-  const old = detail.live;
-  detail.live = { tex, g, alt: a, t: performance.now(), mpp: Math.round(R_KM * 1000 * DEG * Lv.deg),
-    box: new THREE.Vector4(west, north, wdeg, hdeg), innerBox: new THREE.Vector4(west + wdeg * 0.2, north - hdeg * 0.2, wdeg * 0.6, hdeg * 0.6) };
-  if (old) setTimeout(() => old.tex.dispose(), 1000);
-  detail.liveBusy = false; dirty = true;
-}
-
-// ---------------------------------------------------------------- zoom buttons
-// Each press moves the viewpoint 40 percent closer to (or farther from) the surface; holding a button keeps zooming.
-let zoomGoal = null;
-function zoomBy(f) {
-  const alt = camera.position.length() - 1, cur = zoomGoal ?? alt;
-  zoomGoal = Math.min(controls.maxDistance - 1, Math.max(controls.minDistance - 1, cur * f));
-  anim = null; spin = false; $('spin').checked = false;
-}
-function holdZoom(btn, f) {
-  let timer = null;
-  const stop = () => { clearInterval(timer); timer = null; };
-  btn.addEventListener('pointerdown', e => { e.preventDefault(); zoomBy(f); stop(); timer = setInterval(() => zoomBy(Math.pow(f, 0.45)), 160); });
-  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(ev, stop);
-  btn.addEventListener('click', e => { if (e.detail === 0) zoomBy(f); });      // keyboard activation
-}
-holdZoom($('zIn'), 0.6); holdZoom($('zOut'), 1 / 0.6);
-function wholeMoon() {
-  const d = camera.position.clone().normalize();
-  flyTo(Math.asin(d.y) / DEG, Math.atan2(d.x, d.z) / DEG, 4.2 * fitK());
-}
-$('zAll').onclick = wholeMoon;
-addEventListener('keydown', e => {
-  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key === '+' || e.key === '=') zoomBy(0.6);
-  else if (e.key === '-' || e.key === '_') zoomBy(1 / 0.6);
-  else if (e.key === '0') wholeMoon();
-});
-let lastZoomT = 0;
-function stepZoom(now) {
-  const dt = Math.min(0.25, Math.max(0, (now - lastZoomT) / 1000)); lastZoomT = now;
-  if (zoomGoal === null) return;
-  const d = camera.position.length(), alt = d - 1;
-  zoomGoal = Math.min(controls.maxDistance - 1, Math.max(controls.minDistance - 1, zoomGoal));
-  let na = zoomGoal + (alt - zoomGoal) * Math.exp(-dt / 0.11);      // smooth glide, same speed on fast and slow computers
-  if (Math.abs(na - zoomGoal) < zoomGoal * 0.003) { na = zoomGoal; zoomGoal = null; }
-  camera.position.multiplyScalar((1 + na) / d);
-  dirty = true; detail.lastCam = performance.now();
-}
-let lastAltTxt = '';
-function showAltitude() {
-  const km = (camera.position.length() - 1) * R_KM;
-  const txt = km >= 1000 ? Math.round(km).toLocaleString() + ' km' : km >= 100 ? Math.round(km) + ' km' : km.toFixed(1) + ' km';
-  if (txt !== lastAltTxt) { lastAltTxt = txt; $('zAlt').innerHTML = `<b>${txt}</b>height`; }
-}
-seg('density', v => { density = v; });
-
-// ---------------------------------------------------------------- frame loop
-controls.addEventListener('change', () => { dirty = true; detail.lastCam = performance.now(); });
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); dirty = true; });
-const camDir = new THREE.Vector3(), camUp = new THREE.Vector3(), camRight = new THREE.Vector3();
-function updateLight() {
-  if (uniforms.sunMode.value > 0.5) {
-    const s = +$('sun').value * DEG; uniforms.lightDir.value.set(Math.sin(s), 0, Math.cos(s));
-  } else {
-    const a = +$('ang').value * DEG;
-    camDir.copy(camera.position).normalize();
-    camera.updateMatrixWorld(); camera.matrixWorld.extractBasis(camRight, camUp, new THREE.Vector3());
-    const side = camUp.clone().multiplyScalar(0.75).addScaledVector(camRight, -0.66).normalize();
-    uniforms.lightDir.value.copy(camDir).multiplyScalar(Math.cos(a)).addScaledVector(side, Math.sin(a)).normalize();
-  }
-}
-function gridFor(dist) { const alt = dist - 1; return alt > 1.6 ? 30 : alt > 0.7 ? 15 : alt > 0.3 ? 10 : alt > 0.14 ? 5 : alt > 0.06 ? 2 : 1; }
-function loop(now) {
-  requestAnimationFrame(loop);
-  stepAnim(now);
-  if (spin && !anim) { const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.0012); camera.position.applyQuaternion(q); camera.lookAt(0, 0, 0); dirty = true; }
-  stepZoom(now);
-  if (!anim) controls.update();
-  const dist = camera.position.length();
-  const alt = dist - 1;
-  controls.rotateSpeed = Math.max(0.0025, Math.min(1, alt * 0.55));
-  // each wheel step or pinch changes the height above the surface by about 15 percent
-  controls.zoomSpeed = Math.max(0.01, Math.min(1.2, Math.log((1 + 0.85 * alt) / (1 + alt)) / Math.log(0.95)));
-  // let the camera come down close to the ground, but never inside the (exaggerated) terrain below it
-  if (heightKm) {
-    const cLat = Math.asin(camera.position.y / dist) / DEG, cLon = Math.atan2(camera.position.x, camera.position.z) / DEG;
-    let hmax = -20;
-    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) hmax = Math.max(hmax, sampleH(Math.max(-89.9, Math.min(89.9, cLat + j * 0.15)), cLon + i * 0.15 / Math.max(0.2, Math.cos(cLat * DEG))));
-    controls.minDistance = Math.max(1.008, 1 + hmax * uniforms.exag.value / R_KM + 0.015);
-  }
-  const near = Math.max(0.0004, Math.min(0.05, alt * 0.25));
-  if (Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); dirty = true; }
-  if (detail.regions.length || (detail.info && detail.info.live_tiles)) updateDetail(now);
-  const gs = gridFor(dist); if (gs !== uniforms.gridStep.value) { uniforms.gridStep.value = gs; $('gridStep').textContent = gs + '°'; dirty = true; }
-  if (!dirty) return;
-  dirty = false; showAltitude();
-  updateLight();
-  renderer.render(scene, camera);
-  if (items.length) updateLabels();
-}
-requestAnimationFrame(loop);
-loadAll().catch(err => { $('lstat').textContent = 'Could not load the Moon data: ' + err.message; console.error(err); });
+  draw(); addEventListener('resize', draw);
+})();
 </script>
 </body>
 </html>
