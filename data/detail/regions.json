@@ -1,7 +1,7 @@
 {
  "source": "NASA Moon Trek, LRO WAC global mosaic 303 ppd (NASA/GSFC/ASU)",
  "layer": "LRO_WAC_Mosaic_Global_303ppd_v02",
- "updated": "2026-11-19",
+ "updated": "2026-11-20",
  "alignment_correlation": 0.829,
  "lon_correction_deg": 0.0,
  "live_tiles": true,
