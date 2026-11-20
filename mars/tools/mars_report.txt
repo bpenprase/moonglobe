@@ -1,0 +1,18 @@
+Mars data report, 2026-11-20 00:15 UTC
+
+Layer for ir: THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018 (png, LA), deepest level 9 (728.18 px/deg)
+Layer for color: Mars_Viking_MDIM21_ClrMosaic_global_232m (jpg, RGB), deepest level 7 (182.04 px/deg)
+MOLA 16 px/deg loaded from https://pds-geosciences.wustl.edu/mgs/urn-nasa-pds-mgs_mola_topography_derived/meg016/megt90n000eb.img: -8.18 to 21.17 km
+Height map written: 2880 x 1440, 8 m steps
+  stitched THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018 level 2: 2048 x 1024 px, 0 of 32 tiles missing
+Alignment of ir with MOLA relief: correlation 0.277 as is, best 0.292 at a shift of -1 px (-0.18 deg)
+  stitched THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018 level 4: 8192 x 4096 px, 128 of 512 tiles missing
+  mars_ir_8k.jpg written; 27.9% of pixels are empty (black)
+  stitched Mars_Viking_MDIM21_ClrMosaic_global_232m level 2: 2048 x 1024 px, 0 of 32 tiles missing
+Alignment of color with the infrared map: correlation 0.224 as is, best 0.224 at a shift of 0 px (+0.00 deg)
+  stitched Mars_Viking_MDIM21_ClrMosaic_global_232m level 4: 8192 x 4096 px, 0 of 512 tiles missing
+  mars_color_8k.jpg written; 0.0% of pixels are empty (black)
+Nomenclature fields: ['name', 'clean_name', 'approvaldt', 'origin', 'diameter', 'center_lon', 'center_lat', 'type', 'code', 'approval', 'min_lon', 'max_lon', 'min_lat', 'max_lat', 'ethnicity', 'continent', 'quad_name', 'quad_code', 'link']
+  first record: {'name': 'Blunck', 'clean_name': 'Blunck', 'approvaldt': '2013/07/01 00:00:00', 'origin': 'Jürgen; German historian (1935-2008).', 'diameter': '66.485', 'center_lon': '323.103', 'center_lat': '-27.2282', 'type': 'Crater, craters', 'code': 'AA', 'approval': 'Adopted by IAU', 'min_lon': '322.46930000000003', 'max_lon': '323.7366', 'min_lat': '-27.7586', 'max_lat': '-26.6979', 'ethnicity': 'Germany', 'continent': 'Europe', 'quad_name': 'Margaritifer Sinus', 'quad_code': 'mc19', 'link': 'http://planetarynames.wr.usgs.gov/Feature/15149'}
+Names: 2055 features by kind {'other': 1457, 'canyon': 303, 'albedo': 126, 'volcano': 120, 'region': 49}
+features.json written
