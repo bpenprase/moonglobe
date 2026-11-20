@@ -1,4 +1,4 @@
-Detail tile report, 2026-11-20 00:30 UTC
+Detail tile report, 2026-11-20 00:41 UTC
 
 Using the standard Mars Trek tile layout (test tile loaded).
   level 0: 2 x 1 tiles of 256 px, 1.42 px/deg
@@ -14,31 +14,30 @@ Using the standard Mars Trek tile layout (test tile loaded).
 Alignment check at level 1 (1024 x 512 px, 8 tiles, 0 missing): correlation 0.498 as is, best 0.498 with a +0.00 deg longitude correction
   fine check: best correlation 0.498 at +0.000 deg
 CORS: Access-Control-Allow-Origin = '*' -> live tiles in the browser ALLOWED
-Curiosity in Gale crater: level 9, 2348 x 2339 px, 81 m/px, 100 tiles, 0 missing, 5.7 s
-Perseverance in Jezero crater: level 9, 1168 x 1108 px, 81 m/px, 25 tiles, 0 missing, 1.5 s
-Spirit in Gusev crater: level 9, 2417 x 2339 px, 81 m/px, 110 tiles, 0 missing, 5.9 s
-Opportunity at Meridiani Planum: level 9, 1109 x 1108 px, 81 m/px, 30 tiles, 0 missing, 1.4 s
-Pathfinder at Ares Vallis: level 9, 1563 x 1477 px, 81 m/px, 49 tiles, 0 missing, 2.6 s
-Viking 1 in Chryse Planitia: level 9, 1596 x 1477 px, 81 m/px, 49 tiles, 0 missing, 2.7 s
-Phoenix in the northern plains: level 9, 3981 x 1477 px, 81 m/px, 102 tiles, 102 missing, 5.3 s
-Zhurong in Utopia Planitia: level 9, 1631 x 1477 px, 81 m/px, 49 tiles, 0 missing, 2.7 s
-Olympus Mons: level 8, 4096 x 3881 px, 193 m/px, 380 tiles, 0 missing, 12.5 s
-Olympus Mons caldera: level 9, 1689 x 1600 px, 81 m/px, 56 tiles, 0 missing, 2.9 s
-Arsia Mons: level 9, 4096 x 4053 px, 118 m/px, 625 tiles, 0 missing, 20.9 s
-Pavonis Mons: level 9, 4096 x 4094 px, 103 m/px, 441 tiles, 0 missing, 18.6 s
-Ascraeus Mons: level 9, 4096 x 4007 px, 120 m/px, 576 tiles, 0 missing, 19.8 s
-Elysium Mons: level 9, 4096 x 3712 px, 113 m/px, 483 tiles, 0 missing, 17.6 s
-Candor and Ophir Chasmata: level 9, 4096 x 4078 px, 128 m/px, 676 tiles, 0 missing, 19.8 s
-Melas Chasma: level 9, 4096 x 4027 px, 129 m/px, 702 tiles, 0 missing, 19.7 s
-Coprates Chasma: level 9, 4096 x 3985 px, 151 m/px, 930 tiles, 0 missing, 23.0 s
-Noctis Labyrinthus: level 9, 4096 x 4071 px, 138 m/px, 784 tiles, 0 missing, 26.1 s
-Kasei Valles: level 8, 4096 x 3708 px, 189 m/px, 342 tiles, 0 missing, 11.7 s
-Nanedi Valles: level 9, 3213 x 3200 px, 81 m/px, 169 tiles, 0 missing, 10.5 s
-Eberswalde delta: level 9, 1886 x 1723 px, 81 m/px, 64 tiles, 0 missing, 3.5 s
-Huygens crater: level 9, 4096 x 3976 px, 136 m/px, 756 tiles, 0 missing, 21.7 s
-Schiaparelli crater: level 9, 4096 x 4091 px, 137 m/px, 784 tiles, 0 missing, 21.8 s
-Holden crater: level 9, 3014 x 2708 px, 81 m/px, 156 tiles, 0 missing, 8.6 s
-Lyot crater: level 9, 4096 x 2607 px, 127 m/px, 442 tiles, 0 missing, 12.9 s
-Endeavour crater: level 9, 739 x 739 px, 81 m/px, 12 tiles, 0 missing, 0.7 s
-Cydonia (the 'Face on Mars'): level 9, 1950 x 1477 px, 81 m/px, 48 tiles, 0 missing, 2.9 s
-Done: 27 regions saved to data/detail/
+Curiosity in Gale crater: level 9, 2348 x 2339 px, 81 m/px, 100 tiles, 0 missing, 7.4 s
+Perseverance in Jezero crater: level 9, 1168 x 1108 px, 81 m/px, 25 tiles, 0 missing, 2.0 s
+Spirit in Gusev crater: level 9, 2417 x 2339 px, 81 m/px, 110 tiles, 0 missing, 7.8 s
+Opportunity at Meridiani Planum: level 9, 1109 x 1108 px, 81 m/px, 30 tiles, 0 missing, 1.9 s
+Pathfinder at Ares Vallis: level 9, 1563 x 1477 px, 81 m/px, 49 tiles, 0 missing, 3.4 s
+Viking 1 in Chryse Planitia: level 9, 1596 x 1477 px, 81 m/px, 49 tiles, 0 missing, 3.7 s
+Zhurong in Utopia Planitia: level 9, 1631 x 1477 px, 81 m/px, 49 tiles, 0 missing, 3.7 s
+Olympus Mons: level 8, 4096 x 3881 px, 193 m/px, 380 tiles, 0 missing, 19.0 s
+Olympus Mons caldera: level 9, 1689 x 1600 px, 81 m/px, 56 tiles, 0 missing, 3.9 s
+Arsia Mons: level 9, 4096 x 4053 px, 118 m/px, 625 tiles, 0 missing, 31.5 s
+Pavonis Mons: level 9, 4096 x 4094 px, 103 m/px, 441 tiles, 0 missing, 26.2 s
+Ascraeus Mons: level 9, 4096 x 4007 px, 120 m/px, 576 tiles, 0 missing, 29.5 s
+Elysium Mons: level 9, 4096 x 3712 px, 113 m/px, 483 tiles, 0 missing, 26.1 s
+Candor and Ophir Chasmata: level 9, 4096 x 4078 px, 128 m/px, 676 tiles, 0 missing, 30.0 s
+Melas Chasma: level 9, 4096 x 4027 px, 129 m/px, 702 tiles, 0 missing, 30.0 s
+Coprates Chasma: level 9, 4096 x 3985 px, 151 m/px, 930 tiles, 0 missing, 37.0 s
+Noctis Labyrinthus: level 9, 4096 x 4071 px, 138 m/px, 784 tiles, 0 missing, 32.5 s
+Kasei Valles: level 8, 4096 x 3708 px, 189 m/px, 342 tiles, 0 missing, 17.5 s
+Nanedi Valles: level 9, 3213 x 3200 px, 81 m/px, 169 tiles, 0 missing, 13.5 s
+Eberswalde delta: level 9, 1886 x 1723 px, 81 m/px, 64 tiles, 0 missing, 4.6 s
+Huygens crater: level 9, 4096 x 3976 px, 136 m/px, 756 tiles, 0 missing, 34.3 s
+Schiaparelli crater: level 9, 4096 x 4091 px, 137 m/px, 784 tiles, 0 missing, 34.1 s
+Holden crater: level 9, 3014 x 2708 px, 81 m/px, 156 tiles, 0 missing, 11.2 s
+Lyot crater: level 9, 4096 x 2607 px, 127 m/px, 442 tiles, 0 missing, 19.4 s
+Endeavour crater: level 9, 739 x 739 px, 81 m/px, 12 tiles, 0 missing, 0.9 s
+Cydonia (the 'Face on Mars'): level 9, 1950 x 1477 px, 81 m/px, 48 tiles, 0 missing, 3.8 s
+Done: 26 regions saved to data/detail/

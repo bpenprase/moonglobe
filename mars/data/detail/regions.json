@@ -200,21 +200,6 @@
    "size_km": 120
   },
   {
-   "name": "Phoenix in the northern plains",
-   "group": "Landing sites",
-   "file": "phoenix-in-the-northern-plains.jpg",
-   "lat": 68.22,
-   "lon": -125.75,
-   "west": -128.48346,
-   "north": 69.23423,
-   "wdeg": 5.46693,
-   "hdeg": 2.02847,
-   "w": 3981,
-   "h": 1477,
-   "m_per_px": 81,
-   "size_km": 120
-  },
-  {
    "name": "Zhurong in Utopia Planitia",
    "group": "Landing sites",
    "file": "zhurong-in-utopia-planitia.jpg",
