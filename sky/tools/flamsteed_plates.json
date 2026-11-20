@@ -1,0 +1,747 @@
+{
+ "_help": "The 25 constellation plates of Flamsteed's Atlas Coelestis (1729), numbered as in the Wikimedia Commons set 'Atlas Coelestis by John Flamsteed (1729) NNN.jpg' (from RareMaps). title is the engraved title; ra/dec a rough center (J2000 degrees) to start the fit; cons are the IAU constellations whose figures are taken from this plate. proj 'polar' marks the plate drawn around the north celestial pole. frame: the four corners (top-left, top-right, bottom-right, bottom-left) of the map area inside the graduated border, in pixels of the 3840-px photograph, measured by eye.",
+ "plates": [
+  {
+   "n": "009",
+   "title": "Aries",
+   "ra": 40,
+   "dec": 20,
+   "cons": [
+    "Ari"
+   ],
+   "frame": [
+    [
+     722,
+     290
+    ],
+    [
+     3514,
+     280
+    ],
+    [
+     3514,
+     2455
+    ],
+    [
+     722,
+     2460
+    ]
+   ]
+  },
+  {
+   "n": "010",
+   "title": "Taurus",
+   "ra": 72,
+   "dec": 17,
+   "cons": [
+    "Tau"
+   ],
+   "frame": [
+    [
+     700,
+     255
+    ],
+    [
+     3500,
+     250
+    ],
+    [
+     3500,
+     2515
+    ],
+    [
+     700,
+     2520
+    ]
+   ]
+  },
+  {
+   "n": "011",
+   "title": "Gemini",
+   "ra": 105,
+   "dec": 22,
+   "cons": [
+    "Gem"
+   ],
+   "frame": [
+    [
+     710,
+     262
+    ],
+    [
+     3525,
+     262
+    ],
+    [
+     3525,
+     2495
+    ],
+    [
+     710,
+     2500
+    ]
+   ]
+  },
+  {
+   "n": "012",
+   "title": "Cancer",
+   "ra": 130,
+   "dec": 20,
+   "cons": [
+    "Cnc"
+   ],
+   "frame": [
+    [
+     684,
+     268
+    ],
+    [
+     3500,
+     262
+    ],
+    [
+     3500,
+     2500
+    ],
+    [
+     684,
+     2505
+    ]
+   ]
+  },
+  {
+   "n": "013",
+   "title": "Leo",
+   "ra": 158,
+   "dec": 12,
+   "cons": [
+    "Leo"
+   ],
+   "frame": [
+    [
+     655,
+     262
+    ],
+    [
+     3462,
+     258
+    ],
+    [
+     3462,
+     2450
+    ],
+    [
+     655,
+     2458
+    ]
+   ]
+  },
+  {
+   "n": "014",
+   "title": "Virgo",
+   "ra": 195,
+   "dec": 0,
+   "cons": [
+    "Vir"
+   ],
+   "start": [
+    195,
+    0.9,
+    48.6,
+    2043
+   ],
+   "aspect": 0.94,
+   "frame": [
+    [
+     730,
+     318
+    ],
+    [
+     3475,
+     300
+    ],
+    [
+     3475,
+     2485
+    ],
+    [
+     730,
+     2490
+    ]
+   ]
+  },
+  {
+   "n": "015",
+   "title": "Libra and Scorpius",
+   "ra": 235,
+   "dec": -20,
+   "cons": [
+    "Lib",
+    "Sco"
+   ],
+   "frame": [
+    [
+     662,
+     240
+    ],
+    [
+     3475,
+     235
+    ],
+    [
+     3475,
+     2475
+    ],
+    [
+     662,
+     2480
+    ]
+   ]
+  },
+  {
+   "n": "016",
+   "title": "Sagittarius",
+   "ra": 285,
+   "dec": -25,
+   "cons": [
+    "Sgr",
+    "CrA"
+   ],
+   "frame": [
+    [
+     635,
+     290
+    ],
+    [
+     3398,
+     275
+    ],
+    [
+     3398,
+     2455
+    ],
+    [
+     635,
+     2460
+    ]
+   ]
+  },
+  {
+   "n": "017",
+   "title": "Aquarius and Capricornus",
+   "ra": 330,
+   "dec": -12,
+   "cons": [
+    "Aqr",
+    "Cap",
+    "PsA"
+   ],
+   "frame": [
+    [
+     492,
+     240
+    ],
+    [
+     3272,
+     240
+    ],
+    [
+     3272,
+     2385
+    ],
+    [
+     492,
+     2390
+    ]
+   ]
+  },
+  {
+   "n": "018",
+   "title": "Pisces",
+   "ra": 5,
+   "dec": 10,
+   "cons": [
+    "Psc"
+   ],
+   "frame": [
+    [
+     692,
+     240
+    ],
+    [
+     3398,
+     240
+    ],
+    [
+     3398,
+     2370
+    ],
+    [
+     692,
+     2375
+    ]
+   ]
+  },
+  {
+   "n": "019",
+   "title": "Cetus",
+   "ra": 25,
+   "dec": -8,
+   "cons": [
+    "Cet"
+   ],
+   "frame": [
+    [
+     607,
+     240
+    ],
+    [
+     3410,
+     238
+    ],
+    [
+     3410,
+     2398
+    ],
+    [
+     607,
+     2400
+    ]
+   ]
+  },
+  {
+   "n": "020",
+   "title": "Eridanus, Orion and Lepus",
+   "ra": 62,
+   "dec": -15,
+   "cons": [
+    "Ori",
+    "Eri",
+    "Lep"
+   ],
+   "frame": [
+    [
+     648,
+     240
+    ],
+    [
+     3410,
+     238
+    ],
+    [
+     3410,
+     2500
+    ],
+    [
+     648,
+     2505
+    ]
+   ]
+  },
+  {
+   "n": "021",
+   "title": "Monoceros, Canis Major and Minor, Navis and Lepus",
+   "ra": 105,
+   "dec": -10,
+   "cons": [
+    "Mon",
+    "CMa",
+    "CMi",
+    "Pup"
+   ],
+   "frame": [
+    [
+     692,
+     212
+    ],
+    [
+     3428,
+     212
+    ],
+    [
+     3428,
+     2475
+    ],
+    [
+     692,
+     2480
+    ]
+   ]
+  },
+  {
+   "n": "022",
+   "title": "Hydra, Crater, Corvus, Sextans and Virgo",
+   "ra": 160,
+   "dec": -18,
+   "cons": [
+    "Hya",
+    "Crt",
+    "Crv",
+    "Sex"
+   ],
+   "scales": [
+    38,
+    41,
+    44,
+    47,
+    50
+   ],
+   "start": [
+    176,
+    -11,
+    35,
+    1882
+   ],
+   "aspect": 0.95,
+   "frame": [
+    [
+     430,
+     175
+    ],
+    [
+     3705,
+     175
+    ],
+    [
+     3705,
+     1735
+    ],
+    [
+     430,
+     1738
+    ]
+   ]
+  },
+  {
+   "n": "023",
+   "title": "Cassiopeia, Cepheus, Ursa Minor and Draco",
+   "proj": "polar",
+   "pole_px": [
+    2490,
+    710
+   ],
+   "scale": 46,
+   "cons": [
+    "Cas",
+    "Cep",
+    "UMi",
+    "Dra"
+   ],
+   "scales": [
+    43,
+    44.5,
+    46,
+    47.5
+   ],
+   "frame": [
+    [
+     530,
+     195
+    ],
+    [
+     3487,
+     190
+    ],
+    [
+     3487,
+     2455
+    ],
+    [
+     530,
+     2460
+    ]
+   ]
+  },
+  {
+   "n": "024",
+   "title": "Andromeda, Perseus and Triangulum",
+   "ra": 28,
+   "dec": 40,
+   "cons": [
+    "And",
+    "Per",
+    "Tri"
+   ],
+   "frame": [
+    [
+     570,
+     252
+    ],
+    [
+     3444,
+     245
+    ],
+    [
+     3444,
+     2425
+    ],
+    [
+     570,
+     2430
+    ]
+   ]
+  },
+  {
+   "n": "025",
+   "title": "Camelopardalis and Auriga",
+   "ra": 85,
+   "dec": 55,
+   "cons": [
+    "Cam",
+    "Aur"
+   ],
+   "frame": [
+    [
+     634,
+     270
+    ],
+    [
+     3448,
+     262
+    ],
+    [
+     3448,
+     2385
+    ],
+    [
+     634,
+     2390
+    ]
+   ]
+  },
+  {
+   "n": "026",
+   "title": "Lynx and Leo Minor",
+   "ra": 125,
+   "dec": 45,
+   "cons": [
+    "Lyn",
+    "LMi"
+   ],
+   "frame": [
+    [
+     538,
+     308
+    ],
+    [
+     3272,
+     300
+    ],
+    [
+     3272,
+     2475
+    ],
+    [
+     538,
+     2480
+    ]
+   ]
+  },
+  {
+   "n": "027",
+   "title": "Ursa Major",
+   "ra": 165,
+   "dec": 50,
+   "cons": [
+    "UMa"
+   ],
+   "start": [
+    160,
+    52.3,
+    44.5,
+    2062
+   ],
+   "frame": [
+    [
+     692,
+     290
+    ],
+    [
+     3448,
+     280
+    ],
+    [
+     3448,
+     2415
+    ],
+    [
+     692,
+     2420
+    ]
+   ]
+  },
+  {
+   "n": "028",
+   "title": "Coma Berenices, Bootes and Canes Venatici",
+   "ra": 210,
+   "dec": 30,
+   "cons": [
+    "Com",
+    "Boo",
+    "CVn"
+   ],
+   "frame": [
+    [
+     684,
+     262
+    ],
+    [
+     3428,
+     258
+    ],
+    [
+     3428,
+     2425
+    ],
+    [
+     684,
+     2430
+    ]
+   ]
+  },
+  {
+   "n": "029",
+   "title": "Hercules, Corona Borealis and Lyra",
+   "ra": 255,
+   "dec": 30,
+   "cons": [
+    "Her",
+    "CrB",
+    "Lyr"
+   ],
+   "frame": [
+    [
+     622,
+     270
+    ],
+    [
+     3398,
+     262
+    ],
+    [
+     3398,
+     2455
+    ],
+    [
+     622,
+     2460
+    ]
+   ]
+  },
+  {
+   "n": "030",
+   "title": "Ophiuchus and Serpens",
+   "ra": 258,
+   "dec": 0,
+   "cons": [
+    "Oph",
+    "Ser"
+   ],
+   "frame": [
+    [
+     692,
+     195
+    ],
+    [
+     3448,
+     188
+    ],
+    [
+     3448,
+     2385
+    ],
+    [
+     692,
+     2390
+    ]
+   ]
+  },
+  {
+   "n": "031",
+   "title": "Aquila, Sagitta, Vulpecula, Delphinus",
+   "ra": 295,
+   "dec": 10,
+   "cons": [
+    "Aql",
+    "Sge",
+    "Vul",
+    "Del",
+    "Sct"
+   ],
+   "frame": [
+    [
+     692,
+     262
+    ],
+    [
+     3398,
+     258
+    ],
+    [
+     3398,
+     2398
+    ],
+    [
+     692,
+     2400
+    ]
+   ]
+  },
+  {
+   "n": "032",
+   "title": "Lyra, Cygnus, Lacerta, Vulpecula and Sagitta",
+   "ra": 310,
+   "dec": 38,
+   "cons": [
+    "Cyg",
+    "Lac"
+   ],
+   "frame": [
+    [
+     738,
+     195
+    ],
+    [
+     3500,
+     188
+    ],
+    [
+     3500,
+     2348
+    ],
+    [
+     738,
+     2352
+    ]
+   ]
+  },
+  {
+   "n": "033",
+   "title": "Pegasus and Equuleus",
+   "ra": 335,
+   "dec": 18,
+   "cons": [
+    "Peg",
+    "Equ"
+   ],
+   "frame": [
+    [
+     634,
+     175
+    ],
+    [
+     3398,
+     170
+    ],
+    [
+     3398,
+     2462
+    ],
+    [
+     634,
+     2465
+    ]
+   ]
+  }
+ ]
+}

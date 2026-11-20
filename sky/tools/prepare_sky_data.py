@@ -113,6 +113,8 @@ for f in load("dsos.14.json")["features"]:
         continue
     lon, lat = f["geometry"]["coordinates"]; ra, dec = ra360(lon), round(lat, 4)
     desig = p["desig"]
+    if not (desig.startswith(("NGC", "IC", "WLM")) or (desig.startswith("PGC") and p["dim"])):
+        continue                       # skip entries from planetary-nebula and dark-nebula catalogs mislabeled as galaxies
     if desig.replace(" ", "") in mngc or any(abs(ra - a) * math.cos(math.radians(dec)) < 0.08 and abs(dec - b) < 0.08 for a, b in mpos):
         continue                       # already in the Messier list
     galaxies.append(dict(id=desig, name=GAL_NAMES.get(desig, ""), type=p["type"], tname=TYPE.get(p["type"], "Galaxy"),

@@ -88,6 +88,33 @@ The same globe for Mars, at `https://bpenprase.github.io/moonglobe/mars/` (each 
 - **The page** `mars/index.html` is generated from the Moon page by `mars/tools/make_mars_page.py`, so improvements to
   the Moon globe can be carried over with one command: `python3 mars/tools/make_mars_page.py`.
 
+## Celestial Sphere Explorer (the `sky/` folder)
+
+The sky as a sphere, at `https://bpenprase.github.io/moonglobe/sky/`. Look out from the center as from Earth
+(**Inside**), or turn it around as an antique celestial globe (**Outside**, mirror-reversed like the real globes).
+
+- **Layers**: star names, constellation figures, IAU constellation boundaries and names, Flamsteed's *Atlas Coelestis*
+  (1729), Messier objects, bright galaxies, other showpiece objects, the Milky Way, the RA/Dec grid, the ecliptic and
+  the galactic equator. Click any star or object for a card with its data and a link to SIMBAD.
+- **Flamsteed's plates**: all 25 constellation plates are placed on the sphere. Each plate was fitted to the
+  Hipparcos catalog by matching its engraved star symbols (about 20 to 100 stars per plate, typically within a few
+  arcminutes), precessing from the 1690 equinox Flamsteed used to J2000. The engraved coordinate grids are removed, and
+  each piece of sky is drawn from one plate, so the figures join up across plate edges. **Engraving** shows the figures
+  as light lines on the night sky; **Printed plate** shows them as dark ink on parchment. The images (about 14 MB)
+  load the first time the layer is turned on.
+
+| Path | What it is |
+|---|---|
+| `sky/index.html` | The app. |
+| `sky/data/stars.json`, `sky/data/sky.json`, `sky/data/milkyway.jpg` | Stars to magnitude 6.5, names, constellations, deep-sky objects and the Milky Way, built by `sky/tools/prepare_sky_data.py` from d3-celestial (BSD license). |
+| `sky/data/flamsteed/` | The 25 plate overlays (`plate_NNN.jpg`: red = engraving, green = mask) and `plates.json`, which ties points of each image to sky positions. |
+| `sky/tools/flamsteed_plates.json` | Plate titles, constellations, rough centers and the measured map frames. |
+| `sky/tools/flamsteed_fit.py` | Fits each plate's star symbols to the catalog (OpenCV, NumPy, SciPy). |
+| `sky/tools/flamsteed_overlay.py` | Removes the grid, assigns sky to plates and writes `sky/data/flamsteed/`. |
+
+The plate photographs come from Wikimedia Commons (RareMaps scans of the 1729 edition, public domain). They are kept on
+the `flamsteed-sources` branch, which the **Fetch Flamsteed plates** workflow fills.
+
 ## Data credits
 
 - Surface: LRO Camera (LROC) Wide Angle Camera mosaic, NASA/GSFC/Arizona State University, distributed in the NASA Scientific Visualization Studio CGI Moon Kit (Ernie Wright).
@@ -97,6 +124,7 @@ The same globe for Mars, at `https://bpenprase.github.io/moonglobe/mars/` (each 
 - Lunar 100: Charles A. Wood, *Sky & Telescope* (April 2004).
 - 3D graphics: three.js (MIT license).
 
+- Sky: star, constellation and deep-sky data from d3-celestial by Olaf Frohn (BSD license), based on Hipparcos, the IAU and the NGC/IC catalogs; plates from John Flamsteed, *Atlas Coelestis* (London, 1729), public domain.
 - Mars: Viking MDIM 2.1 color mosaic (USGS / NASA Ames); THEMIS daytime infrared mosaic (NASA/JPL/Arizona State University); MOLA MEGDR topography (NASA/GSFC, PDS Geosciences Node); IAU Mars nomenclature (USGS); all served through NASA Mars Trek or the PDS.
 
 NASA imagery and data are in the public domain. Please keep the credits above when you reuse the files.

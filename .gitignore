@@ -3,3 +3,5 @@ node_modules/
 _test.html
 .DS_Store
 __pycache__/
+node_modules
+sky/_test.html

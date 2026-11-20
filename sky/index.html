@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Celestial Sphere Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#03050b; --panel:rgba(14,19,32,.86); --line:rgba(160,180,220,.16); --text:#e6ebf5; --muted:#9aa6bd; --gold:#e2b45c;
+  --con:#9cc8ff; --star:#f6ecc9; --bayer:#c9c2ae; --mes:#ff9fb4; --gal:#c9a8ff; --show:#9fe0b8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+#scene{position:fixed;inset:0;display:block;cursor:grab;touch-action:none}
+#scene.drag{cursor:grabbing}
+#labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;white-space:nowrap;pointer-events:auto;cursor:pointer;user-select:none;
+  text-shadow:0 0 3px #000,0 0 6px #000,0 1px 2px #000;will-change:transform}
+.lbl:hover{text-decoration:underline}
+.k-con{color:var(--con);font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:500;opacity:.9}
+.k-star{color:var(--star);font-size:12px}
+.k-bayer{color:var(--bayer);font-size:12px;font-family:Spectral,serif}
+.k-mes{color:var(--mes);font-size:11.5px;font-weight:600}
+.k-gal{color:var(--gal);font-size:11px}
+.k-show{color:var(--show);font-size:11.5px}
+.k-grid{color:var(--gold);font-size:10.5px;opacity:.8;pointer-events:none;font-variant-numeric:tabular-nums}
+.dso::before{content:"";display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px;border:1.5px solid currentColor;border-radius:50%}
+.t-gal::before{width:13px;height:6px;transform:rotate(-25deg);vertical-align:1px}
+.t-oc::before{border-style:dotted}
+.t-gc::before{background:radial-gradient(currentColor 28%,transparent 34%)}
+.t-neb::before{border-radius:2px}
+.t-pn::before{background:radial-gradient(currentColor 22%,transparent 28%)}
+.t-pos::before{border-style:dashed}
+
+#panel{position:fixed;top:14px;left:14px;width:300px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);
+  border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:16px 16px 12px;
+  box-shadow:0 10px 40px rgba(0,0,0,.45);scrollbar-width:thin;transition:transform .25s;z-index:4}
+#panel.hidden{transform:translateX(calc(-100% - 20px))}
+h1{font-family:Spectral,serif;font-weight:600;font-size:23px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:12px;margin-bottom:12px;line-height:1.5}
+.xlink{color:#9cc8ff;text-decoration:none}.xlink:hover{text-decoration:underline}
+.sec{border-top:1px solid var(--line);padding:11px 0 9px}
+.sec h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin:0 0 8px;font-weight:600}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.row label{flex:1}
+.seg{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px Inter,sans-serif;padding:6px 4px;border-radius:7px;cursor:pointer}
+.seg button.on{background:rgba(226,180,92,.18);color:var(--text)}
+.val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:44px;text-align:right}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0;cursor:pointer}
+.chk input{accent-color:var(--gold);width:15px;height:15px;margin:0}
+.chk.off{opacity:.45;cursor:default}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.count{margin-left:auto;color:var(--muted);font-size:11px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);font:500 12px Inter,sans-serif;padding:7px 6px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:rgba(226,180,92,.5)}
+#search{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;color:var(--text);font:14px Inter,sans-serif;padding:9px 11px;outline:none}
+#search:focus{border-color:rgba(226,180,92,.6)}
+#results div{padding:6px 9px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;gap:8px}
+#results div:hover,#results div.sel{background:rgba(226,180,92,.14)}
+#results small{color:var(--muted);margin-left:auto;font-size:11px;white-space:nowrap}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+details{font-size:11.5px;color:var(--muted);line-height:1.5}
+details summary{cursor:pointer;color:var(--text);font-size:12px}
+details a{color:#9cc8ff}
+#toggle{position:fixed;top:14px;left:14px;z-index:5;display:none;background:var(--panel);border:1px solid var(--line);color:var(--text);
+  border-radius:10px;padding:8px 12px;font:600 13px Inter,sans-serif;cursor:pointer}
+#hide{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+#info{position:fixed;top:14px;right:14px;width:310px;background:var(--panel);border:1px solid var(--line);border-radius:14px;z-index:4;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:14px 16px;display:none;box-shadow:0 10px 40px rgba(0,0,0,.45);max-height:calc(100% - 120px);overflow:auto}
+#info h3{font-family:Spectral,serif;font-size:21px;margin:0 22px 2px 0;font-weight:600}
+#info .kind{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
+#info .desc{font-size:13px;line-height:1.5;margin:6px 0}
+#info table{font-size:12.5px;border-collapse:collapse;width:100%}
+#info td{padding:2px 0;vertical-align:top}#info td:first-child{color:var(--muted);width:42%}
+#info a{color:#9cc8ff;font-size:12px}
+#info .x{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+#readout{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);
+  border-radius:999px;padding:7px 16px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;z-index:3;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#readout b{color:var(--text);font-weight:500}
+#zoomCtl{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel);
+  border:1px solid var(--line);border-radius:14px;padding:6px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:3}
+#zoomCtl button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);
+  font:500 22px/1 Inter,sans-serif;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+#zoomCtl button:hover{border-color:rgba(226,180,92,.55)}
+#zoomCtl #zAll{font-size:15px;height:32px}
+#zAlt{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.25;font-variant-numeric:tabular-nums;padding:2px 0;min-width:52px}
+#zAlt b{display:block;color:var(--text);font-weight:500;font-size:11.5px}
+#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);z-index:10;transition:opacity .6s}
+#loader .t{font-family:Spectral,serif;font-size:26px}
+#loader .bar{width:240px;height:3px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+#loader .bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
+#loader .s{font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+#hint{position:fixed;left:50%;top:16px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;transition:opacity 1s;z-index:3}
+@media (max-width:720px){
+  #panel{width:calc(100% - 28px);max-height:58%;top:auto;bottom:14px}
+  #panel.hidden{transform:translateY(calc(100% + 20px))}
+  #info{width:calc(100% - 28px)}
+  #readout{bottom:auto;top:16px;left:auto;right:14px;transform:none;font-size:11px;padding:6px 12px}
+  #hint{display:none}
+  #zoomCtl{bottom:auto;top:56px}
+  #zoomCtl button{width:36px;height:36px}
+}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="labels"></div>
+<div id="loader"><div class="t">Celestial Sphere Explorer</div><div class="bar"><i id="lbar"></i></div><div class="s" id="lstat">Loading the stars</div></div>
+<div id="hint">Drag to look around &middot; scroll or pinch to zoom &middot; click a star or object for details</div>
+
+<button id="toggle">&#9776; Controls</button>
+<aside id="panel">
+  <button id="hide" title="Hide panel">&times;</button>
+  <h1>Celestial Sphere Explorer</h1>
+  <div class="sub">Astronomy 150 &middot; Models of Time and Space<br><a class="xlink" href="../">Explore the Moon</a> &middot; <a class="xlink" href="../mars/">Explore Mars</a></div>
+
+  <div class="sec">
+    <input id="search" placeholder="Find a star, constellation or Messier object" autocomplete="off" spellcheck="false">
+    <div id="results"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Point of view</h2>
+    <div class="seg" id="viewMode"><button data-v="0" class="on">Inside (the sky)</button><button data-v="1">Outside (a globe)</button></div>
+    <div class="note" id="viewNote">You are at the center of the celestial sphere, looking out at the sky as it appears from Earth.</div>
+  </div>
+
+  <div class="sec">
+    <h2>Layers</h2>
+    <label class="chk"><input type="checkbox" id="L-names" checked><span class="sw" style="background:var(--star)"></span>Star names</label>
+    <label class="chk"><input type="checkbox" id="L-lines" checked><span class="sw" style="background:#6fa8dc"></span>Constellation figures</label>
+    <label class="chk"><input type="checkbox" id="L-bounds"><span class="sw" style="background:#c8935a"></span>Constellation boundaries</label>
+    <label class="chk"><input type="checkbox" id="L-con" checked><span class="sw" style="background:var(--con)"></span>Constellation names</label>
+    <label class="chk off" id="flamRow"><input type="checkbox" id="L-flam" disabled><span class="sw" style="background:#d8b98a"></span>Flamsteed's Atlas Coelestis (1729)<span class="count" id="flamNote">coming soon</span></label>
+    <div id="flamOpts" style="display:none;margin:2px 0 8px 22px">
+      <div class="seg" id="flamStyle"><button data-v="0" class="on">Engraving</button><button data-v="1">Printed plate</button></div>
+      <div class="row" style="margin-top:6px"><label>Opacity</label><input type="range" id="flamOp" min="0.2" max="1" step="0.05" value="0.9" style="flex:1;margin-left:8px"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="L-mes" checked><span class="sw" style="background:var(--mes)"></span>Messier objects</label>
+    <label class="chk"><input type="checkbox" id="L-gal" checked><span class="sw" style="background:var(--gal)"></span>Bright galaxies</label>
+    <label class="chk"><input type="checkbox" id="L-show"><span class="sw" style="background:var(--show)"></span>Other bright showpieces</label>
+    <label class="chk"><input type="checkbox" id="L-mw" checked><span class="sw" style="background:#8794b8"></span>Milky Way</label>
+    <label class="chk"><input type="checkbox" id="L-grid" checked><span class="sw" style="background:#4d6fa3"></span>Right ascension &amp; declination grid</label>
+    <label class="chk"><input type="checkbox" id="L-ecl" checked><span class="sw" style="background:#d9b44a"></span>Ecliptic (path of the Sun)</label>
+    <label class="chk"><input type="checkbox" id="L-galeq"><span class="sw" style="background:#b48ad9"></span>Galactic equator</label>
+    <div class="row" style="margin-top:9px"><label>Label density</label><span class="val" id="lblCount"></span></div>
+    <div class="seg" id="density"><button data-v="1.6">Fewer</button><button data-v="1" class="on">Normal</button><button data-v="0.6">More</button></div>
+    <div class="note">Fainter stars and more names appear as you zoom in.</div>
+  </div>
+
+  <div class="sec">
+    <h2>Views</h2>
+    <div class="btns" id="views"></div>
+  </div>
+
+  <div class="sec">
+    <details>
+      <summary>About the data</summary>
+      <p>Stars: Hipparcos catalog positions, magnitudes and colors for the 25,700 stars brighter than magnitude 7.5, with names and Bayer and
+      Flamsteed designations, from the open <a href="https://github.com/ofrohn/d3-celestial" target="_blank" rel="noopener">d3-celestial</a> data set by Olaf Frohn.</p>
+      <p>Constellations: the 88 IAU constellations, their traditional stick figures and their official boundaries. Deep sky: the Messier catalog,
+      galaxies brighter than magnitude 11 and other bright clusters and nebulae. Milky Way outline from the same data set.</p>
+      <p>Coordinates are right ascension and declination for the year 2000.</p>
+    </details>
+  </div>
+</aside>
+
+<div id="info"><button class="x" id="infoX">&times;</button><div id="infoBody"></div></div>
+<div id="readout">Move over the sky to read coordinates</div>
+<div id="zoomCtl" aria-label="Zoom">
+  <button id="zIn" title="Zoom in (+ key). Hold to keep zooming.">+</button>
+  <div id="zAlt" title="Width of the view"><b>&hellip;</b>view</div>
+  <button id="zOut" title="Zoom out (&minus; key). Hold to keep zooming.">&minus;</button>
+  <button id="zAll" title="Show a wide view (0 key)">&#9711;</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const $ = id => document.getElementById(id);
+const DEG = Math.PI / 180;
+let dirty = true;
+
+// ---------------------------------------------------------------- coordinates
+// A direction on the sky (right ascension and declination in degrees) as a point on the unit sphere.
+// Seen from the center, right ascension increases to the left (east), as in the real sky;
+// seen from outside it increases to the right, as on a celestial globe.
+function vec(ra, dec, r = 1) { const c = Math.cos(dec * DEG); return new THREE.Vector3(c * Math.sin(ra * DEG) * r, Math.sin(dec * DEG) * r, c * Math.cos(ra * DEG) * r); }
+function toRaDec(v) { const n = v.clone().normalize(); return { ra: ((Math.atan2(n.x, n.z) / DEG) + 360) % 360, dec: Math.asin(Math.max(-1, Math.min(1, n.y))) / DEG }; }
+const fmtRA = ra => { const h = ra / 15, hh = Math.floor(h), m = (h - hh) * 60, mm = Math.floor(m), ss = Math.round((m - mm) * 60); return `${hh}h ${String(mm).padStart(2, '0')}m ${String(ss % 60).padStart(2, '0')}s`; };
+const fmtDec = dec => { const s = dec < 0 ? '−' : '+', a = Math.abs(dec), d = Math.floor(a), m = Math.round((a - d) * 60); return `${s}${d}° ${String(m % 60).padStart(2, '0')}′`; };
+// standard (x toward RA 0, z toward the north pole) <-> this page's axes
+const fromStd = (x, y, z) => new THREE.Vector3(y, z, x);
+const GAL = [[-0.0548755604, -0.8734370902, -0.4838350155], [0.4941094279, -0.4448296300, 0.7469822445], [-0.8676661490, -0.1980763734, 0.4559837762]];
+
+// ---------------------------------------------------------------- loading helpers
+const setLoad = (f, s) => { $('lbar').style.width = (f * 100).toFixed(0) + '%'; if (s) $('lstat').textContent = s; };
+async function bitmap(blob) {
+  try { return await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
+  catch (e) { return await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(blob); }); }
+}
+
+// ---------------------------------------------------------------- renderer and scene
+const canvas = $('scene');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) {
+  $('lstat').innerHTML = 'This browser has 3D graphics (WebGL) turned off, so the sky cannot be drawn.<br>Try Chrome, Edge, Firefox or Safari with hardware acceleration switched on.';
+  $('lbar').parentNode.style.display = 'none'; throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x03050b);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.001, 100);
+camera.up.set(0, 1, 0);
+
+// view state: where we look (ra, dec), how wide (fov, inside) or how far (dist, outside)
+const view = { ra: 83, dec: 2, fov: 70, dist: 3.2, outside: false };
+
+// ---------------------------------------------------------------- the Milky Way / globe surface
+function sphereGeometry(nx, ny) {
+  const pos = [], uv = [], idx = [];
+  for (let j = 0; j <= ny; j++) { const v = j / ny, dec = 90 - v * 180;
+    for (let i = 0; i <= nx; i++) { const u = i / nx, p = vec(u * 360 - 180, dec); pos.push(p.x, p.y, p.z); uv.push(u, v); } }
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g;
+}
+const mwUniforms = { tex: { value: null }, outside: { value: 0 }, show: { value: 1 } };
+const mwMat = new THREE.ShaderMaterial({
+  uniforms: mwUniforms, side: THREE.DoubleSide, depthWrite: false, transparent: true,
+  vertexShader: `varying vec2 vUv; varying vec3 vN; void main(){ vUv = uv; vN = normalize(normalMatrix * position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tex; uniform float outside, show; varying vec2 vUv; varying vec3 vN;
+    void main(){
+      float m = texture2D(tex, vUv).r * show;
+      vec3 glow = vec3(0.50, 0.56, 0.72) * m;
+      if (outside > 0.5) {                      // the globe: deep blue, with the Milky Way and a soft rim
+        float rim = pow(1.0 - abs(vN.z), 2.5);
+        gl_FragColor = vec4(vec3(0.035, 0.06, 0.13) + glow * 0.38 + vec3(0.08, 0.12, 0.22) * rim, 1.0);
+      } else gl_FragColor = vec4(glow * 0.36, 1.0);
+    }` });
+const mwMesh = new THREE.Mesh(sphereGeometry(256, 128), mwMat);
+mwMesh.renderOrder = 0;
+scene.add(mwMesh);
+
+// ---------------------------------------------------------------- line layers
+function lineLayer(color, opacity, order) {
+  const m = new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+  const L = new THREE.LineSegments(new THREE.BufferGeometry(), m); L.renderOrder = order; L.userData.baseOpacity = opacity; scene.add(L); return L;
+}
+function setSegments(L, pts) { L.geometry.dispose(); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); L.geometry = g; }
+// polyline in (ra, dec): straight in ra/dec (for boundaries, which run along hour circles and parallels) or along great circles
+function pushPolyline(out, pts, greatCircle, step = 1.5) {
+  for (let i = 0; i + 1 < pts.length; i++) {
+    let [ra1, d1] = pts[i], [ra2, d2] = pts[i + 1];
+    if (greatCircle) {
+      const a = vec(ra1, d1), b = vec(ra2, d2), ang = a.angleTo(b) / DEG, n = Math.max(1, Math.ceil(ang / step));
+      let prev = a;
+      for (let k = 1; k <= n; k++) { const q = new THREE.Vector3().copy(a).lerp(b, k / n).normalize(); out.push(prev.x, prev.y, prev.z, q.x, q.y, q.z); prev = q; }
+    } else {
+      let dra = ra2 - ra1; if (dra > 180) dra -= 360; if (dra < -180) dra += 360;
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(dra) * Math.cos(((d1 + d2) / 2) * DEG), Math.abs(d2 - d1)) / step));
+      let prev = vec(ra1, d1);
+      for (let k = 1; k <= n; k++) { const q = vec(ra1 + dra * k / n, d1 + (d2 - d1) * k / n); out.push(prev.x, prev.y, prev.z, q.x, q.y, q.z); prev = q; }
+    }
+  }
+}
+const gridL = lineLayer(0x4d6fa3, 0.30, 1), eqL = lineLayer(0x6f93cc, 0.55, 1), eclL = lineLayer(0xd9b44a, 0.6, 1), galL = lineLayer(0xb48ad9, 0.5, 1);
+const boundL = lineLayer(0xc8935a, 0.42, 2), figL = lineLayer(0x6fa8dc, 0.62, 4);
+{ // grid, equator, ecliptic, galactic equator
+  const g = [], e = [];
+  for (let ra = 0; ra < 360; ra += 15) { const p = []; for (let d = -80; d <= 80; d += 2) p.push([ra, d]); pushPolyline(g, p, false); }
+  for (let d = -80; d <= 80; d += 10) { if (d === 0) continue; const p = []; for (let ra = 0; ra <= 360; ra += 2) p.push([ra, d]); pushPolyline(g, p, false); }
+  const p0 = []; for (let ra = 0; ra <= 360; ra += 2) p0.push([ra, 0]); pushPolyline(e, p0, false);
+  setSegments(gridL, g); setSegments(eqL, e);
+  const ecl = [], eps = 23.4393 * DEG; let prev = null;
+  for (let l = 0; l <= 360; l += 2) { const L = l * DEG, q = fromStd(Math.cos(L), Math.sin(L) * Math.cos(eps), Math.sin(L) * Math.sin(eps)); if (prev) ecl.push(prev.x, prev.y, prev.z, q.x, q.y, q.z); prev = q; }
+  setSegments(eclL, ecl);
+  const ge = []; prev = null;
+  for (let l = 0; l <= 360; l += 2) { const L = l * DEG, gx = Math.cos(L), gy = Math.sin(L);
+    const x = GAL[0][0] * gx + GAL[1][0] * gy, y = GAL[0][1] * gx + GAL[1][1] * gy, z = GAL[0][2] * gx + GAL[1][2] * gy;   // transpose: galactic -> equatorial
+    const q = fromStd(x, y, z); if (prev) ge.push(prev.x, prev.y, prev.z, q.x, q.y, q.z); prev = q; }
+  setSegments(galL, ge); galL.visible = false;
+}
+
+// ---------------------------------------------------------------- stars
+function bvToRGB(bv) {             // B-V color index -> approximate color of the star
+  bv = Math.max(-0.4, Math.min(2.0, bv));
+  const T = 4600 * (1 / (0.92 * bv + 1.7) + 1 / (0.92 * bv + 0.62));
+  let r, g, b; const t = T / 100;
+  r = t <= 66 ? 255 : 329.7 * Math.pow(t - 60, -0.1332);
+  g = t <= 66 ? 99.47 * Math.log(t) - 161.12 : 288.12 * Math.pow(t - 60, -0.0755);
+  b = t >= 66 ? 255 : t <= 19 ? 0 : 138.52 * Math.log(t - 10) - 305.04;
+  const c = [r, g, b].map(x => Math.max(0, Math.min(255, x)) / 255), m = (c[0] + c[1] + c[2]) / 3;
+  return { rgb: c.map(x => m + (x - m) * 0.75), T };
+}
+const starUniforms = { magLimit: { value: 6.5 }, scale: { value: 1 }, pr: { value: renderer.getPixelRatio() } };
+const starMat = new THREE.ShaderMaterial({
+  uniforms: starUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: `attribute float mag; attribute vec3 col; uniform float magLimit, scale, pr; varying vec3 vCol; varying float vA;
+    void main(){
+      float d = magLimit - mag;
+      vA = clamp(d * 0.8 + 0.35, 0.0, 1.0);
+      gl_PointSize = d < -0.3 ? 0.0 : clamp(2.2 + d * 1.45 + max(0.0, d - 4.5) * 2.2, 2.2, 26.0) * scale * pr;
+      vCol = col; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: `varying vec3 vCol; varying float vA;
+    void main(){
+      vec2 p = gl_PointCoord - 0.5; float r = length(p) * 2.0;
+      float core = smoothstep(0.5, 0.05, r), halo = exp(-r * r * 4.5) * 0.7;
+      float a = (core * 1.25 + halo) * vA; if (a < 0.01) discard;
+      gl_FragColor = vec4(mix(vCol, vec3(1.0), core * 0.5) * a, 1.0);
+    }` });
+const starPts = new THREE.Points(new THREE.BufferGeometry(), starMat); starPts.renderOrder = 6; starPts.frustumCulled = false; scene.add(starPts);
+
+// ---------------------------------------------------------------- data
+let stars = [], sky = null;
+const items = [];           // everything that can carry a label or be searched
+const conById = {};
+async function loadAll() {
+  setLoad(0.05, 'Loading the stars');
+  const [sj, kj] = await Promise.all([fetch('data/stars.json').then(r => r.json()), fetch('data/sky.json').then(r => r.json())]);
+  stars = sj; sky = kj;
+  setLoad(0.55, 'Placing the stars');
+  const pos = new Float32Array(stars.length * 3), mag = new Float32Array(stars.length), col = new Float32Array(stars.length * 3);
+  const byHip = new Map();
+  stars.forEach((s, i) => { const v = vec(s[0], s[1]); pos.set([v.x, v.y, v.z], i * 3); mag[i] = s[2]; col.set(bvToRGB(s[3]).rgb, i * 3); byHip.set(s[4], s); });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('mag', new THREE.BufferAttribute(mag, 1)); g.setAttribute('col', new THREE.BufferAttribute(col, 3)); starPts.geometry = g;
+
+  for (const c of sky.constellations) conById[c.id] = c;
+  // named stars
+  const GREEK = { α: 'Alpha', β: 'Beta', γ: 'Gamma', δ: 'Delta', ε: 'Epsilon', ζ: 'Zeta', η: 'Eta', θ: 'Theta', ι: 'Iota', κ: 'Kappa', λ: 'Lambda', μ: 'Mu', ν: 'Nu', ξ: 'Xi', ο: 'Omicron', π: 'Pi', ρ: 'Rho', σ: 'Sigma', τ: 'Tau', υ: 'Upsilon', φ: 'Phi', χ: 'Chi', ψ: 'Psi', ω: 'Omega' };
+  for (const [hipS, [proper, bayer, flam, con]] of Object.entries(sky.names)) {
+    const s = byHip.get(+hipS); if (!s) continue;
+    const C = conById[con], gen = C ? C.gen : con;
+    const desigs = [];
+    if (bayer) desigs.push(`${bayer} ${gen}`);
+    if (flam) desigs.push(`${flam} ${gen}`);
+    const label = proper || (bayer ? bayer : '');
+    const searchName = [proper, bayer && `${bayer} ${con}`, bayer && (GREEK[bayer[0]] || '') + ' ' + gen, flam && `${flam} ${con}`, flam && `${flam} ${gen}`].filter(Boolean).join('|');
+    items.push({ kind: proper ? 'star' : 'bayer', name: proper || desigs[0] || ('HIP ' + hipS), label, ra: s[0], dec: s[1], mag: s[2], bv: s[3], hip: +hipS, con, desigs, lc: searchName.toLowerCase() });
+  }
+  for (const c of sky.constellations) {
+    items.push({ kind: 'con', name: c.name, label: c.name, ra: c.lra, dec: c.ldec, con: c.id, c, mag: -5 + c.rank, lc: [c.name, c.en, c.id, c.gen].join('|').toLowerCase() });
+    const L = []; for (const line of c.lines) pushPolyline(L, line, true); c._lines = L;
+  }
+  const figs = []; for (const c of sky.constellations) figs.push(...c._lines); setSegments(figL, figs);
+  const bnd = []; for (const b of sky.borders) pushPolyline(bnd, b, false); setSegments(boundL, bnd); boundL.visible = false;
+  const tcls = t => ({ s: 'gal', e: 'gal', i: 'gal', s0: 'gal', g: 'gal', sd: 'gal', oc: 'oc', gc: 'gc', pn: 'pn', pos: 'pos' }[t] || 'neb');
+  for (const m of sky.messier) items.push({ kind: 'mes', name: m.id + (m.name ? ' · ' + m.name : ''), label: m.id, ra: m.ra, dec: m.dec, mag: m.mag ?? 9, o: m, t: tcls(m.type), lc: [m.id, m.id.replace('M', 'm '), m.name, m.ngc].join('|').toLowerCase() });
+  for (const m of sky.galaxies) items.push({ kind: 'gal', name: m.name ? `${m.name}` : m.id, label: m.name || m.id, ra: m.ra, dec: m.dec, mag: m.mag, o: m, t: 'gal', lc: [m.id, m.name].join('|').toLowerCase() });
+  for (const m of sky.showpieces) items.push({ kind: 'show', name: m.name || m.id, label: m.name || m.id, ra: m.ra, dec: m.dec, mag: m.mag ?? 4, o: m, t: tcls(m.type), lc: [m.id, m.name].join('|').toLowerCase() });
+  for (const it of items) { const v = vec(it.ra, it.dec); it.x = v.x; it.y = v.y; it.z = v.z; }
+
+  setLoad(0.8, 'Painting the Milky Way');
+  const mwImg = await bitmap(await (await fetch('data/milkyway.jpg')).blob());
+  const t = new THREE.Texture(mwImg); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; mwUniforms.tex.value = t;
+  await loadFlamsteed();
+  setLoad(1, 'Ready');
+  $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 700);
+  setTimeout(() => { $('hint').style.opacity = 0; }, 7000);
+  dirty = true;
+}
+
+// ---------------------------------------------------------------- Flamsteed plates
+// Each plate is an image (red = engraving, green = how much of the plate to show) and a mesh that ties
+// points of the image to J2000 positions, fitted star by star to the engraved symbols (sky/tools).
+const flam = { group: new THREE.Group(), plates: [], loaded: false, style: 0 };
+flam.group.renderOrder = 3; flam.group.visible = false; scene.add(flam.group);
+const paperMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.86, 0.78, 0.62), transparent: true, opacity: 0.9, depthWrite: false, side: THREE.BackSide });
+const paperSphere = new THREE.Mesh(sphereGeometry(96, 48), paperMat);
+paperSphere.scale.setScalar(0.998); paperSphere.renderOrder = 2; paperSphere.visible = false; scene.add(paperSphere);
+const flamUniforms = { opacity: { value: 0.9 }, paper: { value: 0 } };
+const flamVert = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
+const flamFrag = `uniform sampler2D map; uniform float opacity, paper; varying vec2 vUv;
+void main(){
+  if (vUv.x < 0.0 || vUv.x > 1.0 || vUv.y < 0.0 || vUv.y > 1.0) discard;
+  vec4 t = texture2D(map, vUv);
+  float ink = t.r, m = t.g;
+  // engraving: warm lines on the night sky; paper: the printed plate, dark ink on parchment
+  vec3 lineCol = vec3(0.93, 0.80, 0.58);
+  vec3 inkCol = vec3(0.20, 0.14, 0.08);
+  // on paper the parchment is one sphere behind all plates (no seams where plates overlap); plates add ink
+  vec3 col = mix(lineCol, inkCol, paper);
+  float a = ink * m * opacity * mix(1.0, 1.15, paper);
+  if (a < 0.004) discard;
+  gl_FragColor = vec4(col, a);
+}`;
+async function loadFlamsteed() {
+  try {
+    const r = await fetch('data/flamsteed/plates.json'); if (!r.ok) return;
+    const info = await r.json();
+    for (const P of info.plates) {
+      const g = new THREE.BufferGeometry(), nx = P.nx, ny = P.ny, V = P.v;
+      const pos = new Float32Array(nx * ny * 3), uv = new Float32Array(nx * ny * 2), idx = [];
+      for (let k = 0; k < nx * ny; k++) {
+        const v = vec(V[4 * k], V[4 * k + 1], 0.9995); pos[3 * k] = v.x; pos[3 * k + 1] = v.y; pos[3 * k + 2] = v.z;
+        uv[2 * k] = V[4 * k + 2]; uv[2 * k + 1] = V[4 * k + 3];
+      }
+      const ok = k => V[4 * k + 2] > -0.05 && V[4 * k + 2] < 1.05 && V[4 * k + 3] > -0.05 && V[4 * k + 3] < 1.05;
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+        const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
+        if (ok(a) || ok(b) || ok(c) || ok(d)) idx.push(a, c, b, b, c, d);
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx);
+      g.computeBoundingSphere();
+      const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: null }, opacity: flamUniforms.opacity, paper: flamUniforms.paper },
+        vertexShader: flamVert, fragmentShader: flamFrag, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+      mat.depthTest = view.outside;
+      const mesh = new THREE.Mesh(g, mat); mesh.renderOrder = 3; mesh.visible = false; mesh.userData.P = P;
+      flam.group.add(mesh); flam.plates.push(mesh);
+    }
+    $('flamRow').classList.remove('off'); $('L-flam').disabled = false; $('flamNote').textContent = info.plates.length + ' plates';
+    flam.info = info;
+  } catch (e) { console.warn('No Flamsteed plates yet', e); }
+}
+// the images (about 11 MB in all) load the first time the layer is turned on
+function loadFlamsteedImages() {
+  if (flam.loaded || !flam.plates.length) return;
+  flam.loaded = true;
+  let done = 0; const n = flam.plates.length;
+  $('flamNote').textContent = 'loading 0/' + n;
+  for (const mesh of flam.plates) {
+    fetch('data/flamsteed/' + mesh.userData.P.file).then(x => x.blob()).then(bitmap).then(bm => {
+      const t = new THREE.Texture(bm); t.flipY = false; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter;
+      t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true;
+      mesh.material.uniforms.map.value = t; mesh.visible = true; dirty = true;
+    }).catch(e => console.warn(e)).finally(() => { done++; $('flamNote').textContent = done < n ? `loading ${done}/${n}` : n + ' plates'; });
+  }
+}
+
+// ---------------------------------------------------------------- camera from the view state
+function fovV() { const a = camera.aspect; return a >= 1 ? view.fov : 2 * Math.atan(Math.tan(view.fov * DEG / 2) / a) / DEG; }
+function applyView() {
+  const d = vec(view.ra, view.dec);
+  if (view.outside) {
+    camera.fov = 35; camera.position.copy(d).multiplyScalar(view.dist); camera.near = 0.01;
+    camera.up.set(0, 1, 0); camera.lookAt(0, 0, 0);
+  } else {
+    camera.fov = fovV(); camera.position.set(0, 0, 0); camera.near = 0.001;
+    camera.up.set(0, 1, 0); camera.lookAt(d);
+  }
+  camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+}
+// field of view on the sky (degrees across the smaller screen dimension)
+function skyWidth() {
+  if (!view.outside) return view.fov;
+  // outside: where does a ray at the edge of the view meet the globe? (or the globe's edge, if the whole globe fits)
+  const D = view.dist, a = Math.atan(Math.tan(35 * DEG / 2) * Math.min(1, camera.aspect));
+  const disc = 1 - D * D * Math.sin(a) ** 2;
+  if (disc < 0) return 2 * Math.acos(1 / D) / DEG;
+  const t = D * Math.cos(a) - Math.sqrt(disc);
+  return 2 * Math.atan2(t * Math.sin(a), D - t * Math.cos(a)) / DEG;
+}
+
+// ---------------------------------------------------------------- render state for each point of view
+const layers = { names: true, lines: true, bounds: false, con: true, flam: false, mes: true, gal: true, show: false, mw: true, grid: true, ecl: true, galeq: false };
+let density = 1;
+function setDepth(on) {
+  for (const o of [gridL, eqL, eclL, galL, boundL, figL, starPts, ...flam.plates]) { o.material.depthTest = on; o.material.needsUpdate = true; }
+  mwMat.depthWrite = on; mwMat.transparent = !on; mwMat.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending; mwMat.side = on ? THREE.FrontSide : THREE.DoubleSide;
+  mwMesh.scale.setScalar(on ? 0.995 : 1.02); mwMat.needsUpdate = true;
+}
+function updateLayers() {
+  gridL.visible = layers.grid; eqL.visible = layers.grid; eclL.visible = layers.ecl; galL.visible = layers.galeq;
+  boundL.visible = layers.bounds; figL.visible = layers.lines; flam.group.visible = layers.flam;
+  if (layers.flam) loadFlamsteedImages();
+  $('flamOpts').style.display = layers.flam ? '' : 'none';
+  paperSphere.visible = layers.flam && flamUniforms.paper.value > 0;
+  paperSphere.material.side = view.outside ? THREE.FrontSide : THREE.BackSide;
+  mwUniforms.show.value = layers.mw ? 1 : 0; mwUniforms.outside.value = view.outside ? 1 : 0;
+  mwMesh.visible = layers.mw || view.outside;
+  dirty = true;
+}
+
+// ---------------------------------------------------------------- labels
+const labelBox = $('labels'); const pool = []; let used = 0, lastCount = -1;
+function getLabel() {
+  let el = pool[used];
+  if (!el) { el = document.createElement('div'); el.className = 'lbl'; el.addEventListener('click', e => { e.stopPropagation(); if (el._it) select(el._it, true); }); labelBox.appendChild(el); pool.push(el); }
+  used++; el.style.display = ''; return el;
+}
+const tmp = new THREE.Vector3(), camDir = new THREE.Vector3();
+function updateLabels() {
+  used = 0;
+  const W = innerWidth, H = innerHeight, sw = skyWidth();
+  const zoomF = Math.log2(Math.max(1, 70 / sw));                 // 0 at a wide view, grows as you zoom in
+  const out = view.outside, C = camera.position;
+  camera.getWorldDirection(camDir);
+  const nameMag = (out ? 1.6 : 2.2) + zoomF * 1.3 / density;       // faintest star with a proper name that gets a label
+  const bayerMag = sw < 40 ? 3.2 + zoomF * 1.3 / density : -9;
+  const galMag = 8.5 + zoomF * 1.2 / density;
+  const cand = [];
+  for (const it of items) {
+    let pri;
+    if (it.kind === 'con') { if (!layers.con || sw < 6) continue; pri = 9e5 - it.mag; }
+    else if (it.kind === 'star') { if (!layers.names || it.mag > nameMag) continue; pri = 8.6e5 - it.mag * 2e4; }
+    else if (it.kind === 'bayer') { if (!layers.names || it.mag > bayerMag || !it.label) continue; pri = 3e5 - it.mag * 100; }
+    else if (it.kind === 'mes') { if (!layers.mes) continue; pri = 8e5 - it.mag * 10; }
+    else if (it.kind === 'gal') { if (!layers.gal || it.mag > galMag || (sw > 90 && it.mag > 6)) continue; pri = 5e5 - it.mag * 100; }
+    else if (it.kind === 'show') { if (!layers.show) continue; pri = 7.5e5 - (it.mag ?? 5) * 10; }
+    else continue;
+    if (out) { if (it.x * C.x + it.y * C.y + it.z * C.z < 1.02) continue; }      // back of the globe
+    else if (it.x * camDir.x + it.y * camDir.y + it.z * camDir.z < 0.1) continue;  // behind us
+    tmp.set(it.x, it.y, it.z).project(camera);
+    if (tmp.z > 1) continue;
+    const sx = (tmp.x * 0.5 + 0.5) * W, sy = (-tmp.y * 0.5 + 0.5) * H;
+    if (sx < -80 || sx > W + 80 || sy < -20 || sy > H + 20) continue;
+    cand.push({ it, sx, sy, pri });
+  }
+  cand.sort((a, b) => b.pri - a.pri);
+  const maxLabels = Math.round((sw > 90 ? 90 : sw > 40 ? 140 : 200) / Math.sqrt(density));
+  const boxes = [];
+  for (const c of cand) {
+    if (used >= maxLabels) break;
+    const k = c.it.kind, isDso = k === 'mes' || k === 'gal' || k === 'show';
+    const fs = k === 'con' ? 11.5 : 12, txt = c.it.label;
+    const w = txt.length * fs * (k === 'con' ? 0.78 : 0.56) + (isDso ? 16 : 4), h = fs + 4;
+    let x0, y0;
+    if (k === 'con') { x0 = c.sx - w / 2; y0 = c.sy - h / 2; }
+    else if (isDso) { x0 = c.sx - 7; y0 = c.sy - h / 2; }
+    else { x0 = c.sx + 6; y0 = c.sy - h / 2 - 1; }                     // star names sit just right of the star
+    let hit = false;
+    for (const b of boxes) if (x0 < b[2] && x0 + w > b[0] && y0 < b[3] && y0 + h > b[1]) { hit = true; break; }
+    if (hit) continue;
+    boxes.push([x0 - 3, y0 - 2, x0 + w + 3, y0 + h + 2]);
+    const el = getLabel();
+    if (el._it !== c.it) { el._it = c.it; el.textContent = txt; el.className = 'lbl k-' + k + (isDso ? ' dso t-' + c.it.t : ''); }
+    el.style.transform = `translate(${x0.toFixed(1)}px,${y0.toFixed(1)}px)`;
+  }
+  // coordinate labels: hours along the equator, declinations along the meridian nearest the center
+  if (layers.grid && sw < 150) {
+    const put = (ra, dec, text) => {
+      const v = vec(ra, dec);
+      if (out ? v.dot(C) < 1.02 : v.dot(camDir) < 0.2) return;
+      tmp.copy(v).project(camera); const sx = (tmp.x * 0.5 + 0.5) * W, sy = (-tmp.y * 0.5 + 0.5) * H;
+      if (sx < 0 || sx > W || sy < 0 || sy > H || tmp.z > 1) return;
+      const el = getLabel(); el._it = null; el.textContent = text; el.className = 'lbl k-grid';
+      el.style.transform = `translate(${(sx + 3).toFixed(1)}px,${(sy + 2).toFixed(1)}px)`;
+    };
+    const decRow = Math.max(-60, Math.min(60, Math.round(view.dec / 10) * 10));
+    for (let h = 0; h < 24; h++) put(h * 15, decRow === 0 ? 0 : decRow, h + 'h');
+    const raCol = Math.round(view.ra / 15) * 15;
+    for (let d = -80; d <= 80; d += 10) if (d !== 0) put(raCol, d, (d > 0 ? '+' : '−') + Math.abs(d) + '°');
+  }
+  for (let i = used; i < pool.length; i++) { if (pool[i].style.display !== 'none') pool[i].style.display = 'none'; pool[i]._it = undefined; }
+  if (used !== lastCount) { lastCount = used; $('lblCount').textContent = used + ' shown'; }
+}
+
+// ---------------------------------------------------------------- which constellation contains a point
+function inPoly(poly, ra, dec) {
+  // count crossings of the meridian from the point up to the north celestial pole
+  let n = 0, span = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const [r1, d1] = poly[i], [r2, d2] = poly[(i + 1) % poly.length];
+    let a = ((r1 - ra + 540) % 360) - 180, b = ((r2 - ra + 540) % 360) - 180;
+    let dr = b - a; if (dr > 180) dr -= 360; if (dr < -180) dr += 360; span += dr;
+    if ((a <= 0 && a + dr > 0) || (a > 0 && a + dr <= 0)) { const t = -a / dr, dd = d1 + (d2 - d1) * t; if (dd > dec) n++; }
+  }
+  const aroundNorthPole = Math.abs(span) > 300 && poly.reduce((s, p) => s + p[1], 0) > 0;
+  return (n % 2 === 1) !== aroundNorthPole;
+}
+function constellationAt(ra, dec) {
+  for (const c of sky.constellations) for (const p of c.bounds) if (inPoly(p, ra, dec)) return c;
+  return null;
+}
+
+// ---------------------------------------------------------------- info cards
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function colorWord(T) { return T > 25000 ? 'blue' : T > 10000 ? 'blue-white' : T > 7500 ? 'white' : T > 6000 ? 'yellow-white' : T > 5200 ? 'yellow' : T > 3900 ? 'orange' : 'red'; }
+function conName(id) { const c = conById[id]; return c ? `${c.name} (${c.en})` : id; }
+function select(it, fly) {
+  let h = `<h3>${esc(it.name)}</h3>`;
+  if (it.kind === 'star' || it.kind === 'bayer') {
+    const { rgb, T } = bvToRGB(it.bv);
+    h += `<div class="kind">Star in ${esc(conById[it.con]?.name || it.con)}</div><table>`;
+    if (it.desigs.length) h += `<tr><td>Designation</td><td>${it.desigs.map(esc).join('<br>')}</td></tr>`;
+    h += `<tr><td>Brightness</td><td>magnitude ${it.mag.toFixed(2)}</td></tr>`;
+    h += `<tr><td>Color</td><td><span class="swatch" style="background:rgb(${rgb.map(x => Math.round(x * 255)).join(',')})"></span>${colorWord(T)}, about ${(Math.round(T / 100) * 100).toLocaleString()} K</td></tr>`;
+    h += `<tr><td>Right ascension</td><td>${fmtRA(it.ra)}</td></tr><tr><td>Declination</td><td>${fmtDec(it.dec)}</td></tr><tr><td>Catalog</td><td>HIP ${it.hip}</td></tr></table>`;
+    h += `<div style="margin-top:8px"><a href="https://simbad.cds.unistra.fr/simbad/sim-id?Ident=HIP+${it.hip}" target="_blank" rel="noopener">More in the SIMBAD database &rarr;</a></div>`;
+  } else if (it.kind === 'con') {
+    const c = it.c, bright = items.filter(s => (s.kind === 'star' || s.kind === 'bayer') && s.con === c.id).sort((a, b) => a.mag - b.mag)[0];
+    h += `<div class="kind">Constellation</div><table><tr><td>Meaning</td><td>${esc(c.en)}</td></tr><tr><td>Genitive</td><td>${esc(c.gen)} (as in "Alpha ${esc(c.gen)}")</td></tr>
+      <tr><td>Abbreviation</td><td>${c.id}</td></tr>${bright ? `<tr><td>Brightest star</td><td>${esc(bright.name)} (mag ${bright.mag.toFixed(1)})</td></tr>` : ''}</table>`;
+    const pl = flam.info && flam.info.plates.find(p => p.cons.includes(c.id));
+    if (pl) h += `<div class="desc" style="color:var(--muted);font-size:12px">Drawn in Flamsteed's Atlas Coelestis on the plate "${esc(pl.title)}".</div>`;
+  } else {
+    const o = it.o;
+    h += `<div class="kind">${esc(o.tname)}${it.kind === 'mes' ? ' &middot; Messier catalog' : ''}</div><table>`;
+    if (it.kind === 'mes') h += `<tr><td>Catalog numbers</td><td>${esc(o.id)}${o.ngc ? ', ' + esc(o.ngc) : ''}</td></tr>`;
+    else h += `<tr><td>Catalog number</td><td>${esc(o.id)}</td></tr>`;
+    if (o.mag != null) h += `<tr><td>Brightness</td><td>magnitude ${(+o.mag).toFixed(1)}</td></tr>`;
+    if (o.dim) h += `<tr><td>Apparent size</td><td>${esc(o.dim.replace('x', ' × '))} arcminutes</td></tr>`;
+    const c = constellationAt(it.ra, it.dec);
+    if (c) h += `<tr><td>Constellation</td><td>${esc(c.name)}</td></tr>`;
+    h += `<tr><td>Right ascension</td><td>${fmtRA(it.ra)}</td></tr><tr><td>Declination</td><td>${fmtDec(it.dec)}</td></tr></table>`;
+    const q = it.kind === 'mes' ? o.id.replace('M', 'M ') : o.id;
+    h += `<div style="margin-top:8px"><a href="https://simbad.cds.unistra.fr/simbad/sim-id?Ident=${encodeURIComponent(q)}" target="_blank" rel="noopener">More in the SIMBAD database &rarr;</a></div>`;
+  }
+  $('infoBody').innerHTML = h; $('info').style.display = 'block';
+  if (fly) {
+    const sz = it.kind === 'con' ? 55 : it.kind === 'mes' || it.kind === 'gal' || it.kind === 'show' ? Math.max(4, Math.min(30, (parseFloat(it.o.dim) || 10) / 60 * 6)) : 25;
+    flyTo(it.ra, it.dec, sz);
+  }
+}
+$('infoX').onclick = () => { $('info').style.display = 'none'; };
+
+// ---------------------------------------------------------------- smooth moves
+let anim = null;
+function flyTo(ra, dec, width) {
+  const a = vec(view.ra, view.dec), b = vec(ra, dec);
+  const q = new THREE.Quaternion().setFromUnitVectors(a, b);
+  const f0 = view.outside ? view.dist : view.fov;
+  const f1 = view.outside ? Math.max(1.25, Math.min(6, 1 + 1.6 / Math.tan(Math.min(80, width) * DEG))) : Math.max(2, Math.min(120, width));
+  anim = { t0: performance.now(), dur: 1500, a, q, f0, f1 };
+  zoomGoal = null;
+}
+function stepAnim(now) {
+  if (!anim) return;
+  const t = Math.min(1, (now - anim.t0) / anim.dur), e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+  const p = anim.a.clone().applyQuaternion(new THREE.Quaternion().slerp(anim.q, e)); const rd = toRaDec(p);
+  view.ra = rd.ra; view.dec = Math.max(-89.5, Math.min(89.5, rd.dec));
+  const f = Math.exp(Math.log(anim.f0) + (Math.log(anim.f1) - Math.log(anim.f0)) * e);
+  if (view.outside) view.dist = f; else view.fov = f;
+  dirty = true; if (t >= 1) anim = null;
+}
+
+// ---------------------------------------------------------------- dragging, wheel and pinch
+const ptrs = new Map(); let drag = null, vel = { ra: 0, dec: 0 }, pinch0 = null, downAt = null;
+function degPerPx() {
+  const H = Math.min(innerWidth, innerHeight);
+  if (!view.outside) return view.fov / H;
+  const rpx = (innerHeight / 2) / (Math.sqrt(view.dist * view.dist - 1) * Math.tan(35 * DEG / 2));
+  return 57.3 / rpx;
+}
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  anim = null; zoomGoal = null; vel = { ra: 0, dec: 0 };
+  if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, t: performance.now() }; downAt = [e.clientX, e.clientY]; canvas.classList.add('drag'); }
+  if (ptrs.size === 2) { const [p, q] = [...ptrs.values()]; pinch0 = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), fov: view.fov, dist: view.dist }; drag = null; }
+});
+canvas.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch0 && ptrs.size === 2) {
+    const [p, q] = [...ptrs.values()], f = pinch0.d / Math.max(10, Math.hypot(p[0] - q[0], p[1] - q[1]));
+    if (view.outside) view.dist = clampDist(1 + (pinch0.dist - 1) * f); else view.fov = clampFov(pinch0.fov * f);
+    dirty = true; return;
+  }
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y, now = performance.now(), dt = Math.max(1, now - drag.t);
+    const k = degPerPx(), cd = Math.max(0.12, Math.cos(view.dec * DEG));
+    const dra = (view.outside ? -dx : dx) * k / cd, ddec = dy * k * (view.outside ? 1 : 1);
+    view.ra = (view.ra + dra + 360) % 360; view.dec = Math.max(-89.5, Math.min(89.5, view.dec + ddec));
+    vel = { ra: dra / dt * 16, dec: ddec / dt * 16 };
+    drag = { x: e.clientX, y: e.clientY, t: now }; dirty = true;
+  }
+  hover(e);
+});
+const endPtr = e => {
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinch0 = null;
+  if (ptrs.size === 0) {
+    canvas.classList.remove('drag');
+    if (drag && performance.now() - drag.t > 80) vel = { ra: 0, dec: 0 };
+    drag = null;
+    if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5) clickAt(e);
+    downAt = null;
+  }
+};
+canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+const clampFov = f => Math.max(1.5, Math.min(130, f));
+const clampDist = d => Math.max(1.12, Math.min(8, d));
+canvas.addEventListener('wheel', e => {
+  e.preventDefault(); anim = null; zoomGoal = null;
+  const f = Math.pow(1.0012, e.deltaY * (e.deltaMode === 1 ? 30 : 1));
+  if (view.outside) view.dist = clampDist(1 + (view.dist - 1) * f); else view.fov = clampFov(view.fov * f);
+  dirty = true;
+}, { passive: false });
+
+// ---------------------------------------------------------------- zoom buttons
+let zoomGoal = null;
+function zoomBy(f) {
+  anim = null;
+  const cur = zoomGoal ?? (view.outside ? view.dist - 1 : view.fov);
+  zoomGoal = view.outside ? clampDist(1 + cur * f) - 1 : clampFov(cur * f);
+}
+function holdZoom(btn, f) {
+  let timer = null; const stop = () => { clearInterval(timer); timer = null; };
+  btn.addEventListener('pointerdown', e => { e.preventDefault(); zoomBy(f); stop(); timer = setInterval(() => zoomBy(Math.pow(f, 0.45)), 160); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(ev, stop);
+  btn.addEventListener('click', e => { if (e.detail === 0) zoomBy(f); });
+}
+holdZoom($('zIn'), 0.6); holdZoom($('zOut'), 1 / 0.6);
+const wide = () => flyTo(view.ra, view.dec, view.outside ? 120 : 90);
+$('zAll').onclick = wide;
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '+' || e.key === '=') zoomBy(0.6); else if (e.key === '-' || e.key === '_') zoomBy(1 / 0.6); else if (e.key === '0') wide();
+});
+let lastT = 0;
+function stepMotion(now) {
+  const dt = Math.min(0.25, Math.max(0, (now - lastT) / 1000)); lastT = now;
+  if (zoomGoal !== null) {
+    const cur = view.outside ? view.dist - 1 : view.fov;
+    let n = zoomGoal + (cur - zoomGoal) * Math.exp(-dt / 0.11);
+    if (Math.abs(n - zoomGoal) < zoomGoal * 0.003) { n = zoomGoal; zoomGoal = null; }
+    if (view.outside) view.dist = 1 + n; else view.fov = n;
+    dirty = true;
+  }
+  if (!drag && (Math.abs(vel.ra) > 1e-4 || Math.abs(vel.dec) > 1e-4)) {          // gentle coasting after a flick
+    view.ra = (view.ra + vel.ra + 360) % 360; view.dec = Math.max(-89.5, Math.min(89.5, view.dec + vel.dec));
+    const k = Math.exp(-dt / 0.25); vel.ra *= k; vel.dec *= k; dirty = true;
+  }
+}
+
+// ---------------------------------------------------------------- pointing: readout and clicking
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), unitSphere = new THREE.Sphere(new THREE.Vector3(), 1), hitP = new THREE.Vector3();
+function skyAt(e) {
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  if (!view.outside) return toRaDec(ray.ray.direction);
+  return ray.ray.intersectSphere(unitSphere, hitP) ? toRaDec(hitP) : null;
+}
+let lastHover = 0;
+function hover(e) {
+  const now = performance.now(); if (now - lastHover < 50 || !sky) return; lastHover = now;
+  const p = skyAt(e); if (!p) { $('readout').innerHTML = 'Move over the sky to read coordinates'; return; }
+  const c = constellationAt(p.ra, p.dec);
+  $('readout').innerHTML = `RA <b>${fmtRA(p.ra)}</b> &nbsp; Dec <b>${fmtDec(p.dec)}</b>${c ? ` &nbsp; in <b>${esc(c.name)}</b>` : ''}`;
+}
+function clickAt(e) {
+  if (!sky) return;
+  // nearest star or object within a few pixels
+  let best = null, bd = 14;
+  const consider = (it) => {
+    if (view.outside ? (it.x * camera.position.x + it.y * camera.position.y + it.z * camera.position.z < 1.0) : (it.x * camDir.x + it.y * camDir.y + it.z * camDir.z < 0.1)) return;
+    tmp.set(it.x, it.y, it.z).project(camera); if (tmp.z > 1) return;
+    const sx = (tmp.x * 0.5 + 0.5) * innerWidth, sy = (-tmp.y * 0.5 + 0.5) * innerHeight, d = Math.hypot(sx - e.clientX, sy - e.clientY);
+    if (d < bd) { bd = d; best = it; }
+  };
+  for (const it of items) if (it.kind !== 'con') consider(it);
+  if (best) return select(best, false);
+  const p = skyAt(e); if (!p) return;
+  const c = constellationAt(p.ra, p.dec);
+  if (c) select(items.find(i => i.kind === 'con' && i.con === c.id), false);
+}
+
+// ---------------------------------------------------------------- search
+const sInput = $('search'), sRes = $('results'); let sList = [], sSel = 0;
+function kindText(it) { return { star: 'Star', bayer: 'Star', con: 'Constellation', mes: 'Messier object', gal: 'Galaxy', show: 'Deep-sky object' }[it.kind]; }
+sInput.addEventListener('input', () => {
+  const q = sInput.value.trim().toLowerCase(); sList = [];
+  if (q.length >= 2 || /^m\d/.test(q)) {
+    const a = [], b = [];
+    for (const it of items) { const parts = it.lc.split('|'); if (parts.some(p => p === q)) a.unshift(it); else if (parts.some(p => p.startsWith(q))) a.push(it); else if (it.lc.includes(q)) b.push(it); }
+    const rank = it => (it.kind === 'con' ? 3 : it.kind === 'mes' ? 2 : it.kind === 'star' ? 1.5 : 1) * 10 - (it.mag ?? 5) * 0.1;
+    a.sort((x, y) => (y.lc.split('|').includes(q) - x.lc.split('|').includes(q)) || rank(y) - rank(x)); b.sort((x, y) => rank(y) - rank(x));
+    sList = a.concat(b).slice(0, 8);
+  }
+  sSel = 0; drawRes();
+});
+function drawRes() { sRes.innerHTML = sList.map((it, i) => `<div data-i="${i}" class="${i === sSel ? 'sel' : ''}"><span>${esc(it.name)}</span><small>${kindText(it)}</small></div>`).join(''); }
+sRes.addEventListener('click', e => { const d = e.target.closest('[data-i]'); if (d) pick(+d.dataset.i); });
+sInput.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { sSel = Math.min(sList.length - 1, sSel + 1); drawRes(); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { sSel = Math.max(0, sSel - 1); drawRes(); e.preventDefault(); }
+  else if (e.key === 'Enter' && sList.length) pick(sSel);
+  else if (e.key === 'Escape') { sList = []; drawRes(); }
+});
+function pick(i) {
+  const it = sList[i]; if (!it) return;
+  const L = { star: 'names', bayer: 'names', con: 'con', mes: 'mes', gal: 'gal', show: 'show' }[it.kind];
+  if (L && !layers[L]) { layers[L] = true; const c = $('L-' + L); if (c) c.checked = true; updateLayers(); }
+  select(it, true); sList = []; drawRes(); sInput.blur();
+}
+
+// ---------------------------------------------------------------- panel
+function seg(id, fn) { const el = $(id); el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(+b.dataset.v); dirty = true; }); }
+seg('density', v => { density = v; });
+seg('viewMode', v => {
+  view.outside = v === 1; setDepth(view.outside);
+  $('viewNote').textContent = view.outside
+    ? 'You are outside the celestial sphere, as with an antique celestial globe. Everything appears mirror-reversed compared with the real sky.'
+    : 'You are at the center of the celestial sphere, looking out at the sky as it appears from Earth.';
+  updateLayers();
+});
+for (const b of $('flamStyle').querySelectorAll('button')) b.onclick = () => {
+  for (const x of $('flamStyle').querySelectorAll('button')) x.classList.toggle('on', x === b);
+  flamUniforms.paper.value = +b.dataset.v; updateLayers(); };
+$('flamOp').oninput = e => { flamUniforms.opacity.value = +e.target.value; paperMat.opacity = +e.target.value; dirty = true; };
+for (const k of Object.keys(layers)) { const c = $('L-' + k); if (!c) continue; c.checked = layers[k]; c.onchange = () => { layers[k] = c.checked; updateLayers(); }; }
+const VIEWS = [['Orion and the Winter Hexagon', 92, 10, 75], ['Big Dipper and Polaris', 175, 65, 70], ['Summer Triangle', 296, 30, 70], ['Southern Cross', 187, -60, 45],
+  ['Center of the Milky Way', 266.4, -29, 50], ['Andromeda Galaxy', 10.7, 41.3, 18], ['Pleiades and Hyades', 61, 20, 22], ['Zodiac in spring', 165, 10, 100]];
+$('views').innerHTML = VIEWS.map((v, i) => `<button class="btn" data-i="${i}">${v[0]}</button>`).join('');
+$('views').onclick = e => { const b = e.target.closest('[data-i]'); if (!b) return; const [, ra, dec, w] = VIEWS[+b.dataset.i]; flyTo(ra, dec, w); };
+$('hide').onclick = () => { $('panel').classList.add('hidden'); $('toggle').style.display = 'block'; };
+$('toggle').onclick = () => { $('panel').classList.remove('hidden'); $('toggle').style.display = 'none'; };
+if (innerWidth < 720) $('hide').click();
+
+// ---------------------------------------------------------------- frame loop
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; starUniforms.pr.value = renderer.getPixelRatio(); dirty = true; });
+let lastZ = '';
+function loop(now) {
+  requestAnimationFrame(loop);
+  stepAnim(now); stepMotion(now);
+  if (!dirty) return;
+  dirty = false;
+  applyView();
+  const sw = skyWidth();
+  starUniforms.magLimit.value = view.outside ? Math.min(6.5, 4.6 + Math.log2(130 / sw) * 0.8) : Math.max(4.8, Math.min(7.5, 6.2 + Math.log2(70 / sw) * 0.9));
+  starUniforms.scale.value = view.outside ? 0.8 : 1;
+  figL.material.opacity = sw < 3 ? 0.35 : 0.62;
+  renderer.render(scene, camera);
+  if (sky) updateLabels();
+  const z = sw >= 10 ? Math.round(sw) + '°' : sw.toFixed(1) + '°';
+  if (z !== lastZ) { lastZ = z; $('zAlt').innerHTML = `<b>${z}</b>${view.outside ? 'on globe' : 'view'}`; }
+}
+setDepth(false); updateLayers();
+requestAnimationFrame(loop);
+loadAll().catch(err => { $('lstat').textContent = 'Could not load the sky data: ' + err.message; console.error(err); });
+</script>
+</body>
+</html>
