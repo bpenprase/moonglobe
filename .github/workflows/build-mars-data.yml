@@ -40,7 +40,7 @@ jobs:
         continue-on-error: true
         run: >
           python tools/fetch_detail_tiles.py --body Mars --layers-json mars/data/layers.json
-          --radius 3389.5 --native-ppd 592.75
+          --radius 3389.5 --native-ppd 592.75 --min-corr 0.3
           --regions mars/tools/detail_regions.json --features mars/data/features.json
           --base mars/data/mars_ir_8k.jpg --out mars/data/detail --report mars/tools/detail_report.txt
           --source "NASA Mars Trek, THEMIS daytime infrared global mosaic, about 100 m per pixel (NASA/JPL/ASU)"

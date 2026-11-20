@@ -41,6 +41,7 @@ ap.add_argument("--radius", type=float, default=1737.4)
 ap.add_argument("--native-ppd", type=float, default=303.0)
 ap.add_argument("--max-level", type=int, default=8)
 ap.add_argument("--lon-shift", type=float, default=0.0)
+ap.add_argument("--min-corr", type=float, default=0.5, help="stop if the tiles match the base map less well than this")
 ap.add_argument("--regions", default=str(ROOT / "tools" / "detail_regions.json"))
 ap.add_argument("--features", default=str(ROOT / "data" / "features.json"))
 ap.add_argument("--base", default=str(ROOT / "data" / "moon_albedo_8k.jpg"))
@@ -226,7 +227,7 @@ def main():
     levels, template = read_layout()
     shift, align_corr = check_alignment(levels, template)
     cors = check_cors(levels, template)
-    if align_corr < 0.5:
+    if align_corr < ARGS.min_corr:
         log("STOPPED: the tiles do not line up with the globe's base map, so nothing was changed.")
         sys.exit(1)
     work = OUT.parent / "detail_new"
