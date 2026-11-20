@@ -19,18 +19,24 @@ The celestial sphere seen from its center by an observer standing on a flat disk
 Sphere Explorer's data (stars, figures, boundaries, Flamsteed's plates, Messier objects and galaxies) and turns the
 sphere for the observer's latitude and the local sidereal time.
 
-- **Observer**: a latitude slider with preset places (the Soka campus, Stonehenge, Chaco Canyon, Giza, Mauna Kea,
+- **Observer**: latitude and longitude sliders with preset places (the Soka campus, Stonehenge, Chaco Canyon, Giza, Mauna Kea,
   the Equator, the poles and others), and buttons to face N, E, S, W or look straight up. The default view faces south.
-- **Date and time**: a date box, a time-of-day slider, and a dial where the Sun can be dragged along the ecliptic to set
-  the date. Time can run forward or backward at several speeds, including a "Days" speed that steps one day at a time
-  at the same hour, so the Sun drifts along the ecliptic while the stars shift about a degree a night.
+- **Date and time**: a time bar at the bottom of the screen with Play, Run backward and a speed menu (real time up to one
+  day per second). "1 day/s" keeps the hour fixed, so the Sun drifts along the ecliptic and the Moon and planets wander
+  among the stars. The panel adds a date box, a time-of-day slider, and a dial where the Sun can be dragged along the
+  ecliptic to set the date; the Moon and planets show as dots on the dial.
+- **Moon and planets**: the Moon is a small globe with the real lunar map, lit by the Sun so its phase is right, and
+  corrected for parallax from the observer's spot. The seven planets show with their colors and brightness. Their cards
+  give phase, distance, magnitude, angle from the Sun, and rising and setting times. Positions come from
+  `horizon/ephem.js` (Paul Schlyter's orbital formulas), which agree with astropy to within 2 arcminutes for the planets
+  and about 5 for the Moon.
 - **Measuring**: the horizon carries N, E, S, W labels and an azimuth scale. Clicking the sky marks a point and shows its
   altitude, azimuth, hour angle and rising, highest and setting times. "Show altitude scale" draws a graduated arc from
   the horizon up to the mark.
 - **Daylight and the ground**: the sky brightens through twilight into day, and the ground can be solid, see-through or
   hidden. Looking down shows a compass rose at the observer's feet and the encircling ocean at the edge of the disk.
-- Times are local mean solar time. The Sun's position uses a standard low-precision formula. Star positions are J2000
-  without precession, and refraction is not included.
+- Times are local mean solar time at the observer's longitude. The sphere is precessed from J2000 to the date shown.
+  Refraction is not included.
 
 # Lunar Globe Explorer
 
