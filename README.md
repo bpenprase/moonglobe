@@ -25,6 +25,9 @@ sphere for the observer's latitude and the local sidereal time.
   day per second). "1 day/s" keeps the hour fixed, so the Sun drifts along the ecliptic and the Moon and planets wander
   among the stars. The panel adds a date box, a time-of-day slider, and a dial where the Sun can be dragged along the
   ecliptic to set the date; the Moon and planets show as dots on the dial.
+- **Sidereal days**: speeds of 1, 10 or 60 sidereal days (23 h 56 m) per second. Each step is one turn of the sky, so
+  the stars hold still while the Sun, Moon and planets move through the constellations. Choosing one turns off daylight
+  and turns on planet trails, which show retrograde loops such as Mars in Leo in early 2027.
 - **Moon and planets**: the Moon is a small globe with the real lunar map, lit by the Sun so its phase is right, and
   corrected for parallax from the observer's spot. The seven planets show with their colors and brightness. Their cards
   give phase, distance, magnitude, angle from the Sun, and rising and setting times. Positions come from
