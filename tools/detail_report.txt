@@ -1,4 +1,4 @@
-Detail tile report, 2026-11-20 00:19 UTC
+Detail tile report, 2026-11-20 00:28 UTC
 
 Using the standard Moon Trek tile layout (test tile loaded).
   level 0: 2 x 1 tiles of 256 px, 1.42 px/deg
@@ -13,35 +13,35 @@ Using the standard Moon Trek tile layout (test tile loaded).
 Alignment check at level 1 (1024 x 512 px, 8 tiles, 0 missing): correlation 0.829 as is, best 0.829 with a +0.00 deg longitude correction
   fine check: best correlation 0.829 at +0.000 deg
 CORS: Access-Control-Allow-Origin = '*' -> live tiles in the browser ALLOWED
-Apollo 11 - Tranquility Base: level 8, 1321 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.6 s
-Apollo 12 - Ocean of Storms: level 8, 1323 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.6 s
-Apollo 14 - Fra Mauro: level 8, 1323 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.6 s
-Apollo 15 - Hadley Rille: level 8, 1872 x 1681 px, 83 m/px, 64 tiles, 0 missing, 2.6 s
-Apollo 16 - Descartes Highlands: level 8, 1337 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.6 s
-Apollo 17 - Taurus-Littrow: level 8, 1407 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.6 s
-Copernicus: level 8, 2436 x 2401 px, 83 m/px, 121 tiles, 0 missing, 5.0 s
-Tycho: level 8, 3135 x 2281 px, 83 m/px, 140 tiles, 0 missing, 6.2 s
-Kepler: level 8, 1577 x 1561 px, 83 m/px, 56 tiles, 0 missing, 2.2 s
-Eratosthenes: level 8, 1736 x 1681 px, 83 m/px, 56 tiles, 0 missing, 2.3 s
-Aristarchus and Vallis Schroteri: level 8, 3459 x 3122 px, 83 m/px, 195 tiles, 0 missing, 8.9 s
-Plato: level 8, 4096 x 2543 px, 87 m/px, 187 tiles, 0 missing, 8.3 s
-Clavius: level 7, 4096 x 2133 px, 178 m/px, 190 tiles, 0 missing, 7.9 s
-Theophilus, Cyrillus and Catharina: level 8, 4096 x 3965 px, 91 m/px, 324 tiles, 0 missing, 13.5 s
-Ptolemaeus, Alphonsus and Arzachel: level 8, 4096 x 3991 px, 108 m/px, 441 tiles, 0 missing, 16.5 s
-Archimedes, Aristillus and Autolycus: level 8, 4096 x 3583 px, 84 m/px, 255 tiles, 0 missing, 11.4 s
-Gassendi: level 8, 2770 x 2642 px, 83 m/px, 144 tiles, 0 missing, 5.9 s
-Petavius: level 8, 3987 x 3602 px, 83 m/px, 255 tiles, 0 missing, 15.9 s
-Langrenus: level 8, 2916 x 2882 px, 83 m/px, 156 tiles, 0 missing, 6.6 s
-Posidonius: level 8, 2828 x 2401 px, 83 m/px, 132 tiles, 0 missing, 5.5 s
-Grimaldi: level 8, 3980 x 3962 px, 83 m/px, 272 tiles, 0 missing, 11.7 s
-Schickard: level 8, 4096 x 2927 px, 113 m/px, 368 tiles, 0 missing, 12.8 s
-Vallis Alpes (Alpine Valley): level 8, 4096 x 2714 px, 96 m/px, 266 tiles, 0 missing, 10.4 s
-Rupes Recta (Straight Wall): level 8, 2590 x 2401 px, 83 m/px, 110 tiles, 0 missing, 4.7 s
-Sinus Iridum (Bay of Rainbows): level 8, 4096 x 2907 px, 131 m/px, 494 tiles, 0 missing, 16.1 s
-Reiner Gamma swirl: level 8, 2664 x 2642 px, 83 m/px, 132 tiles, 0 missing, 5.6 s
-Mare Orientale: level 7, 4096 x 3861 px, 233 m/px, 506 tiles, 0 missing, 18.0 s
-Chang'e 3 / Yutu: level 8, 1840 x 1321 px, 83 m/px, 48 tiles, 0 missing, 2.0 s
-Lunokhod 1 (Luna 17): level 8, 1682 x 1321 px, 83 m/px, 48 tiles, 0 missing, 1.9 s
-Chang'e 4 in Von Karman: level 8, 4096 x 2866 px, 91 m/px, 247 tiles, 0 missing, 10.0 s
-Tsiolkovskiy: level 8, 3843 x 3602 px, 83 m/px, 256 tiles, 0 missing, 10.8 s
+Apollo 11 - Tranquility Base: level 8, 1321 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.4 s
+Apollo 12 - Ocean of Storms: level 8, 1323 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.3 s
+Apollo 14 - Fra Mauro: level 8, 1323 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.3 s
+Apollo 15 - Hadley Rille: level 8, 1872 x 1681 px, 83 m/px, 64 tiles, 0 missing, 2.2 s
+Apollo 16 - Descartes Highlands: level 8, 1337 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.3 s
+Apollo 17 - Taurus-Littrow: level 8, 1407 x 1321 px, 83 m/px, 36 tiles, 0 missing, 1.4 s
+Copernicus: level 8, 2436 x 2401 px, 83 m/px, 121 tiles, 0 missing, 4.3 s
+Tycho: level 8, 3135 x 2281 px, 83 m/px, 140 tiles, 0 missing, 5.3 s
+Kepler: level 8, 1577 x 1561 px, 83 m/px, 56 tiles, 0 missing, 1.9 s
+Eratosthenes: level 8, 1736 x 1681 px, 83 m/px, 56 tiles, 0 missing, 2.0 s
+Aristarchus and Vallis Schroteri: level 8, 3459 x 3122 px, 83 m/px, 195 tiles, 0 missing, 7.3 s
+Plato: level 8, 4096 x 2543 px, 87 m/px, 187 tiles, 0 missing, 7.2 s
+Clavius: level 7, 4096 x 2133 px, 178 m/px, 190 tiles, 0 missing, 6.9 s
+Theophilus, Cyrillus and Catharina: level 8, 4096 x 3965 px, 91 m/px, 324 tiles, 0 missing, 12.1 s
+Ptolemaeus, Alphonsus and Arzachel: level 8, 4096 x 3991 px, 108 m/px, 441 tiles, 0 missing, 14.1 s
+Archimedes, Aristillus and Autolycus: level 8, 4096 x 3583 px, 84 m/px, 255 tiles, 0 missing, 9.8 s
+Gassendi: level 8, 2770 x 2642 px, 83 m/px, 144 tiles, 0 missing, 5.0 s
+Petavius: level 8, 3987 x 3602 px, 83 m/px, 255 tiles, 0 missing, 9.4 s
+Langrenus: level 8, 2916 x 2882 px, 83 m/px, 156 tiles, 0 missing, 5.7 s
+Posidonius: level 8, 2828 x 2401 px, 83 m/px, 132 tiles, 0 missing, 4.7 s
+Grimaldi: level 8, 3980 x 3962 px, 83 m/px, 272 tiles, 0 missing, 10.0 s
+Schickard: level 8, 4096 x 2927 px, 113 m/px, 368 tiles, 0 missing, 11.3 s
+Vallis Alpes (Alpine Valley): level 8, 4096 x 2714 px, 96 m/px, 266 tiles, 0 missing, 9.0 s
+Rupes Recta (Straight Wall): level 8, 2590 x 2401 px, 83 m/px, 110 tiles, 0 missing, 4.1 s
+Sinus Iridum (Bay of Rainbows): level 8, 4096 x 2907 px, 131 m/px, 494 tiles, 0 missing, 13.8 s
+Reiner Gamma swirl: level 8, 2664 x 2642 px, 83 m/px, 132 tiles, 0 missing, 4.8 s
+Mare Orientale: level 7, 4096 x 3861 px, 233 m/px, 506 tiles, 0 missing, 15.6 s
+Chang'e 3 / Yutu: level 8, 1840 x 1321 px, 83 m/px, 48 tiles, 0 missing, 1.6 s
+Lunokhod 1 (Luna 17): level 8, 1682 x 1321 px, 83 m/px, 48 tiles, 0 missing, 1.6 s
+Chang'e 4 in Von Karman: level 8, 4096 x 2866 px, 91 m/px, 247 tiles, 0 missing, 8.9 s
+Tsiolkovskiy: level 8, 3843 x 3602 px, 83 m/px, 256 tiles, 0 missing, 9.2 s
 Done: 31 regions saved to data/detail/
