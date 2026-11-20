@@ -7,10 +7,30 @@ of America. The course is based on the book *Models of Time and Space from Astro
 |---|---|
 | https://bpenprase.github.io/moonglobe/ | The landing page (`index.html`, images in `assets/`) |
 | https://bpenprase.github.io/moonglobe/sky/ | Celestial Sphere Explorer (`sky/`) |
+| https://bpenprase.github.io/moonglobe/horizon/ | Horizon Sky Explorer (`horizon/`, using the data in `sky/data/`) |
 | https://bpenprase.github.io/moonglobe/moon/ | Lunar Globe Explorer (`moon/`, with its data in `data/` and `tools/`) |
 | https://bpenprase.github.io/moonglobe/mars/ | Mars Globe Explorer (`mars/`) |
 
 The Moon globe used to live at the site's root address. Old links to it now open the landing page, one click away.
+
+## Horizon Sky Explorer (the `horizon/` folder)
+
+The celestial sphere seen from its center by an observer standing on a flat disk of Earth. It uses the Celestial
+Sphere Explorer's data (stars, figures, boundaries, Flamsteed's plates, Messier objects and galaxies) and turns the
+sphere for the observer's latitude and the local sidereal time.
+
+- **Observer**: a latitude slider with preset places (the Soka campus, Stonehenge, Chaco Canyon, Giza, Mauna Kea,
+  the Equator, the poles and others), and buttons to face N, E, S, W or look straight up. The default view faces south.
+- **Date and time**: a date box, a time-of-day slider, and a dial where the Sun can be dragged along the ecliptic to set
+  the date. Time can run forward or backward at several speeds, including a "Days" speed that steps one day at a time
+  at the same hour, so the Sun drifts along the ecliptic while the stars shift about a degree a night.
+- **Measuring**: the horizon carries N, E, S, W labels and an azimuth scale. Clicking the sky marks a point and shows its
+  altitude, azimuth, hour angle and rising, highest and setting times. "Show altitude scale" draws a graduated arc from
+  the horizon up to the mark.
+- **Daylight and the ground**: the sky brightens through twilight into day, and the ground can be solid, see-through or
+  hidden. Looking down shows a compass rose at the observer's feet and the encircling ocean at the edge of the disk.
+- Times are local mean solar time. The Sun's position uses a standard low-precision formula. Star positions are J2000
+  without precession, and refraction is not included.
 
 # Lunar Globe Explorer
 

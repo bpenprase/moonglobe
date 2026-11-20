@@ -41,7 +41,7 @@ h2{font-family:Spectral,Georgia,serif;font-weight:500;font-size:clamp(28px,3.4vw
 .book .links{display:flex;gap:8px}
 .book .links a{flex:1;text-align:center;font-size:13px;font-weight:500;text-decoration:none;padding:8px 6px;border-radius:8px;border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.04)}
 .book .links a:hover{border-color:rgba(156,200,255,.5);color:var(--sky)}
-.apps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:28px}
+.apps{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px}
 .app{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;transition:transform .25s ease,border-color .25s ease}
 .app:hover{transform:translateY(-4px);border-color:var(--accent)}
 .app .pic{aspect-ratio:16/10;background:#000 center/cover no-repeat;border-bottom:1px solid var(--line)}
@@ -52,7 +52,7 @@ h2{font-family:Spectral,Georgia,serif;font-weight:500;font-size:clamp(28px,3.4vw
 .app li{padding-left:16px;position:relative;margin:4px 0}
 .app li:before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .app .go{margin-top:auto;font-weight:600;font-size:14.5px;color:var(--accent)}
-.sky{--accent:var(--sky)} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
+.sky{--accent:var(--sky)} .hz{--accent:var(--gold)} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
 .more{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:28px}
 .res{display:block;padding:24px 26px;background:var(--card);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:inherit;transition:border-color .25s}
 .res:hover{border-color:rgba(233,201,143,.5)}
@@ -125,6 +125,19 @@ footer a{color:var(--muted)}
           <li>Messier objects, bright galaxies and the Milky Way</li>
         </ul>
         <span class="go">Open the Celestial Sphere &rarr;</span>
+      </div>
+    </a>
+    <a class="app hz" href="horizon/">
+      <div class="pic" style="background-image:url(assets/app_horizon.jpg)" role="img" aria-label="The western sky at dusk from Aliso Viejo, with Flamsteed's figures and a star's altitude measured"></div>
+      <div class="body">
+        <h3>Horizon Sky</h3>
+        <p>The same sky seen from where we stand, at the center of the sphere on a flat disk of Earth. Set your latitude, the date and the time, and watch the sphere turn overhead.</p>
+        <ul>
+          <li>Latitudes from pole to pole, with famous observing sites</li>
+          <li>Set the date by dragging the Sun along the ecliptic</li>
+          <li>Click the sky to measure altitude and azimuth on a scale</li>
+        </ul>
+        <span class="go">Open the Horizon Sky &rarr;</span>
       </div>
     </a>
     <a class="app moon" href="moon/">
