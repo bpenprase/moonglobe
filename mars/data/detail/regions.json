@@ -2,7 +2,7 @@
  "source": "NASA Mars Trek, THEMIS daytime infrared global mosaic, about 100 m per pixel (NASA/JPL/ASU)",
  "layer": "THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018",
  "updated": "2026-11-20",
- "alignment_correlation": 0.657,
+ "alignment_correlation": 0.498,
  "lon_correction_deg": 0.0,
  "live_tiles": true,
  "template": "https://trek.nasa.gov/tiles/Mars/EQ/THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018/1.0.0/default/default028mm/{TileMatrix}/{TileRow}/{TileCol}.png",
