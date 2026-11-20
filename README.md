@@ -71,6 +71,23 @@ A few minutes later the new close-up is live.
 If Moon Trek allows web pages on other sites to load its tiles (the report says "live tiles ... ALLOWED"),
 the globe also loads live close-ups anywhere you zoom in, not just in the listed regions.
 
+## Mars Globe Explorer (the `mars/` folder)
+
+The same globe for Mars, at `https://bpenprase.github.io/moonglobe/mars/` (each globe links to the other).
+
+- **Maps**: Color (Viking orbiter MDIM 2.1 colorized mosaic), Infrared (Mars Odyssey THEMIS daytime infrared, about
+  100 m per pixel, with polar gaps filled from MOLA shaded relief), Elevation (MOLA laser altimeter), and Blend.
+- **Layers**: landers and rovers (Viking 1 and 2 through Perseverance and Zhurong), volcanoes, canyons and channels,
+  plains and highlands, craters, other landforms, and the classical telescope (albedo) names. About 2,000 IAU names in all,
+  each with the origin of its name.
+- **Close-ups**: 26 regions (landing sites, the Tharsis volcanoes, Valles Marineris, famous craters, Cydonia) with sharp
+  THEMIS images, plus live THEMIS close-ups anywhere you zoom in.
+- **How it is built**: `mars/tools/prepare_mars_data.py` downloads and processes the NASA and USGS data, and
+  `tools/fetch_detail_tiles.py` makes the close-ups. Both run on GitHub through `.github/workflows/build-mars-data.yml`
+  whenever the Mars scripts or `mars/tools/detail_regions.json` change. Reports are written to `mars/tools/*_report.txt`.
+- **The page** `mars/index.html` is generated from the Moon page by `mars/tools/make_mars_page.py`, so improvements to
+  the Moon globe can be carried over with one command: `python3 mars/tools/make_mars_page.py`.
+
 ## Data credits
 
 - Surface: LRO Camera (LROC) Wide Angle Camera mosaic, NASA/GSFC/Arizona State University, distributed in the NASA Scientific Visualization Studio CGI Moon Kit (Ernie Wright).
@@ -79,5 +96,7 @@ the globe also loads live close-ups anywhere you zoom in, not just in the listed
 - Names: IAU Working Group for Planetary System Nomenclature, Gazetteer of Planetary Nomenclature (USGS Astrogeology).
 - Lunar 100: Charles A. Wood, *Sky & Telescope* (April 2004).
 - 3D graphics: three.js (MIT license).
+
+- Mars: Viking MDIM 2.1 color mosaic (USGS / NASA Ames); THEMIS daytime infrared mosaic (NASA/JPL/Arizona State University); MOLA MEGDR topography (NASA/GSFC, PDS Geosciences Node); IAU Mars nomenclature (USGS); all served through NASA Mars Trek or the PDS.
 
 NASA imagery and data are in the public domain. Please keep the credits above when you reuse the files.

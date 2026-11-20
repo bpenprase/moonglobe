@@ -7,7 +7,6 @@
     {"name": "Opportunity at Meridiani Planum", "lat": -2.1, "lon": -5.4, "size_km": 90, "group": "Landing sites"},
     {"name": "Pathfinder at Ares Vallis", "lat": 19.13, "lon": -33.22, "size_km": 120, "group": "Landing sites"},
     {"name": "Viking 1 in Chryse Planitia", "lat": 22.27, "lon": -47.95, "size_km": 120, "group": "Landing sites"},
-    {"name": "Phoenix in the northern plains", "lat": 68.22, "lon": -125.75, "size_km": 120, "group": "Landing sites"},
     {"name": "Zhurong in Utopia Planitia", "lat": 25.07, "lon": 109.93, "size_km": 120, "group": "Landing sites"},
 
     {"name": "Olympus Mons", "feature": "Olympus Mons", "size_km": 750, "group": "Volcanoes"},

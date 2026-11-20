@@ -31,6 +31,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .k-land::before{content:"\25B2";font-size:9px;margin-right:4px;vertical-align:1px}
 .k-det{color:#7fe3ff;font-size:11.5px;font-weight:600}
 .k-det::before{content:"\25A3";font-size:10px;margin-right:4px;vertical-align:0}
+.xlink{color:#ffb68a;text-decoration:none}.xlink:hover{text-decoration:underline}
 .k-grid{color:var(--gold);font-size:10.5px;opacity:.85;pointer-events:none;font-variant-numeric:tabular-nums}
 
 #panel{position:fixed;top:14px;left:14px;width:300px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);
@@ -128,7 +129,7 @@ details a{color:#9cc8ff}
 <aside id="panel">
   <button id="hide" title="Hide panel">&times;</button>
   <h1>Lunar Globe Explorer</h1>
-  <div class="sub">Astronomy 150 &middot; Models of Time and Space</div>
+  <div class="sub">Astronomy 150 &middot; Models of Time and Space &middot; <a class="xlink" href="mars/">Explore Mars &rarr;</a></div>
 
   <div class="sec">
     <input id="search" placeholder="Find a crater, mare or landing site" autocomplete="off" spellcheck="false">
