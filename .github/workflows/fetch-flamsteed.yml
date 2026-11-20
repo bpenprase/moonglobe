@@ -1,0 +1,37 @@
+# Downloads public-domain scans of Flamsteed's Atlas Coelestis from Wikimedia Commons onto the
+# 'flamsteed-sources' branch (kept separate from the published site). Run by hand from the Actions tab
+# or when the script changes.
+name: Fetch Flamsteed plates
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - sky/tools/fetch_flamsteed.py
+      - .github/workflows/fetch-flamsteed.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Find and download the plates
+        run: python sky/tools/fetch_flamsteed.py
+      - name: Save them on the flamsteed-sources branch
+        run: |
+          mv sky_sources /tmp/sky_sources
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan flamsteed-sources
+          mv /tmp/sky_sources .
+          git add sky_sources
+          git commit -m "Flamsteed Atlas Coelestis scans from Wikimedia Commons"
+          git push -f origin flamsteed-sources
