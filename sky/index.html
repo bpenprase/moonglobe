@@ -589,7 +589,7 @@ function select(it, fly) {
     h += `<tr><td>Brightness</td><td>magnitude ${it.mag.toFixed(2)}</td></tr>`;
     h += `<tr><td>Color</td><td><span class="swatch" style="background:rgb(${rgb.map(x => Math.round(x * 255)).join(',')})"></span>${colorWord(T)}, about ${(Math.round(T / 100) * 100).toLocaleString()} K</td></tr>`;
     h += `<tr><td>Right ascension</td><td>${fmtRA(it.ra)}</td></tr><tr><td>Declination</td><td>${fmtDec(it.dec)}</td></tr><tr><td>Catalog</td><td>HIP ${it.hip}</td></tr></table>`;
-    h += `<div style="margin-top:8px"><a href="https://simbad.cds.unistra.fr/simbad/sim-id?Ident=HIP+${it.hip}" target="_blank" rel="noopener">More in the SIMBAD database &rarr;</a></div>`;
+    h += `<div style="margin-top:8px"><a href="https://simbad.cfa.harvard.edu/simbad/sim-id?Ident=HIP+${it.hip}" target="_blank" rel="noopener">More in the SIMBAD database &rarr;</a></div>`;
   } else if (it.kind === 'con') {
     const c = it.c, bright = items.filter(s => (s.kind === 'star' || s.kind === 'bayer') && s.con === c.id).sort((a, b) => a.mag - b.mag)[0];
     h += `<div class="kind">Constellation</div><table><tr><td>Meaning</td><td>${esc(c.en)}</td></tr><tr><td>Genitive</td><td>${esc(c.gen)} (as in "Alpha ${esc(c.gen)}")</td></tr>
@@ -607,7 +607,7 @@ function select(it, fly) {
     if (c) h += `<tr><td>Constellation</td><td>${esc(c.name)}</td></tr>`;
     h += `<tr><td>Right ascension</td><td>${fmtRA(it.ra)}</td></tr><tr><td>Declination</td><td>${fmtDec(it.dec)}</td></tr></table>`;
     const q = it.kind === 'mes' ? o.id.replace('M', 'M ') : o.id;
-    h += `<div style="margin-top:8px"><a href="https://simbad.cds.unistra.fr/simbad/sim-id?Ident=${encodeURIComponent(q)}" target="_blank" rel="noopener">More in the SIMBAD database &rarr;</a></div>`;
+    h += `<div style="margin-top:8px"><a href="https://simbad.cfa.harvard.edu/simbad/sim-id?Ident=${encodeURIComponent(q)}" target="_blank" rel="noopener">More in the SIMBAD database &rarr;</a></div>`;
   }
   $('infoBody').innerHTML = h; $('info').style.display = 'block';
   if (fly) {

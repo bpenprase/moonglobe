@@ -557,7 +557,8 @@ function showGalaxy(g) {
   if (ids.length) h += `<tr><td>Also known as</td><td>${ids.join(', ')}</td></tr>`;
   h += `</table><hr><div style="font-size:11.5px;color:var(--muted)">Brightness in 11 Hubble filters (magnitudes; up is brighter)</div>${sedSVG(g)}`;
   h += `<div class="btns" style="margin-top:6px"><button class="btn" id="cardMark">Mark this galaxy</button><button class="btn" id="cardZoom">Zoom in</button></div>`;
-  h += `<div style="margin-top:8px"><a href="https://simbad.cds.unistra.fr/simbad/sim-coo?Coord=${sky.ra.toFixed(5)}%20${sky.dec.toFixed(5)}&Radius=1&Radius.unit=arcsec" target="_blank" rel="noopener">Look it up in SIMBAD &rarr;</a></div>`;
+  h += `<div style="margin-top:8px"><a href="https://simbad.cfa.harvard.edu/simbad/sim-coo?Coord=${sky.ra.toFixed(5)}%20${sky.dec.toFixed(5)}&Radius=1&Radius.unit=arcsec" target="_blank" rel="noopener">Look it up in SIMBAD &rarr;</a>
+    <div style="font-size:11px;color:var(--muted);margin-top:3px">Opens SIMBAD's catalog entry for this position (UVUDF number ${g.id} is listed there as [RTG2015] ${g.id}).</div></div>`;
   $('infoBody').innerHTML = h; $('info').style.display = 'block';
   $('cardMark').onclick = () => addMark(g.x, g.y, g);
   $('cardZoom').onclick = () => flyTo(g.x, g.y, Math.max(60, g.a * 8));
