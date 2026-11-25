@@ -1,0 +1,38 @@
+# Downloads the Hubble Ultra Deep Field images (ESA/Hubble) and galaxy catalogs (VizieR) onto the
+# 'hudf-sources' branch, kept apart from the published site.
+name: Fetch HUDF sources
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - hudf/tools/fetch_hudf.py
+      - .github/workflows/fetch-hudf.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download images and catalogs
+        run: python hudf/tools/fetch_hudf.py
+      - name: Save them on the hudf-sources branch
+        run: |
+          ls -la hudf_sources
+          find hudf_sources -size +95M -print -delete
+          mv hudf_sources /tmp/hudf_sources
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan hudf-sources
+          mv /tmp/hudf_sources .
+          git add hudf_sources
+          git commit -m "HUDF images (ESA/Hubble) and catalogs (VizieR)"
+          git push -f origin hudf-sources
