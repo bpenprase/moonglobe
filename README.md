@@ -51,7 +51,7 @@ CC BY 4.0) as zoomable tiles, with a catalog overlay.
   redshifts, joined by position and brightness to the MUSE DR2 spectroscopic redshifts, stellar masses and star-formation
   rates (Bacon et al. 2023). 1,675 have spectroscopic redshifts. Outlines are colored by redshift; dashed outlines are
   photometric. Hover for a summary, click for a card with lookback time, age of the universe, size in kpc and a plot of
-  brightness against wavelength. Filters by redshift, kind of redshift and brightness, with a live histogram.
+  brightness against wavelength. Filters by kind of redshift and brightness. Unchecking "All redshifts" gives "Show galaxies with redshifts between [min] and [max]", with quick ranges and a bar chart that can be dragged across to pick a range.
 - **Coordinates**: the press image has none, so `hudf/tools/hudf_wcs.py` matches about 3,800 detected galaxies to the
   catalog and fits a polynomial solution (median error 0.37 px, about 0.01 arcsec). Every pixel then has an RA and Dec.
 - **Marking**: Mark mode numbers clicked galaxies and records pixel position, RA, Dec, catalog number and redshift. Marks
