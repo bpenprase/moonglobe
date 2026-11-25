@@ -41,40 +41,79 @@ CATALOGS = {
     "J/AJ/132/926": "Coe et al. 2006, HUDF photometric redshifts",
     "J/AJ/132/1729": "Beckwith et al. 2006, HUDF ACS catalog",
 }
-# the CDS archive keeps each catalog as plain files (a ReadMe plus fixed-width tables); try several mirrors
-MIRRORS = ["https://cdsarc.cds.unistra.fr/ftp/", "https://cdsarc.u-strasbg.fr/ftp/", "http://vizier.cfa.harvard.edu/ftp/",
-           "https://vizier.nao.ac.jp/ftp/", "http://cdsarc.cds.unistra.fr/ftp/"]
+# VizieR: the "asu-tsv" query returns every table of a catalog as tab-separated text. Try the mirrors in turn.
+VIZ = ["https://vizier.cds.unistra.fr", "http://vizier.cfa.harvard.edu", "https://vizier.cfa.harvard.edu", "http://vizier.nao.ac.jp",
+       "https://vizier.iucaa.in", "http://vizier.china-vo.org", "https://vizier.inasan.ru", "https://vizier.idia.ac.za"]
 import re
-def fetch_cat(cat):
-    for m in MIRRORS:
-        base = m + cat + "/"
+def viz(cat):
+    q = urllib.parse.urlencode({"-source": cat, "-out.all": "", "-out.max": "unlimited", "-out.form": "|"})
+    for m in VIZ:
+        url = f"{m}/viz-bin/asu-tsv?{q}"
         try:
-            readme = get(base + "ReadMe", 60).decode("latin-1")
+            b = get(url, 300).decode("utf-8", "replace")
+            nrows = sum(1 for L in b.splitlines() if L and not L.startswith("#") and not L.startswith("-"))
+            log("  ", m, len(b), "bytes,", nrows, "lines")
+            if nrows > 20:
+                safe = cat.replace("/", "_").replace("+", "p")
+                (OUT / f"viz_{safe}.tsv").write_text(b)
+                return {"mirror": m, "file": f"viz_{safe}.tsv", "lines": nrows}
         except Exception as e:
-            log("  mirror fail", base, e); continue
-        log("  mirror ok", base)
-        safe = cat.replace("/", "_").replace("+", "p")
-        d = OUT / safe; d.mkdir(exist_ok=True)
-        (d / "ReadMe").write_text(readme)
-        # file names from the "File Summary" section
-        files = re.findall(r"^\s*(\S+\.(?:dat|txt|tex|fits|csv))\s", readme, re.M)
-        got = {}
-        for f in dict.fromkeys(files):
-            for name in (f + ".gz", f):
-                try:
-                    b = get(base + name, 600)
-                    (d / name).write_bytes(b); got[name] = len(b); log("   file", name, len(b)); break
-                except Exception as e:
-                    last = e
-            else:
-                log("   file fail", f, last)
-        return {"mirror": base, "dir": safe, "files": got}
+            log("   fail", m, e)
     return None
+
+# archives that keep catalog files as plain files: list one or two levels and take catalog-like files
+CRAWL = ["https://archive.stsci.edu/hlsps/uvudf/", "https://archive.stsci.edu/pub/hlsp/udf/acs-wfc/", "https://archive.stsci.edu/hlsps/udf/",
+         "https://archive.stsci.edu/hlsps/hudf12/", "https://archive.stsci.edu/hlsps/hudf09/", "https://amused.univ-lyon1.fr/data/UDF/HUDF/download/",
+         "https://archive.stsci.edu/hlsps/hlf/", "https://archive.stsci.edu/missions/hlsp/uvudf/"]
+WANT = re.compile(r"(cat|redshift|photz|zphot|specz|z_|bpz|eazy|main).*\.(fits|txt|cat|dat|csv|gz|tbl|ecsv)$", re.I)
+def links(url):
+    try:
+        h = get(url, 60).decode("utf-8", "replace")
+    except Exception as e:
+        log("   list fail", url, e); return []
+    out = []
+    for href in re.findall(r'href="([^"?#]+)"', h):
+        u = urllib.parse.urljoin(url, href)
+        if u.startswith(url) and u != url: out.append(u)
+    return sorted(set(out))
+def size_of(u):
+    try:
+        req = urllib.request.Request(u, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60) as r: return int(r.headers.get("Content-Length") or 0)
+    except Exception: return -1
+def crawl(root, depth=3):
+    found = []
+    todo = [(root, 0)]; seen = set()
+    while todo:
+        u, d = todo.pop(0)
+        if u in seen: continue
+        seen.add(u)
+        for v in links(u):
+            if v.endswith("/"):
+                if d + 1 < depth: todo.append((v, d + 1))
+            else:
+                log("   seen", v)
+                if WANT.search(v.rsplit("/", 1)[-1]): found.append(v)
+        if len(seen) > 60: break
+    got = []
+    for v in found[:40]:
+        n = size_of(v)
+        if 0 < n < 95e6 or n == -1:
+            try:
+                b = get(v, 900); name = re.sub(r"[^A-Za-z0-9._-]", "_", v.split("//", 1)[1]); (OUT / name).write_bytes(b); got.append((name, len(b))); log("   got", v, len(b))
+            except Exception as e:
+                log("   get fail", v, e)
+        else:
+            log("   too big", v, n)
+    return got
 
 info = {}
 for cat, desc in CATALOGS.items():
     log("catalog", cat, desc)
-    r = fetch_cat(cat)
+    r = viz(cat)
     if r: info[cat] = {"desc": desc, **r}
+for root in CRAWL:
+    log("crawl", root)
+    info[root] = crawl(root)
 json.dump(info, open(OUT / "catalogs.json", "w"), indent=1)
 log("done")
