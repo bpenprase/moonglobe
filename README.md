@@ -8,6 +8,7 @@ of America. The course is based on the book *Models of Time and Space from Astro
 | https://bpenprase.github.io/moonglobe/ | The landing page (`index.html`, images in `assets/`) |
 | https://bpenprase.github.io/moonglobe/sky/ | Celestial Sphere Explorer (`sky/`) |
 | https://bpenprase.github.io/moonglobe/horizon/ | Horizon Sky Explorer (`horizon/`, using the data in `sky/data/`) |
+| https://bpenprase.github.io/moonglobe/hudf/ | Hubble Ultra Deep Field Explorer (`hudf/`) |
 | https://bpenprase.github.io/moonglobe/moon/ | Lunar Globe Explorer (`moon/`, with its data in `data/` and `tools/`) |
 | https://bpenprase.github.io/moonglobe/mars/ | Mars Globe Explorer (`mars/`) |
 
@@ -40,6 +41,27 @@ sphere for the observer's latitude and the local sidereal time.
   hidden. Looking down shows a compass rose at the observer's feet and the encircling ocean at the edge of the disk.
 - Times are local mean solar time at the observer's longitude. The sphere is precessed from J2000 to the date shown.
   Refraction is not included.
+
+## Hubble Ultra Deep Field Explorer (the `hudf/` folder)
+
+The 2004 Hubble Ultra Deep Field press image (ESA/Hubble heic0406a, 6200 x 6200 pixels at 0.030 arcsec per pixel,
+CC BY 4.0) as zoomable tiles, with a catalog overlay.
+
+- **Catalog**: 8,724 objects from the UVUDF catalog (Rafelski et al. 2015) with magnitudes in 11 filters and photometric
+  redshifts, joined by position and brightness to the MUSE DR2 spectroscopic redshifts, stellar masses and star-formation
+  rates (Bacon et al. 2023). 1,675 have spectroscopic redshifts. Outlines are colored by redshift; dashed outlines are
+  photometric. Hover for a summary, click for a card with lookback time, age of the universe, size in kpc and a plot of
+  brightness against wavelength. Filters by redshift, kind of redshift and brightness, with a live histogram.
+- **Coordinates**: the press image has none, so `hudf/tools/hudf_wcs.py` matches about 3,800 detected galaxies to the
+  catalog and fits a polynomial solution (median error 0.37 px, about 0.01 arcsec). Every pixel then has an RA and Dec.
+- **Marking**: Mark mode numbers clicked galaxies and records pixel position, RA, Dec, catalog number and redshift. Marks
+  can be named, annotated, kept in the browser and saved as a CSV file.
+- **Measuring**: Measure mode gives the separation of two points in pixels and arcseconds, and in kiloparsecs at the
+  redshift of the galaxy the measurement starts on. Distances use a flat universe with H0 = 67.7 and Omega_m = 0.31.
+
+To rebuild: run the **Fetch HUDF sources** workflow (it fills the `hudf-sources` branch), copy the image and catalog
+files into a folder, then run `python3 hudf/tools/hudf_wcs.py FOLDER` and `python3 hudf/tools/build_hudf.py FOLDER`
+(the UVUDF FITS catalog is saved there as `uvudf_cat.fits`).
 
 # Lunar Globe Explorer
 

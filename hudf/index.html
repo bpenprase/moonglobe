@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hubble Ultra Deep Field Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#020306;--panel:rgba(14,19,32,.88);--line:rgba(160,180,220,.16);--text:#e6ebf5;--muted:#9aa6bd;--gold:#e2b45c;--mark:#7cf0c8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+#viewer{position:fixed;inset:0;background:#000}
+#viewer.markmode, #viewer.markmode *{cursor:crosshair !important}
+#ov{position:fixed;inset:0;pointer-events:none;z-index:2}
+#panel{position:fixed;top:14px;left:14px;width:320px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:16px 16px 12px;box-shadow:0 10px 40px rgba(0,0,0,.45);
+  scrollbar-width:thin;transition:transform .25s;z-index:5}
+#panel.hidden{transform:translateX(calc(-100% - 20px))}
+h1{font-family:Spectral,serif;font-weight:600;font-size:22px;margin:0 0 2px;line-height:1.15}
+.sub{color:var(--muted);font-size:12px;margin:4px 0 12px;line-height:1.5}
+.xlink{color:#9cc8ff;text-decoration:none}.xlink:hover{text-decoration:underline}
+.sec{border-top:1px solid var(--line);padding:11px 0 9px}
+.sec h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin:0 0 8px;font-weight:600}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.row label{flex:1}
+.val{font-variant-numeric:tabular-nums;font-size:12.5px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0;cursor:pointer}
+.chk input{accent-color:var(--gold);width:15px;height:15px;margin:0}
+.seg{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px Inter,sans-serif;padding:6px 4px;border-radius:7px;cursor:pointer}
+.seg button.on{background:rgba(226,180,92,.18);color:var(--text)}
+.btn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);font:500 12.5px Inter,sans-serif;padding:7px 9px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:rgba(226,180,92,.5)}
+.btn.on{background:rgba(124,240,200,.16);border-color:rgba(124,240,200,.7);color:#d9fff2}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btns3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+input[type=range]{width:100%;accent-color:var(--gold);margin:2px 0}
+select{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:var(--text);font:13px Inter,sans-serif;padding:7px 9px;outline:none;color-scheme:dark}
+#search{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;color:var(--text);font:14px Inter,sans-serif;padding:9px 11px;outline:none}
+#search:focus{border-color:rgba(226,180,92,.6)}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+#legend{height:10px;border-radius:5px;margin:8px 0 2px}
+.lticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+#hist{width:100%;height:70px;display:block;margin-top:8px}
+#marks{margin-top:6px;max-height:240px;overflow:auto}
+.mk{display:grid;grid-template-columns:22px 1fr auto;gap:6px;align-items:start;padding:6px 4px;border-radius:8px;font-size:12px;border-bottom:1px solid var(--line)}
+.mk:hover{background:rgba(255,255,255,.04)}
+.mk .n{width:20px;height:20px;border-radius:50%;background:var(--mark);color:#04261b;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mk input{width:100%;background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.15);color:var(--text);font:500 12.5px Inter,sans-serif;padding:1px 0;outline:none}
+.mk small{display:block;color:var(--muted);font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
+.mk .del{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;line-height:1}
+details{font-size:11.5px;color:var(--muted);line-height:1.5}
+details summary{cursor:pointer;color:var(--text);font-size:12px}
+details a{color:#9cc8ff}
+#toggle{position:fixed;top:14px;left:14px;z-index:6;display:none;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 12px;font:600 13px Inter,sans-serif;cursor:pointer}
+#hide{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+#tip{position:fixed;z-index:7;pointer-events:none;background:rgba(10,14,24,.94);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:12px;line-height:1.45;
+  max-width:280px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+#tip b{font-size:13px}
+#tip .zz{font-size:14px;font-weight:600}
+#tip .m{color:var(--muted)}
+#info{position:fixed;top:14px;right:14px;width:340px;background:var(--panel);border:1px solid var(--line);border-radius:14px;z-index:5;backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);padding:14px 16px;display:none;box-shadow:0 10px 40px rgba(0,0,0,.45);max-height:calc(100% - 120px);overflow:auto}
+#info h3{font-family:Spectral,serif;font-size:21px;margin:0 22px 2px 0;font-weight:600}
+#info .kind{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
+#info table{font-size:12.5px;border-collapse:collapse;width:100%}
+#info td{padding:2.5px 0;vertical-align:top}#info td:first-child{color:var(--muted);width:44%}
+#info td:last-child{font-variant-numeric:tabular-nums}
+#info .big td:last-child{color:#ffd27a;font-weight:600;font-size:14px}
+#info hr{border:0;border-top:1px solid var(--line);margin:9px 0}
+#info .x{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer}
+#info a{color:#9cc8ff;font-size:12px}
+#info .desc{font-size:12.5px;line-height:1.5;color:#cfd5e2;margin:6px 0}
+#sed{width:100%;height:120px;display:block;margin:4px 0}
+#readout{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 16px;
+  font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;z-index:4;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#readout b{color:var(--text);font-weight:500}
+#zoomCtl{position:fixed;right:176px;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:6px;z-index:4}
+#zoomCtl button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);font:500 22px/1 Inter,sans-serif;cursor:pointer}
+#zoomCtl button:hover{border-color:rgba(226,180,92,.55)}
+#zoomCtl #zHome{font-size:15px;height:32px}
+#zLvl{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.25;font-variant-numeric:tabular-nums;padding:2px 0;min-width:52px}
+#zLvl b{display:block;color:var(--text);font-weight:500;font-size:11.5px}
+#modeBar{position:fixed;left:50%;top:14px;transform:translateX(-50%);display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;z-index:4}
+#modeBar button{background:none;border:0;color:var(--muted);font:600 12.5px Inter,sans-serif;padding:7px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+#modeBar button.on{background:rgba(226,180,92,.2);color:var(--text)}
+#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--bg);z-index:10;transition:opacity .6s}
+#loader .t{font-family:Spectral,serif;font-size:26px}
+#loader .s{font-size:12px;color:var(--muted)}
+.navigator{border-radius:8px !important;border:1px solid rgba(255,255,255,.25) !important}
+@media (max-width:720px){
+  #zoomCtl{bottom:auto;top:104px;right:14px}
+  .navigator{display:none !important}
+  #panel{width:calc(100% - 28px);max-height:58%;top:auto;bottom:14px}
+  #panel.hidden{transform:translateY(calc(100% + 20px))}
+  #info{width:calc(100% - 28px);top:auto;bottom:14px;max-height:55%}
+  #readout{bottom:auto;top:62px;font-size:10.5px;max-width:calc(100% - 28px);overflow:hidden;text-overflow:ellipsis}
+  #modeBar{left:auto;right:14px;transform:none}
+  #modeBar button{padding:7px 8px;font-size:11.5px}
+  #zoomCtl button{width:36px;height:36px}
+}
+</style>
+</head>
+<body>
+<div id="viewer"></div>
+<canvas id="ov"></canvas>
+<div id="tip"></div>
+<div id="loader"><div class="t">Hubble Ultra Deep Field</div><div class="s" id="lstat">Loading the image and the catalog of galaxies</div></div>
+
+<div id="modeBar" role="toolbar" aria-label="What a click does">
+  <button data-m="inspect" class="on" title="Click a galaxy to see what is known about it">Inspect</button>
+  <button data-m="mark" title="Click to drop a numbered marker and record its position">Mark</button>
+  <button data-m="ruler" title="Click two points to measure the distance between them">Measure</button>
+</div>
+
+<button id="toggle">&#9776; Controls</button>
+<aside id="panel">
+  <button id="hide" title="Hide panel">&times;</button>
+  <h1>Hubble Ultra Deep Field Explorer</h1>
+  <div class="sub"><a class="xlink" href="../">Exploring Space</a> &middot; Astronomy 150 &middot; Models of Time and Space<br>
+  About 10,000 galaxies in a patch of sky one tenth the width of the full Moon, in the constellation Fornax.</div>
+
+  <div class="sec">
+    <input id="search" placeholder="Find: UVUDF or MUSE number, or RA Dec" autocomplete="off" spellcheck="false">
+    <select id="highlights" style="margin-top:7px"><option value="">Go to a highlight&hellip;</option></select>
+  </div>
+
+  <div class="sec">
+    <h2>Catalog overlay</h2>
+    <label class="chk"><input type="checkbox" id="showCat" checked>Show catalog galaxies</label>
+    <label class="chk"><input type="checkbox" id="showLbl">Write redshifts beside galaxies</label>
+    <label class="chk"><input type="checkbox" id="hideStars" checked>Leave out stars</label>
+    <div class="row" style="margin-top:8px"><label>Redshifts to use</label></div>
+    <div class="seg" id="zKind"><button data-v="best" class="on" title="Spectroscopic where known, otherwise photometric">Best</button><button data-v="spec" title="Only galaxies with a measured spectrum">Spectra only</button><button data-v="phot" title="Estimated from colors (BPZ)">Photometric</button></div>
+    <div class="row" style="margin-top:9px"><label>Redshift from</label><span class="val" id="zLoV"></span></div>
+    <input type="range" id="zLo" min="0" max="9" step="0.1" value="0">
+    <div class="row"><label>Redshift up to</label><span class="val" id="zHiV"></span></div>
+    <input type="range" id="zHi" min="0" max="9" step="0.1" value="9">
+    <div class="row"><label>Brighter than</label><span class="val" id="magV"></span></div>
+    <input type="range" id="mag" min="21" max="31" step="0.25" value="31">
+    <div id="legend"></div>
+    <div class="lticks"><span>z = 0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6+</span></div>
+    <canvas id="hist" aria-label="Number of galaxies at each redshift"></canvas>
+    <div class="note" id="countNote"></div>
+  </div>
+
+  <div class="sec">
+    <h2>My marked galaxies</h2>
+    <div class="note" style="margin:0 0 7px">Choose <b>Mark</b> at the top, then click galaxies to number them. Each mark records its pixel position and its right ascension and declination. Your marks stay in this browser.</div>
+    <div class="btns3"><button class="btn" id="mkMode">Mark mode</button><button class="btn" id="mkCsv">Save CSV</button><button class="btn" id="mkClear">Clear all</button></div>
+    <div id="marks"></div>
+  </div>
+
+  <div class="sec">
+    <h2>View</h2>
+    <label class="chk"><input type="checkbox" id="showCompass" checked>Compass and scale bar</label>
+    <label class="chk"><input type="checkbox" id="showNav" checked>Overview map</label>
+    <div class="row" style="margin-top:6px"><label>Brightness</label></div>
+    <input type="range" id="bright" min="0.6" max="2.2" step="0.05" value="1">
+  </div>
+
+  <div class="sec">
+    <details>
+      <summary>About the image and the data</summary>
+      <p>The image is the Hubble Ultra Deep Field released in 2004: about a million seconds of exposure with Hubble's Advanced Camera for Surveys,
+      combining blue, green, red and near-infrared light. Credit: NASA, ESA, S. Beckwith (STScI) and the HUDF Team
+      (<a href="https://esahubble.org/images/heic0406a/" target="_blank" rel="noopener">ESA/Hubble heic0406a</a>, CC BY 4.0).</p>
+      <p>Galaxy positions, brightness in 11 filters, and photometric redshifts come from the UVUDF catalog of
+      <a href="https://ui.adsabs.harvard.edu/abs/2015AJ....150...31R" target="_blank" rel="noopener">Rafelski et al. (2015)</a>.
+      Spectroscopic redshifts, stellar masses and star-formation rates come from the MUSE Hubble Ultra Deep Field survey
+      (<a href="https://ui.adsabs.harvard.edu/abs/2023A%26A...670A...4B" target="_blank" rel="noopener">Bacon et al. 2023</a>) and earlier surveys collected by Rafelski et al.</p>
+      <p>The press image has no coordinates of its own. They were found by matching about 3,800 galaxies in the image to the catalog,
+      which ties each pixel to the sky to about 0.01 arcseconds. Each pixel is 0.030 arcseconds across. Distances and times use a flat
+      universe with H<sub>0</sub> = 67.7 km/s/Mpc and &Omega;<sub>m</sub> = 0.31 (Planck 2018).</p>
+      <p>A <b>photometric redshift</b> is estimated from a galaxy's colors and can be off by 5 to 10 percent, sometimes much more.
+      A <b>spectroscopic redshift</b> is measured from spectral lines and is accurate to better than 0.1 percent.</p>
+    </details>
+  </div>
+</aside>
+
+<div id="info"><button class="x" id="infoX">&times;</button><div id="infoBody"></div></div>
+<div id="readout">Move over the image to read positions</div>
+<div id="zoomCtl">
+  <button id="zIn" title="Zoom in">+</button>
+  <div id="zLvl"><b>1×</b>zoom</div>
+  <button id="zOut" title="Zoom out">&minus;</button>
+  <button id="zHome" title="Show the whole field">&#9711;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/openseadragon@4.1.1/build/openseadragon/openseadragon.min.js"></script>
+<script>
+(async function () {
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const DEG = Math.PI / 180;
+
+// ---------------------------------------------------------------- data
+let CAT, WCS;
+try {
+  [CAT, WCS] = await Promise.all([fetch('data/catalog.json').then(r => r.json()), fetch('data/wcs.json').then(r => r.json())]);
+} catch (e) { $('lstat').textContent = 'Could not load the catalog: ' + e.message; return; }
+const F = Object.fromEntries(CAT.fields.map((f, i) => [f, i]));
+const W = WCS.width, H = WCS.height;
+const G = CAT.rows.map(r => {
+  const o = {}; for (const f of CAT.fields) o[f] = r[F[f]];
+  o.mag = o.mags[5] ?? o.mags[6] ?? o.mags[4] ?? o.mags[10] ?? 99;            // F775W, else neighbours
+  return o;
+});
+const zBest = g => g.zs ?? g.zb;
+
+// ---------------------------------------------------------------- pixels <-> sky
+function terms(u, v, order) { const t = [1]; for (let k = 1; k <= order; k++) for (let j = 0; j <= k; j++) t.push(u ** (k - j) * v ** j); return t; }
+const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+function pxToSky(x, y) {
+  const t = terms((x - W / 2) / WCS.inv_scale, (y - H / 2) / WCS.inv_scale, WCS.inv_order);
+  const xi = dot(t, WCS.ix) / 3600 * DEG, eta = dot(t, WCS.iy) / 3600 * DEG;
+  const a0 = WCS.ra0 * DEG, d0 = WCS.dec0 * DEG, rho = Math.hypot(xi, eta), c = Math.atan(rho);
+  if (rho === 0) return { ra: WCS.ra0, dec: WCS.dec0 };
+  const dec = Math.asin(Math.cos(c) * Math.sin(d0) + eta * Math.sin(c) * Math.cos(d0) / rho);
+  const ra = a0 + Math.atan2(xi * Math.sin(c), rho * Math.cos(d0) * Math.cos(c) - eta * Math.sin(d0) * Math.sin(c));
+  return { ra: ((ra / DEG) + 360) % 360, dec: dec / DEG };
+}
+function skyToPx(ra, dec) {
+  const a = ra * DEG, d = dec * DEG, a0 = WCS.ra0 * DEG, d0 = WCS.dec0 * DEG;
+  const c = Math.sin(d0) * Math.sin(d) + Math.cos(d0) * Math.cos(d) * Math.cos(a - a0);
+  const xi = Math.cos(d) * Math.sin(a - a0) / c / DEG * 3600, eta = (Math.cos(d0) * Math.sin(d) - Math.sin(d0) * Math.cos(d) * Math.cos(a - a0)) / c / DEG * 3600;
+  const t = terms(xi / WCS.fwd_scale, eta / WCS.fwd_scale, WCS.fwd_order);
+  return { x: dot(t, WCS.fx), y: dot(t, WCS.fy) };
+}
+const fmtRA = ra => { const h = ra / 15, hh = Math.floor(h), m = (h - hh) * 60, mm = Math.floor(m), s = (m - mm) * 60; return `${hh}h ${String(mm).padStart(2, '0')}m ${s.toFixed(2).padStart(5, '0')}s`; };
+const fmtDec = dec => { const sg = dec < 0 ? '−' : '+', a = Math.abs(dec), d = Math.floor(a), m = (a - d) * 60, mm = Math.floor(m), s = (m - mm) * 60; return `${sg}${d}° ${String(mm).padStart(2, '0')}′ ${s.toFixed(1).padStart(4, '0')}″`; };
+const PIX = WCS.pixscale;                                                            // arcsec per pixel
+
+// ---------------------------------------------------------------- cosmology (flat, Planck 2018)
+const H0 = 67.7, OM = 0.31, OL = 1 - OM, C = 299792.458, HUBBLE_TIME = 977.792 / H0;   // Gyr
+const E = z => Math.sqrt(OM * (1 + z) ** 3 + OL);
+function integ(f, a, b, n = 400) { const h = (b - a) / n; let s = f(a) + f(b); for (let i = 1; i < n; i++) s += f(a + i * h) * (i % 2 ? 4 : 2); return s * h / 3; }
+// integrals in x = ln(1+z), which keeps the high-redshift end accurate
+const ageAt = z => HUBBLE_TIME * integ(x => 1 / E(Math.expm1(x)), Math.log1p(z), Math.log1p(1e4), 600);
+const AGE0 = ageAt(0);
+function cosmo(z) {
+  const age = ageAt(z), dc = C / H0 * integ(x => Math.exp(x) / E(Math.expm1(x)), 0, Math.log1p(z), 300);   // comoving distance, Mpc
+  return { age, lookback: AGE0 - age, dc, da: dc / (1 + z), dl: dc * (1 + z), kpcPerArcsec: dc / (1 + z) * 1000 * Math.PI / 648000 };
+}
+const fmtGyr = t => t >= 1 ? t.toFixed(t >= 10 ? 1 : 2) + ' billion years' : (t * 1000).toFixed(0) + ' million years';
+
+// ---------------------------------------------------------------- colors by redshift
+const ZSTOPS = [[0, [120, 215, 255]], [1, [110, 231, 168]], [2, [255, 227, 110]], [3, [255, 162, 76]], [4, [255, 93, 93]], [5, [235, 90, 190]], [6, [190, 120, 255]]];
+function zColor(z, a = 1) {
+  if (z == null) return `rgba(200,200,210,${a})`;
+  z = clamp(z, 0, 6); let i = 0; while (i < ZSTOPS.length - 2 && z > ZSTOPS[i + 1][0]) i++;
+  const [z0, c0] = ZSTOPS[i], [z1, c1] = ZSTOPS[i + 1], t = (z - z0) / (z1 - z0);
+  return `rgba(${c0.map((v, k) => Math.round(v + (c1[k] - v) * t)).join(',')},${a})`;
+}
+$('legend').style.background = `linear-gradient(90deg,${ZSTOPS.map(([z, c]) => `rgb(${c.join(',')}) ${(z / 6 * 100).toFixed(0)}%`).join(',')})`;
+
+// ---------------------------------------------------------------- the viewer
+const viewer = OpenSeadragon({
+  id: 'viewer', tileSources: 'data/hudf.dzi', prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@4.1.1/build/openseadragon/images/',
+  showNavigationControl: false, showNavigator: true, navigatorPosition: 'BOTTOM_RIGHT', navigatorHeight: '150px', navigatorWidth: '150px', navigatorAutoFade: false,
+  maxZoomPixelRatio: 6, minZoomImageRatio: 0.8, visibilityRatio: 0.3, animationTime: 0.6, springStiffness: 9, crossOriginPolicy: 'Anonymous',
+  gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true }, gestureSettingsTouch: { clickToZoom: false, dblClickToZoom: true, pinchRotate: false },
+  background: '#000'
+});
+viewer.addOnceHandler('open', () => { $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 700); });
+viewer.addHandler('open-failed', e => { $('lstat').textContent = 'Could not open the image tiles.'; });
+const navEl = () => viewer.navigator && viewer.navigator.element;
+// image <-> screen, from the current viewport (no rotation, so a scale and an offset)
+let VS = { s: 1, ox: 0, oy: 0 };
+function syncVS() {
+  const vp = viewer.viewport, a = vp.imageToViewerElementCoordinates(new OpenSeadragon.Point(0, 0)), b = vp.imageToViewerElementCoordinates(new OpenSeadragon.Point(1000, 0));
+  VS = { s: (b.x - a.x) / 1000, ox: a.x, oy: a.y };
+}
+const toScr = (x, y) => [VS.ox + x * VS.s, VS.oy + y * VS.s];
+const toImg = (sx, sy) => [(sx - VS.ox) / VS.s, (sy - VS.oy) / VS.s];
+
+// ---------------------------------------------------------------- filtering
+const filt = { kind: 'best', zlo: 0, zhi: 9, mag: 31, hideStars: true, show: true, labels: false };
+let shown = [];
+function zFor(g) { return filt.kind === 'spec' ? g.zs : filt.kind === 'phot' ? g.zb : zBest(g); }
+function applyFilter() {
+  shown = G.filter(g => {
+    if (filt.hideStars && g.star) return false;
+    if (g.mag > filt.mag) return false;
+    const z = zFor(g); if (z == null) return false;
+    return z >= filt.zlo && z <= (filt.zhi >= 9 ? 99 : filt.zhi);
+  });
+  shown.sort((a, b) => a.mag - b.mag);
+  buildGrid(); drawHist(); dirty = true;
+  $('countNote').textContent = `${shown.length.toLocaleString()} of ${G.length.toLocaleString()} catalog objects shown` +
+    (filt.kind === 'spec' ? ' (galaxies with measured spectra)' : '');
+}
+// spatial grid of shown objects for fast hover lookups
+const CELL = 64; let grid = new Map();
+function buildGrid() {
+  grid = new Map();
+  for (const g of shown) {
+    const r = Math.max(g.a * 1.6, 6), x0 = Math.floor((g.x - r) / CELL), x1 = Math.floor((g.x + r) / CELL), y0 = Math.floor((g.y - r) / CELL), y1 = Math.floor((g.y + r) / CELL);
+    for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) { const k = i + ',' + j; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(g); }
+  }
+}
+function insideEll(g, x, y, k = 1.6) {
+  const c = Math.cos(g.pa * DEG), s = Math.sin(g.pa * DEG), dx = x - g.x, dy = y - g.y;
+  const u = (dx * c + dy * s) / Math.max(g.a * k, 3), v = (-dx * s + dy * c) / Math.max(g.b * k, 3);
+  return u * u + v * v;
+}
+function pick(x, y, scrTol = 9) {
+  const list = grid.get(Math.floor(x / CELL) + ',' + Math.floor(y / CELL)) || [];
+  let best = null, bv = 1e9;
+  for (const g of list) {
+    if (!visibleAtZoom(g)) continue;
+    const q = insideEll(g, x, y);
+    const dScr = Math.hypot(g.x - x, g.y - y) * VS.s;
+    // inside the outline wins (smallest object first); otherwise the nearest center within a few screen pixels
+    const score = q <= 1 ? q * Math.max(g.a, 3) : dScr <= scrTol ? 100 + dScr : 1e9;
+    if (score < bv) { bv = score; best = g; }
+  }
+  return best;
+}
+// at wide views only the brighter galaxies are drawn, so the overlay stays readable
+const magLimitForZoom = () => clamp(24 + Math.log2(Math.max(VS.s, 1e-3) * 6200 / innerWidth) * 1.6, 24, 32);
+const visibleAtZoom = g => g.mag <= magLimitForZoom() || VS.s > 1.2;
+
+// ---------------------------------------------------------------- marks (kept in this browser)
+let marks = [];
+try { marks = JSON.parse(localStorage.getItem('hudf-marks') || '[]'); } catch (e) { marks = []; }
+const saveMarks = () => { try { localStorage.setItem('hudf-marks', JSON.stringify(marks)); } catch (e) {} };
+function addMark(x, y, g) {
+  const s = pxToSky(x, y);
+  const n = (marks.reduce((m, k) => Math.max(m, k.n), 0) || 0) + 1;
+  marks.push({ n, name: g ? `UVUDF ${g.id}` : `Mark ${n}`, x: +x.toFixed(1), y: +y.toFixed(1), ra: +s.ra.toFixed(6), dec: +s.dec.toFixed(6),
+    cat: g ? g.id : null, z: g ? zBest(g) : null, ztype: g ? (g.zs != null ? 'spectroscopic' : 'photometric') : '', note: '' });
+  saveMarks(); drawMarks(); dirty = true;
+}
+function drawMarks() {
+  const box = $('marks');
+  if (!marks.length) { box.innerHTML = '<div class="note">No marks yet.</div>'; return; }
+  box.innerHTML = marks.map((m, i) => `<div class="mk" data-i="${i}"><div class="n" title="Go to this mark">${m.n}</div>
+    <div><input value="${esc(m.name)}" data-f="name" aria-label="Name of mark ${m.n}">
+    <small>x ${m.x.toFixed(1)}, y ${m.y.toFixed(1)} px<br>RA ${fmtRA(m.ra)} &nbsp;Dec ${fmtDec(m.dec)}<br>${m.cat ? `UVUDF ${m.cat}, z = ${m.z != null ? m.z.toFixed(m.ztype === 'spectroscopic' ? 3 : 2) : '?'} (${m.ztype})` : 'not on a catalog galaxy'}</small>
+    <input value="${esc(m.note)}" data-f="note" placeholder="notes" aria-label="Notes for mark ${m.n}" style="margin-top:3px;font-weight:400;font-size:11.5px"></div>
+    <button class="del" title="Delete this mark">&times;</button></div>`).join('');
+}
+$('marks').addEventListener('input', e => { const d = e.target.closest('.mk'); if (!d || !e.target.dataset.f) return; marks[+d.dataset.i][e.target.dataset.f] = e.target.value; saveMarks(); dirty = true; });
+$('marks').addEventListener('click', e => {
+  const d = e.target.closest('.mk'); if (!d) return; const m = marks[+d.dataset.i];
+  if (e.target.classList.contains('del')) { marks.splice(+d.dataset.i, 1); saveMarks(); drawMarks(); dirty = true; }
+  else if (e.target.classList.contains('n')) flyTo(m.x, m.y, 200);
+});
+$('mkClear').onclick = () => { if (marks.length && confirm('Delete all ' + marks.length + ' marks?')) { marks = []; saveMarks(); drawMarks(); dirty = true; } };
+$('mkCsv').onclick = () => {
+  const q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+  const lines = ['number,name,x_pixel,y_pixel,ra_deg,dec_deg,ra_hms,dec_dms,uvudf_id,redshift,redshift_type,notes'];
+  for (const m of marks) lines.push([m.n, q(m.name), m.x, m.y, m.ra, m.dec, q(fmtRA(m.ra)), q(fmtDec(m.dec)), m.cat ?? '', m.z ?? '', m.ztype, q(m.note)].join(','));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = 'hudf_marks.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+drawMarks();
+
+// ---------------------------------------------------------------- modes
+let mode = 'inspect', ruler = null;
+function setMode(m) {
+  mode = m; ruler = m === 'ruler' ? { pts: [] } : null;
+  document.querySelectorAll('#modeBar button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  $('mkMode').classList.toggle('on', m === 'mark'); $('mkMode').textContent = m === 'mark' ? 'Marking…' : 'Mark mode';
+  $('viewer').classList.toggle('markmode', m !== 'inspect'); dirty = true;
+}
+$('modeBar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); });
+$('mkMode').onclick = () => setMode(mode === 'mark' ? 'inspect' : 'mark');
+
+// ---------------------------------------------------------------- the overlay
+const ov = $('ov'), g2 = ov.getContext('2d');
+let dirty = true;
+function sizeOv() { const pr = Math.min(devicePixelRatio, 2); ov.width = innerWidth * pr; ov.height = innerHeight * pr; ov.style.width = innerWidth + 'px'; ov.style.height = innerHeight + 'px'; g2.setTransform(pr, 0, 0, pr, 0, 0); dirty = true; }
+sizeOv(); addEventListener('resize', sizeOv);
+let hoverG = null, selG = null, hoverPt = null;
+const opt = { compass: true };
+function textOut(s, x, y, font, col, align = 'left', base = 'middle') {
+  g2.font = font; g2.textAlign = align; g2.textBaseline = base; g2.lineWidth = 3; g2.strokeStyle = 'rgba(0,0,0,.8)'; g2.strokeText(s, x, y); g2.fillStyle = col; g2.fillText(s, x, y);
+}
+function draw() {
+  syncVS();
+  g2.clearRect(0, 0, innerWidth, innerHeight);
+  // keep the overlay off the overview map
+  g2.save();
+  const nv = navEl();
+  if (nv && nv.offsetParent) {
+    const r = nv.getBoundingClientRect();
+    g2.beginPath(); g2.rect(0, 0, innerWidth, innerHeight); g2.rect(r.left, r.top, r.width, r.height); g2.clip('evenodd');
+  }
+  const [ix0, iy0] = toImg(-40, -40), [ix1, iy1] = toImg(innerWidth + 40, innerHeight + 40);
+  if (filt.show) {
+    const lim = magLimitForZoom(), k = 1.6;
+    let nDrawn = 0;
+    for (const g of shown) {
+      if (g.x < ix0 || g.x > ix1 || g.y < iy0 || g.y > iy1) continue;
+      if (!(g.mag <= lim || VS.s > 1.2)) continue;
+      const [sx, sy] = toScr(g.x, g.y), z = zFor(g), ra = Math.max(g.a * k * VS.s, 3), rb = Math.max(g.b * k * VS.s, 3);
+      const hot = g === hoverG || g === selG;
+      g2.strokeStyle = zColor(z, hot ? 1 : g.zs != null ? 0.9 : 0.6); g2.lineWidth = hot ? 2.2 : g.zs != null ? 1.4 : 1;
+      if (g.zs == null && filt.kind !== 'spec') g2.setLineDash(ra > 8 ? [4, 3] : []); else g2.setLineDash([]);
+      g2.beginPath(); g2.ellipse(sx, sy, ra, rb, g.pa * DEG, 0, 2 * Math.PI); g2.stroke();
+      if (filt.labels && ra > 9 && z != null) textOut('z ' + z.toFixed(g.zs != null ? 2 : 1), sx + ra * 0.75 + 3, sy - rb * 0.7 - 4, '600 11px Inter,sans-serif', zColor(z, 1));
+      if (++nDrawn > 6000) break;
+    }
+    g2.setLineDash([]);
+  }
+  // marks
+  for (const m of marks) {
+    const [sx, sy] = toScr(m.x, m.y); if (sx < -30 || sy < -30 || sx > innerWidth + 30 || sy > innerHeight + 30) continue;
+    g2.strokeStyle = '#7cf0c8'; g2.lineWidth = 1.8; g2.beginPath();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { g2.moveTo(sx + dx * 7, sy + dy * 7); g2.lineTo(sx + dx * 15, sy + dy * 15); }
+    g2.stroke();
+    g2.fillStyle = '#7cf0c8'; g2.beginPath(); g2.arc(sx + 15, sy - 15, 9, 0, 7); g2.fill();
+    g2.font = '700 11px Inter,sans-serif'; g2.fillStyle = '#04261b'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(m.n, sx + 15, sy - 14.5);
+    if (m.name && VS.s > 0.25) textOut(m.name, sx + 28, sy - 15, '600 12px Inter,sans-serif', '#c9fff0');
+  }
+  // ruler
+  if (ruler && ruler.pts.length) {
+    const p = ruler.pts, end = p[1] || hoverPt;
+    if (end) {
+      const [ax, ay] = toScr(p[0][0], p[0][1]), [bx, by] = toScr(end[0], end[1]);
+      g2.strokeStyle = '#ffd27a'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(ax, ay); g2.lineTo(bx, by); g2.stroke();
+      for (const [x, y] of [[ax, ay], [bx, by]]) { g2.fillStyle = '#ffd27a'; g2.beginPath(); g2.arc(x, y, 3.5, 0, 7); g2.fill(); }
+      const dpx = Math.hypot(end[0] - p[0][0], end[1] - p[0][1]), as = dpx * PIX;
+      let txt = `${as.toFixed(2)}″  (${dpx.toFixed(0)} px)`;
+      if (ruler.z != null) txt += `  ≈ ${(as * cosmo(ruler.z).kpcPerArcsec).toFixed(1)} kpc at z = ${ruler.z.toFixed(2)}`;
+      textOut(txt, (ax + bx) / 2 + 8, (ay + by) / 2 - 12, '600 13px Inter,sans-serif', '#ffd27a');
+    }
+  }
+  if (opt.compass) drawCompass();
+  g2.restore();
+}
+function drawCompass() {
+  // north and east arrows: directions of increasing declination and right ascension at the field center
+  const c = pxToSky(W / 2, H / 2), pn = skyToPx(c.ra, c.dec + 2 / 3600), pe = skyToPx(c.ra + 2 / 3600 / Math.cos(c.dec * DEG), c.dec);
+  const nx = pn.x - W / 2, ny = pn.y - H / 2, ex = pe.x - W / 2, ey = pe.y - H / 2, ln = Math.hypot(nx, ny), le = Math.hypot(ex, ey);
+  const pr = $('panel').classList.contains('hidden') || innerWidth < 720 ? 0 : $('panel').getBoundingClientRect().right;
+  const left = pr + 26, bx = left + 46, by = innerHeight - 95, L = 38;
+  g2.lineWidth = 1.8; g2.strokeStyle = '#e9c98f';
+  for (const [dx, dy, lab] of [[nx / ln, ny / ln, 'N'], [ex / le, ey / le, 'E']]) {
+    const tx = bx + dx * L, ty = by + dy * L;
+    g2.lineWidth = 1.8; g2.strokeStyle = '#e9c98f';
+    g2.beginPath(); g2.moveTo(bx, by); g2.lineTo(tx, ty);
+    const a = Math.atan2(dy, dx); g2.moveTo(tx, ty); g2.lineTo(tx - 7 * Math.cos(a - 0.45), ty - 7 * Math.sin(a - 0.45));
+    g2.moveTo(tx, ty); g2.lineTo(tx - 7 * Math.cos(a + 0.45), ty - 7 * Math.sin(a + 0.45)); g2.stroke();
+    textOut(lab, bx + dx * (L + 12), by + dy * (L + 12), '600 14px Spectral,serif', '#ffd88f', 'center');
+  }
+  // scale bar
+  const pxPerArcsec = VS.s / PIX, opts = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30, 60];
+  const len = opts.find(v => v * pxPerArcsec >= 60) ?? 60, wpx = len * pxPerArcsec, sx = left, sy = innerHeight - 30;
+  g2.strokeStyle = '#e9c98f'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(sx, sy); g2.lineTo(sx + wpx, sy); g2.moveTo(sx, sy - 5); g2.lineTo(sx, sy + 5); g2.moveTo(sx + wpx, sy - 5); g2.lineTo(sx + wpx, sy + 5); g2.stroke();
+  textOut(len >= 60 ? (len / 60) + ' arcmin' : len + ' arcsec', sx + wpx / 2, sy - 12, '500 11.5px Inter,sans-serif', '#ffd88f', 'center');
+}
+function loop() { requestAnimationFrame(loop); if (dirty) { dirty = false; draw(); updateZoomLabel(); } }
+viewer.addHandler('update-viewport', () => { dirty = true; });
+viewer.addHandler('animation', () => { dirty = true; });
+requestAnimationFrame(loop);
+function updateZoomLabel() {
+  const z = VS.s; $('zLvl').innerHTML = `<b>${z >= 1 ? z.toFixed(z >= 10 ? 0 : 1) + '×' : (z * 100).toFixed(0) + '%'}</b>zoom`;
+}
+
+// ---------------------------------------------------------------- hover and click
+const tip = $('tip');
+function hoverAt(sx, sy) {
+  const [x, y] = toImg(sx, sy); hoverPt = [x, y];
+  if (x < 0 || y < 0 || x > W || y > H) { tip.style.display = 'none'; hoverG = null; $('readout').innerHTML = 'Outside the image'; dirty = true; return; }
+  const s = pxToSky(x, y);
+  const g = filt.show ? pick(x, y) : null;
+  if (g !== hoverG) { hoverG = g; dirty = true; }
+  if (ruler) dirty = true;
+  $('readout').innerHTML = `x <b>${x.toFixed(1)}</b> y <b>${y.toFixed(1)}</b> px &nbsp;&middot;&nbsp; RA <b>${fmtRA(s.ra)}</b> &nbsp;Dec <b>${fmtDec(s.dec)}</b>` +
+    (g ? ` &nbsp;&middot;&nbsp; UVUDF ${g.id}` : '');
+  if (g && mode !== 'ruler') {
+    const z = zBest(g), cz = z != null ? cosmo(z) : null;
+    tip.innerHTML = `<b>${g.star ? 'Star' : 'Galaxy'} UVUDF ${g.id}</b>${g.muse ? ` <span class="m">· MUSE ${g.muse}</span>` : ''}<br>` +
+      (g.star ? `<span class="m">A star in our own Milky Way</span><br>` :
+        `<span class="zz" style="color:${zColor(z)}">z = ${z.toFixed(g.zs != null ? 3 : 2)}</span> <span class="m">${g.zs != null ? 'spectroscopic' : 'photometric, ' + (g.zbmin ?? '?') + ' to ' + (g.zbmax ?? '?')}</span><br>` +
+        `Light left it ${fmtGyr(cz.lookback)} ago<br>`) +
+      `<span class="m">Brightness (F775W) ${g.mag < 90 ? g.mag.toFixed(1) + ' mag' : 'too faint'}${g.logm != null ? ` · stellar mass 10<sup>${g.logm.toFixed(1)}</sup> Suns` : ''}</span>`;
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = (sx + 16 + tw > innerWidth ? sx - tw - 14 : sx + 16) + 'px'; tip.style.top = clamp(sy + 14, 6, innerHeight - th - 6) + 'px';
+  } else tip.style.display = 'none';
+}
+viewer.element.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') hoverAt(e.clientX, e.clientY); });
+viewer.element.addEventListener('pointerleave', () => { tip.style.display = 'none'; hoverG = null; dirty = true; });
+viewer.addHandler('canvas-click', e => {
+  if (!e.quick) return;
+  e.preventDefaultAction = true;
+  const r = viewer.element.getBoundingClientRect(), sx = e.position.x + r.left, sy = e.position.y + r.top;
+  const [x, y] = toImg(e.position.x, e.position.y);
+  if (x < 0 || y < 0 || x > W || y > H) return;
+  const g = filt.show ? pick(x, y, 12) : null;
+  if (mode === 'mark') { addMark(g && insideEll(g, x, y) <= 1 ? g.x : x, g && insideEll(g, x, y) <= 1 ? g.y : y, g && insideEll(g, x, y) <= 1 ? g : null); return; }
+  if (mode === 'ruler') {
+    if (ruler.pts.length >= 2) ruler.pts = [];
+    ruler.pts.push([x, y]);
+    if (ruler.pts.length === 1) { const g0 = g && insideEll(g, x, y) <= 1 ? g : null; ruler.z = g0 && !g0.star ? zBest(g0) : null; }
+    dirty = true; return;
+  }
+  if (e.originalEvent && e.originalEvent.pointerType !== 'mouse') hoverAt(sx, sy);
+  if (g) showGalaxy(g); else showPoint(x, y);
+});
+
+// ---------------------------------------------------------------- info cards
+function sedSVG(g) {
+  const L = CAT.wavelengths, M = g.mags, pts = L.map((l, i) => [l, M[i]]).filter(p => p[1] != null);
+  if (pts.length < 2) return '';
+  const lo = Math.min(...pts.map(p => p[1])) - 0.5, hi = Math.max(...pts.map(p => p[1])) + 0.5;
+  const X = l => 34 + (Math.log(l) - Math.log(200)) / (Math.log(1800) - Math.log(200)) * 290, Y = m => 12 + (m - lo) / (hi - lo) * 88;
+  let s = `<svg id="sed" viewBox="0 0 330 120"><g font-family="Inter" font-size="9" fill="#9aa6bd">`;
+  for (const l of [300, 500, 800, 1200, 1600]) s += `<line x1="${X(l)}" x2="${X(l)}" y1="10" y2="100" stroke="rgba(255,255,255,.06)"/><text x="${X(l)}" y="112" text-anchor="middle">${l}</text>`;
+  for (let m = Math.ceil(lo); m <= hi; m += hi - lo > 6 ? 2 : 1) s += `<text x="28" y="${Y(m) + 3}" text-anchor="end">${m}</text>`;
+  s += `<text x="180" y="120" text-anchor="middle" font-size="8.5">wavelength (nm)</text></g>`;
+  s += `<polyline fill="none" stroke="rgba(226,180,92,.6)" stroke-width="1.2" points="${pts.map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ')}"/>`;
+  for (const [l, m] of pts) s += `<circle cx="${X(l).toFixed(1)}" cy="${Y(m).toFixed(1)}" r="3" fill="${l < 400 ? '#9b8cff' : l < 500 ? '#6fb6ff' : l < 650 ? '#7ce39b' : l < 900 ? '#ffb46b' : '#ff7b6b'}"/>`;
+  return s + '</svg>';
+}
+function showGalaxy(g) {
+  selG = g; dirty = true;
+  const z = zBest(g), sky = { ra: g.ra, dec: g.dec };
+  let h = `<h3>${g.star ? 'Star' : 'Galaxy'} UVUDF ${g.id}</h3><div class="kind">${g.star ? 'Foreground star in the Milky Way' : g.zs != null ? 'Galaxy with a measured spectrum' : 'Galaxy (redshift from its colors)'}</div><table>`;
+  if (!g.star && z != null) {
+    const c = cosmo(z);
+    h += `<tr class="big"><td>Redshift z</td><td>${z.toFixed(g.zs != null ? 4 : 2)}</td></tr>`;
+    h += g.zs != null ? `<tr><td>Measured by</td><td>${esc(g.zsrc)}</td></tr>` : `<tr><td>Likely range</td><td>${g.zbmin} to ${g.zbmax} (confidence ${Math.round((g.odds ?? 0) * 100)}%)</td></tr>`;
+    if (g.zs != null && g.zb != null) h += `<tr><td>Photometric estimate</td><td>${g.zb.toFixed(2)}</td></tr>`;
+    if (g.line) h += `<tr><td>Strongest spectral line</td><td>${esc(g.line)}</td></tr>`;
+    h += `<tr class="big"><td>Light travel time</td><td>${fmtGyr(c.lookback)}</td></tr>`;
+    h += `<tr><td>Age of the universe then</td><td>${fmtGyr(c.age)} (now ${AGE0.toFixed(1)})</td></tr>`;
+    h += `<tr><td>Wavelengths stretched by</td><td>${(1 + z).toFixed(2)} times</td></tr>`;
+    h += `<tr><td>Distance now (comoving)</td><td>${(c.dc * 3.2616e-3).toFixed(1)} billion light-years</td></tr>`;
+    h += `<tr><td>1 arcsecond there is</td><td>${c.kpcPerArcsec.toFixed(2)} kpc (${(c.kpcPerArcsec * 3.2616).toFixed(1)} thousand light-years)</td></tr>`;
+    const sizeAs = 2 * g.a * PIX;
+    h += `<tr><td>Size on the image</td><td>${sizeAs.toFixed(2)}″, about ${(sizeAs * c.kpcPerArcsec).toFixed(1)} kpc across</td></tr>`;
+    if (g.logm != null) h += `<tr><td>Mass in stars</td><td>10<sup>${g.logm.toFixed(1)}</sup> Suns</td></tr>`;
+    if (g.logsfr != null) h += `<tr><td>Star formation</td><td>${Math.pow(10, g.logsfr).toFixed(g.logsfr < 0 ? 2 : 1)} Suns per year</td></tr>`;
+  }
+  h += `<tr><td>Brightness (F775W)</td><td>${g.mag < 90 ? g.mag.toFixed(2) + ' mag' : 'not detected'}</td></tr>`;
+  h += `<tr><td>Right ascension</td><td>${fmtRA(sky.ra)}</td></tr><tr><td>Declination</td><td>${fmtDec(sky.dec)}</td></tr>`;
+  h += `<tr><td>Pixel position</td><td>x ${g.x.toFixed(1)}, y ${g.y.toFixed(1)}</td></tr>`;
+  const ids = [g.muse ? 'MUSE ' + g.muse : '', g.coe ? 'Coe ' + g.coe : ''].filter(Boolean);
+  if (ids.length) h += `<tr><td>Also known as</td><td>${ids.join(', ')}</td></tr>`;
+  h += `</table><hr><div style="font-size:11.5px;color:var(--muted)">Brightness in 11 Hubble filters (magnitudes; up is brighter)</div>${sedSVG(g)}`;
+  h += `<div class="btns" style="margin-top:6px"><button class="btn" id="cardMark">Mark this galaxy</button><button class="btn" id="cardZoom">Zoom in</button></div>`;
+  h += `<div style="margin-top:8px"><a href="https://simbad.cds.unistra.fr/simbad/sim-coo?Coord=${sky.ra.toFixed(5)}%20${sky.dec.toFixed(5)}&Radius=1&Radius.unit=arcsec" target="_blank" rel="noopener">Look it up in SIMBAD &rarr;</a></div>`;
+  $('infoBody').innerHTML = h; $('info').style.display = 'block';
+  $('cardMark').onclick = () => addMark(g.x, g.y, g);
+  $('cardZoom').onclick = () => flyTo(g.x, g.y, Math.max(60, g.a * 8));
+}
+function showPoint(x, y) {
+  selG = null; dirty = true;
+  const s = pxToSky(x, y);
+  $('infoBody').innerHTML = `<h3>A spot on the image</h3><div class="kind">No catalog galaxy here</div><table>
+    <tr><td>Pixel position</td><td>x ${x.toFixed(1)}, y ${y.toFixed(1)}</td></tr><tr><td>Right ascension</td><td>${fmtRA(s.ra)}</td></tr><tr><td>Declination</td><td>${fmtDec(s.dec)}</td></tr>
+    <tr><td>In degrees</td><td>${s.ra.toFixed(6)}, ${s.dec.toFixed(6)}</td></tr></table>
+    <div class="desc" style="color:var(--muted)">Many faint smudges are too faint, or too blended with neighbors, to be in the catalog. Turn on the catalog overlay to see which objects are.</div>
+    <div class="btns"><button class="btn" id="cardMark">Mark this spot</button></div>`;
+  $('info').style.display = 'block';
+  $('cardMark').onclick = () => addMark(x, y, null);
+}
+$('infoX').onclick = () => { $('info').style.display = 'none'; selG = null; dirty = true; };
+
+// ---------------------------------------------------------------- navigation
+function flyTo(x, y, widthPx) {
+  const vp = viewer.viewport, tiled = viewer.world.getItemAt(0); if (!tiled) return;
+  const w = widthPx / W;                    // viewport units: the image is 1 unit wide
+  vp.fitBounds(new OpenSeadragon.Rect(x / W - w / 2, y / W - w * innerHeight / innerWidth / 2, w, w * innerHeight / innerWidth));
+}
+$('zIn').onclick = () => { viewer.viewport.zoomBy(1.6); viewer.viewport.applyConstraints(); };
+$('zOut').onclick = () => { viewer.viewport.zoomBy(1 / 1.6); viewer.viewport.applyConstraints(); };
+$('zHome').onclick = () => viewer.viewport.goHome();
+
+// search: catalog numbers or coordinates
+$('search').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const q = $('search').value.trim(), ql = q.toLowerCase();
+  let g = null, m;
+  if ((m = ql.match(/^muse\s*#?\s*(\d+)$/))) g = G.find(o => o.muse === +m[1]);
+  else if ((m = ql.match(/^coe\s*#?\s*(\d+)$/))) g = G.find(o => o.coe === +m[1]);
+  else if ((m = ql.match(/^(?:uvudf\s*#?\s*)?(\d+)$/))) g = G.find(o => o.id === +m[1]);
+  if (g) { flyTo(g.x, g.y, Math.max(60, g.a * 8)); showGalaxy(g); return; }
+  const n = q.replace(/[hdms°′″'":]/g, ' ').trim().split(/[\s,]+/).map(Number);
+  let ra = null, dec = null;
+  if (n.length === 2 && n.every(isFinite)) [ra, dec] = n;
+  else if (n.length === 6 && n.every(isFinite)) { ra = (n[0] + n[1] / 60 + n[2] / 3600) * 15; const sg = /^\S*\s*\S+\s+\S+\s+\S+\s*-/.test(q) || q.split(/\s+/)[3]?.startsWith('-') || q.split(/\s+/)[3]?.startsWith('−') ? -1 : 1; dec = sg * (Math.abs(n[3]) + n[4] / 60 + n[5] / 3600); }
+  if (ra != null) { const p = skyToPx(ra, dec); if (p.x >= 0 && p.y >= 0 && p.x <= W && p.y <= H) { flyTo(p.x, p.y, 300); showPoint(p.x, p.y); } else alert('That position is outside the image.'); return; }
+  alert('Type a catalog number (for example 9 or MUSE 1) or a position (for example 53.16 -27.79).');
+});
+
+// highlights, found from the catalog itself
+{
+  const gal = G.filter(g => !g.star), spec = gal.filter(g => g.zs != null);
+  const H1 = [];
+  const add = (label, g, w) => g && H1.push([label, g, w]);
+  add('The most distant galaxy with a measured spectrum', spec.reduce((a, b) => (b.zs > a.zs ? b : a)), 260);
+  add('A very distant galaxy found from its colors (z above 7)', gal.filter(g => g.zb > 7 && g.odds > 0.8).sort((a, b) => a.mag - b.mag)[0] || gal.filter(g => g.zb > 6).sort((a, b) => a.mag - b.mag)[0], 260);
+  add('The brightest galaxy in the field', gal.reduce((a, b) => (b.mag < a.mag ? b : a)), 700);
+  add('The largest galaxy on the image', gal.reduce((a, b) => (b.a > a.a ? b : a)), 900);
+  add('The most massive galaxy with a MUSE spectrum', gal.filter(g => g.logm != null).reduce((a, b) => (b.logm > a.logm ? b : a)), 500);
+  add('The most furiously star-forming galaxy (MUSE)', gal.filter(g => g.logsfr != null).reduce((a, b) => (b.logsfr > a.logsfr ? b : a)), 400);
+  add('A nearby galaxy (lowest measured redshift)', spec.filter(g => g.zs > 0.05 && g.mag < 26).reduce((a, b) => (b.zs < a.zs ? b : a)), 500);
+  add('The brightest star (with diffraction spikes)', G.filter(g => g.star).reduce((a, b) => (b.mag < a.mag ? b : a)), 600);
+  $('highlights').innerHTML += H1.map(([l], i) => `<option value="${i}">${esc(l)}</option>`).join('');
+  $('highlights').onchange = () => { const i = $('highlights').value; if (i === '') return; const [, g, w] = H1[+i]; flyTo(g.x, g.y, w); showGalaxy(g); $('highlights').value = ''; };
+}
+
+// ---------------------------------------------------------------- histogram of shown redshifts
+function drawHist() {
+  const c = $('hist'), pr = Math.min(devicePixelRatio, 2), w = c.clientWidth || 288, h = 70;
+  c.width = w * pr; c.height = h * pr; const x = c.getContext('2d'); x.setTransform(pr, 0, 0, pr, 0, 0); x.clearRect(0, 0, w, h);
+  const nb = 45, maxZ = 9, cnt = new Array(nb).fill(0);
+  for (const g of shown) { const z = zFor(g); if (z == null) continue; cnt[Math.min(nb - 1, Math.floor(z / maxZ * nb))]++; }
+  const m = Math.max(1, ...cnt), bw = w / nb;
+  cnt.forEach((n, i) => { const bh = n / m * (h - 14); x.fillStyle = zColor((i + 0.5) / nb * maxZ, 0.9); x.fillRect(i * bw + 0.5, h - 12 - bh, bw - 1, bh); });
+  x.fillStyle = '#9aa6bd'; x.font = '9.5px Inter'; x.textAlign = 'center';
+  for (const z of [0, 2, 4, 6, 8]) x.fillText('z ' + z, Math.max(10, Math.min(w - 10, z / maxZ * w)), h - 1);
+}
+
+// ---------------------------------------------------------------- panel controls
+const seg = (id, fn) => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset.v); });
+seg('zKind', v => { filt.kind = v; applyFilter(); });
+const syncSliders = () => {
+  filt.zlo = +$('zLo').value; filt.zhi = +$('zHi').value; filt.mag = +$('mag').value;
+  if (filt.zhi < filt.zlo) { filt.zhi = filt.zlo; $('zHi').value = filt.zhi; }
+  $('zLoV').textContent = filt.zlo.toFixed(1); $('zHiV').textContent = filt.zhi >= 9 ? 'no limit' : filt.zhi.toFixed(1);
+  $('magV').textContent = filt.mag >= 31 ? 'no limit' : filt.mag.toFixed(2) + ' mag';
+};
+for (const id of ['zLo', 'zHi', 'mag']) $(id).addEventListener('input', () => { syncSliders(); applyFilter(); });
+$('showCat').onchange = e => { filt.show = e.target.checked; dirty = true; };
+$('showLbl').onchange = e => { filt.labels = e.target.checked; dirty = true; };
+$('hideStars').onchange = e => { filt.hideStars = e.target.checked; applyFilter(); };
+$('showCompass').onchange = e => { opt.compass = e.target.checked; dirty = true; };
+$('showNav').onchange = e => { const n = navEl(); if (n) n.style.display = e.target.checked ? '' : 'none'; };
+$('bright').oninput = e => { viewer.canvas.style.filter = `brightness(${e.target.value})`; };
+$('hide').onclick = () => { $('panel').classList.add('hidden'); $('toggle').style.display = 'block'; setTimeout(() => dirty = true, 300); };
+$('toggle').onclick = () => { $('panel').classList.remove('hidden'); $('toggle').style.display = 'none'; setTimeout(() => dirty = true, 300); };
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === 'Escape') setMode('inspect'); else if (e.key === 'm') setMode('mark'); else if (e.key === 'i') setMode('inspect'); else if (e.key === 'r') setMode('ruler');
+});
+if (innerWidth < 720) $('hide').click();
+syncSliders(); applyFilter();
+})();
+</script>
+</body>
+</html>
