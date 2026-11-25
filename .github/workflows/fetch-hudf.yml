@@ -19,20 +19,30 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Download images and catalogs
-        run: python hudf/tools/fetch_hudf.py
+        run: |
+          if git ls-remote --exit-code --heads origin hudf-sources; then
+            git fetch origin hudf-sources
+            git worktree add /tmp/src origin/hudf-sources
+            cp -r /tmp/src/hudf_sources . 2>/dev/null || true
+            python hudf/tools/fetch_hudf.py --catalogs-only
+          else
+            python hudf/tools/fetch_hudf.py
+          fi
       - name: Save them on the hudf-sources branch
         run: |
-          ls -la hudf_sources
+          ls -laR hudf_sources | head -80
           find hudf_sources -size +95M -print -delete
-          mv hudf_sources /tmp/hudf_sources
+          mv hudf_sources /tmp/hudf_sources_new
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git switch --orphan hudf-sources
-          mv /tmp/hudf_sources .
+          git switch --orphan hudf-sources-new
+          mv /tmp/hudf_sources_new hudf_sources
           git add hudf_sources
-          git commit -m "HUDF images (ESA/Hubble) and catalogs (VizieR)"
-          git push -f origin hudf-sources
+          git commit -m "HUDF images (ESA/Hubble) and catalogs (CDS/VizieR)"
+          git push -f origin HEAD:hudf-sources

@@ -16,13 +16,14 @@ def get(url, timeout=300):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
-# 1. images: try the largest versions ESA/Hubble publishes
+# 1. images: try the largest versions ESA/Hubble publishes (skipped when already downloaded)
 IMAGES = {
     "heic0406a": "Hubble Ultra Deep Field (2004)",
     "heic1214a": "Hubble eXtreme Deep Field (2012)",
     "heic1406a": "Hubble Ultra Deep Field in ultraviolet light (2014)",
 }
-for code, title in IMAGES.items():
+if "--catalogs-only" not in sys.argv:
+  for code, title in IMAGES.items():
     for kind, ext in [("publicationjpg", "jpg"), ("large", "jpg"), ("original", "tif"), ("screen", "jpg")]:
         url = f"https://esahubble.org/media/archives/images/{kind}/{code}.{ext}"
         try:
@@ -40,35 +41,40 @@ CATALOGS = {
     "J/AJ/132/926": "Coe et al. 2006, HUDF photometric redshifts",
     "J/AJ/132/1729": "Beckwith et al. 2006, HUDF ACS catalog",
 }
-TAP = "https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync"
-def tap(q, fmt="csv"):
-    data = urllib.parse.urlencode({"REQUEST": "doQuery", "LANG": "ADQL", "FORMAT": fmt, "QUERY": q}).encode()
-    req = urllib.request.Request(TAP, data=data, headers={"User-Agent": "Mozilla/5.0 (moonglobe HUDF app)"})
-    with urllib.request.urlopen(req, timeout=600) as r:
-        return r.read().decode("utf-8", "replace")
+# the CDS archive keeps each catalog as plain files (a ReadMe plus fixed-width tables); try several mirrors
+MIRRORS = ["https://cdsarc.cds.unistra.fr/ftp/", "https://cdsarc.u-strasbg.fr/ftp/", "http://vizier.cfa.harvard.edu/ftp/",
+           "https://vizier.nao.ac.jp/ftp/", "http://cdsarc.cds.unistra.fr/ftp/"]
+import re
+def fetch_cat(cat):
+    for m in MIRRORS:
+        base = m + cat + "/"
+        try:
+            readme = get(base + "ReadMe", 60).decode("latin-1")
+        except Exception as e:
+            log("  mirror fail", base, e); continue
+        log("  mirror ok", base)
+        safe = cat.replace("/", "_").replace("+", "p")
+        d = OUT / safe; d.mkdir(exist_ok=True)
+        (d / "ReadMe").write_text(readme)
+        # file names from the "File Summary" section
+        files = re.findall(r"^\s*(\S+\.(?:dat|txt|tex|fits|csv))\s", readme, re.M)
+        got = {}
+        for f in dict.fromkeys(files):
+            for name in (f + ".gz", f):
+                try:
+                    b = get(base + name, 600)
+                    (d / name).write_bytes(b); got[name] = len(b); log("   file", name, len(b)); break
+                except Exception as e:
+                    last = e
+            else:
+                log("   file fail", f, last)
+        return {"mirror": base, "dir": safe, "files": got}
+    return None
 
 info = {}
 for cat, desc in CATALOGS.items():
-    try:
-        t = tap(f"SELECT table_name, description FROM TAP_SCHEMA.tables WHERE table_name LIKE '{cat}/%'")
-        rows = list(csv.DictReader(io.StringIO(t)))
-        log("catalog", cat, [r["table_name"] for r in rows])
-        info[cat] = {"desc": desc, "tables": {}}
-        for r in rows:
-            tn = r["table_name"]
-            try:
-                cols = tap(f"SELECT column_name, unit, ucd, description FROM TAP_SCHEMA.columns WHERE table_name = '{tn}'")
-                body = tap(f'SELECT * FROM "{tn}"')
-                safe = tn.replace("/", "_").replace("+", "p")
-                (OUT / f"{safe}.csv").write_text(body)
-                (OUT / f"{safe}.columns.csv").write_text(cols)
-                n = body.count("\n") - 1
-                info[cat]["tables"][tn] = {"file": f"{safe}.csv", "rows": n, "desc": r["description"]}
-                log("  table", tn, n, "rows")
-            except Exception as e:
-                log("  table fail", tn, e)
-            time.sleep(1)
-    except Exception as e:
-        log("catalog fail", cat, e)
+    log("catalog", cat, desc)
+    r = fetch_cat(cat)
+    if r: info[cat] = {"desc": desc, **r}
 json.dump(info, open(OUT / "catalogs.json", "w"), indent=1)
 log("done")
