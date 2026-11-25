@@ -1,0 +1,95 @@
+{
+ "J/AJ/150/31": {
+  "desc": "Rafelski et al. 2015, UVUDF photometry and photometric redshifts",
+  "mirror": "http://vizier.cfa.harvard.edu",
+  "file": "viz_J_AJ_150_31.tsv",
+  "lines": 10142
+ },
+ "J/A+A/670/A4": {
+  "desc": "Bacon et al. 2023, MUSE Hubble Ultra Deep Field survey DR2 (spectroscopic redshifts)",
+  "mirror": "http://vizier.cfa.harvard.edu",
+  "file": "viz_J_ApA_670_A4.tsv",
+  "lines": 81605
+ },
+ "J/A+A/608/A2": {
+  "desc": "Inami et al. 2017, MUSE HUDF redshifts DR1",
+  "mirror": "http://vizier.cfa.harvard.edu",
+  "file": "viz_J_ApA_608_A2.tsv",
+  "lines": 3332
+ },
+ "J/AJ/132/926": {
+  "desc": "Coe et al. 2006, HUDF photometric redshifts",
+  "mirror": "http://vizier.cfa.harvard.edu",
+  "file": "viz_J_AJ_132_926.tsv",
+  "lines": 27773
+ },
+ "J/AJ/132/1729": {
+  "desc": "Beckwith et al. 2006, HUDF ACS catalog",
+  "mirror": "http://vizier.cfa.harvard.edu",
+  "file": "viz_J_AJ_132_1729.tsv",
+  "lines": 764
+ },
+ "https://archive.stsci.edu/hlsps/uvudf/": [],
+ "https://archive.stsci.edu/pub/hlsp/udf/acs-wfc/": [
+  [
+   "archive.stsci.edu_pub_hlsp_udf_acs-wfc_h_udf_wfc_V1_cat.txt",
+   2178727
+  ],
+  [
+   "archive.stsci.edu_pub_hlsp_udf_acs-wfc_h_udf_wfc_V1_i_cat.txt",
+   2178727
+  ],
+  [
+   "archive.stsci.edu_pub_hlsp_udf_acs-wfc_h_udf_wfc_V1_z_cat.txt",
+   1501845
+  ]
+ ],
+ "https://archive.stsci.edu/hlsps/udf/": [],
+ "https://archive.stsci.edu/hlsps/hudf12/": [
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f105w_v1.0_drz.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f105w_v1.0_wht.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f125w_v1.0_drz.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f125w_v1.0_wht.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f140w_v1.0_drz.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f140w_v1.0_wht.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f160w_v1.0_drz.fits",
+   51868800
+  ],
+  [
+   "archive.stsci.edu_hlsps_hudf12_hlsp_hudf12_hst_wfc3ir_udfmain_f160w_v1.0_wht.fits",
+   51868800
+  ]
+ ],
+ "https://archive.stsci.edu/hlsps/hudf09/": [],
+ "https://amused.univ-lyon1.fr/data/UDF/HUDF/download/": [],
+ "https://archive.stsci.edu/hlsps/hlf/": [],
+ "https://archive.stsci.edu/missions/hlsp/uvudf/": [
+  [
+   "archive.stsci.edu_missions_hlsp_uvudf_v2.0_hlsp_uvudf_hst_v2.0_cat.fits",
+   7450560
+  ],
+  [
+   "archive.stsci.edu_missions_hlsp_uvudf_v2.0_hlsp_uvudf_hst_wfc3-uvis_udf-epoch3_multi_v2.0_cat.fits",
+   7450560
+  ]
+ ]
+}
