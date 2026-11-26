@@ -8,6 +8,7 @@ of America. The course is based on the book *Models of Time and Space from Astro
 | https://bpenprase.github.io/moonglobe/ | The landing page (`index.html`, images in `assets/`) |
 | https://bpenprase.github.io/moonglobe/sky/ | Celestial Sphere Explorer (`sky/`) |
 | https://bpenprase.github.io/moonglobe/horizon/ | Horizon Sky Explorer (`horizon/`, using the data in `sky/data/`) |
+| https://bpenprase.github.io/moonglobe/blackhole/ | Galactic Center Black Hole viewer (`blackhole/`) |
 | https://bpenprase.github.io/moonglobe/hudf/ | Hubble Ultra Deep Field Explorer (`hudf/`) |
 | https://bpenprase.github.io/moonglobe/moon/ | Lunar Globe Explorer (`moon/`, with its data in `data/` and `tools/`) |
 | https://bpenprase.github.io/moonglobe/mars/ | Mars Globe Explorer (`mars/`) |
@@ -41,6 +42,33 @@ sphere for the observer's latitude and the local sidereal time.
   hidden. Looking down shows a compass rose at the observer's feet and the encircling ocean at the edge of the disk.
 - Times are local mean solar time at the observer's longitude. The sphere is precessed from J2000 to the date shown.
   Refraction is not included.
+
+## Galactic Center Black Hole viewer (the `blackhole/` folder)
+
+The Keck/UCLA Galactic Center Group's orbit movie (`gc_orbits.mp4`, 1995.5 to 2025.3) with the positions of 19 stars
+measured in every year step, so students can identify stars and measure their motions and orbits in arcseconds.
+
+- **Movie controls**: play, pause, stop, loop, steps of 0.1 year, slower speeds and a year slider. Drag to pan, and
+  scroll or use the + and − buttons to zoom.
+- **Identify and trace**: clicking a star names it and traces its path up to the year shown, with a dot for each 0.1 year
+  and labeled year marks. Several stars can be traced at once.
+- **Motion between two dates**: "Mark start" and "Mark end" give the distance moved in arcseconds, the time elapsed and
+  the speed across the sky (km/s at an adjustable distance, 8.0 kpc by default).
+- **Orbit fit**: fits an ellipse or a circle to the traced points and reports how much of the curve the points cover.
+  "Teacher view" shows the fitted axes and the orbit model's period, eccentricity and true semi-major axis.
+- **Ruler**: measures between two clicks in arcseconds and snaps to traced points, fitted orbits and Sgr A*. Each line is
+  tagged with its star and what it measures. "Save measurements (CSV)" writes every ruler line and start/end motion,
+  with the student's name, for offline work with Kepler's third law. A small calculator does the same in the page.
+- **Scale and orientation**: the movie's 0.1 arcsecond bar is 120 pixels, so 1 arcsec = 1200 movie pixels. North is up
+  and east is to the left. Positions are offsets from Sgr A* (the white star symbol at pixel 989.1, 539.1).
+- **How the positions were measured**: `blackhole/tools/track_stars.py` finds each star in each frame, links the
+  detections from year to year, and fits a Kepler orbit with Sgr A* at the focus to each star. The fits match the movie
+  to under 1 pixel for most stars (about 3 pixels for S0-2), and give S0-2 a period of 16.1 years and eccentricity
+  0.888. `blackhole/tools/build_page.py` puts the results (`tools/stars.json`) into `index.html`. Edit
+  `tools/page_template.html`, not `index.html`, then rebuild.
+- **A note on the mass**: with the movie's scale bar, the best-measured orbits imply about 6 million solar masses at
+  8 kpc, more than the published value of about 4 million. The orbits seen on the sky are also tilted, so the ellipse
+  measured on the screen is smaller than the true orbit (for S0-2, 0.089 arcsec against 0.139 arcsec).
 
 ## Hubble Ultra Deep Field Explorer (the `hudf/` folder)
 
@@ -198,5 +226,7 @@ the `flamsteed-sources` branch, which the **Fetch Flamsteed plates** workflow fi
 
 - Sky: star, constellation and deep-sky data from d3-celestial by Olaf Frohn (BSD license), based on Hipparcos, the IAU and the NGC/IC catalogs; plates from John Flamsteed, *Atlas Coelestis* (London, 1729), public domain.
 - Mars: Viking MDIM 2.1 color mosaic (USGS / NASA Ames); THEMIS daytime infrared mosaic (NASA/JPL/Arizona State University); MOLA MEGDR topography (NASA/GSFC, PDS Geosciences Node); IAU Mars nomenclature (USGS); all served through NASA Mars Trek or the PDS.
+
+- Galactic Center: orbit movie by the Keck/UCLA Galactic Center Group (UCLA), from W. M. Keck Observatory data.
 
 NASA imagery and data are in the public domain. Please keep the credits above when you reuse the files.

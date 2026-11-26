@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galactic Center Orbits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a calm observatory measuring instrument for students
+   IDEA: a plate-measuring engine: the movie is the plate, the panel is the logbook
+   PICTURE: the Keck/UCLA orbit movie itself, large, with traced orbits drawn over it
+   COLOUR and TYPE: deep night ground, gold for measurements, aqua for orbit fits; Archivo with tabular figures
+   LAYOUT: movie and transport on the left, logbook panel on the right; stacks below 1000px */
+:root{color-scheme:dark;--bg:#070a12;--panel:#0e1320;--panel2:#131a2b;--line:#252e45;--ink:#e9edf6;--muted:#9aa5bd;--gold:#f5b83d;--aqua:#5fd4ff;--bad:#ff7a6b}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
+header{padding:18px max(2vw,14px) 10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px}
+h1{font-size:clamp(24px,3vw,34px);line-height:1.05;margin:0;font-weight:800;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:15px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:14px;padding:0 max(2vw,14px) 24px;align-items:start}
+@media(max-width:1000px){main{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:none}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;display:block}
+.stage.pan canvas{cursor:grabbing}
+.zoom{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:40px;height:40px;padding:0;font-size:20px}
+.hud{position:absolute;left:10px;bottom:10px;background:rgba(7,10,18,.78);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px;font-variant-numeric:tabular-nums;pointer-events:none;max-width:70%}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:17px}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.year{font-size:30px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;min-width:4.2em}
+#scrub{flex:1 1 220px;accent-color:var(--gold);height:30px}
+button,select,input{font:inherit;font-size:15px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:6px 12px}
+button{cursor:pointer;font-weight:600}
+button:hover{border-color:#3b4766}
+button.on{background:var(--gold);color:#1a1300;border-color:var(--gold)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--aqua);outline-offset:2px}
+input[type=number]{width:6.5em;font-size:16px}
+label{display:inline-flex;align-items:center;gap:7px;font-size:15px;cursor:pointer}
+input[type=checkbox]{width:18px;height:18px;min-height:0;accent-color:var(--gold)}
+.panel{display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h2{font-size:17px;margin:0 0 8px;font-weight:800}
+.star{font-size:32px;font-weight:800;line-height:1.05;color:var(--gold)}
+.muted{color:var(--muted);font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:8px 0 0;font-variant-numeric:tabular-nums}
+dt{color:var(--muted);font-size:14px}dd{margin:0;text-align:right;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 4px 3px 10px;border:1px solid var(--line);background:var(--panel2);font-size:14px;cursor:pointer;min-height:34px}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip b{font-weight:600}
+.chip .x{border:0;background:none;min-height:28px;padding:0 8px;color:var(--muted)}
+.chip.act{border-color:var(--gold)}
+ol{margin:6px 0 0;padding-left:22px;font-variant-numeric:tabular-nums}
+ol li{margin:2px 0}
+ol li button{min-height:30px;padding:0 8px;margin-left:4px;font-size:13px}
+ol li{margin:6px 0}ol li select{min-height:32px;padding:2px 6px;font-size:14px}
+input[type=text]{width:12em;font-size:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;min-height:38px}
+.msg{min-height:1.5em;font-size:14px;color:var(--aqua);margin-top:6px}
+.warn{color:var(--bad)}
+.answer{border-top:1px dashed var(--line);margin-top:10px;padding-top:8px}
+details summary{cursor:pointer;font-weight:800}
+details p,details li{color:#cfd6e6;font-size:15px}
+footer{padding:0 max(2vw,14px) 28px;color:var(--muted);font-size:13px}
+textarea{width:100%;height:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px;margin-top:8px}
+@media(max-width:600px){.year{font-size:24px}.star{font-size:26px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Stars orbiting the Milky Way's black hole</h1>
+  <p><a href="https://bpenprase.github.io/moonglobe/" style="color:var(--aqua)">Exploring Space</a> · Keck/UCLA Galactic Center Group, 1995–2025. Click a star, watch it move, and measure its orbit in arcseconds.</p>
+</header>
+<main>
+  <section>
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="Galactic center movie with measurement overlay"></canvas>
+      <div class="loading" id="loading">Loading the movie…</div>
+      <div class="zoom"><button id="zin" title="Zoom in">+</button><button id="zout" title="Zoom out">−</button><button id="zfit" title="Show whole field" style="font-size:13px">fit</button></div>
+      <div class="hud" id="hud">Click on a star to identify it</div>
+    </div>
+    <video id="vid" muted playsinline preload="auto" style="display:none"></video>
+    <div class="transport">
+      <span class="year" id="year">1995.5</span>
+      <button id="play">▶ Play</button>
+      <button id="stop" title="Back to 1995.5">■ Stop</button>
+      <button id="loop">↻ Loop</button>
+      <button id="back" title="Back 0.1 year">◀ 0.1 yr</button>
+      <button id="fwd" title="Forward 0.1 year">0.1 yr ▶</button>
+      <select id="speed" title="Playback speed"><option value="0.25">¼ speed</option><option value="0.5">½ speed</option><option value="1" selected>Normal speed</option></select>
+      <input type="range" id="scrub" min="0" max="298" value="0" aria-label="Year">
+    </div>
+    <div class="row">
+      <span class="muted">Tool:</span>
+      <div class="seg"><button id="mSel" class="on">Identify &amp; trace</button><button id="mRul">Ruler</button></div>
+      <label><input type="checkbox" id="snap" checked> Snap ruler to traced points</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="grid"> 0.1″ grid</label>
+      <label><input type="checkbox" id="labels"> Label all stars</label>
+      <label><input type="checkbox" id="full"> Show whole path</label>
+      <label>Year marks <select id="ticks"><option value="0">none</option><option value="1">every year</option><option value="2" selected>every 2 years</option><option value="5">every 5 years</option></select></label>
+    </div>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <aside class="panel">
+    <div class="card">
+      <h2>Selected star</h2>
+      <div class="star" id="sName">None yet</div>
+      <div class="muted" id="sNote">Click on a star in the movie. Drag to pan, scroll or use + and − to zoom.</div>
+      <dl id="sNow"></dl>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="card">
+      <h2>Motion between two dates</h2>
+      <div class="muted">Move the movie to a year, then press a button to record where the selected star is.</div>
+      <div class="row"><button id="mStart">Mark start</button><button id="mEnd">Mark end</button><button id="mClr">Clear</button></div>
+      <dl id="motion"></dl>
+      <div class="row"><label>Distance to the Galactic Center <input type="number" id="dist" value="8.0" step="0.1" min="1"> kpc</label></div>
+    </div>
+
+    <div class="card">
+      <h2>Fit the orbit</h2>
+      <div class="muted">Fits a curve to the selected star's traced positions, up to the year now showing. The fitted orbit is drawn as a solid white line. Press the button again after tracing more of the orbit to update it.</div>
+      <div class="row">
+        <div class="seg"><button id="fE" class="on">Ellipse</button><button id="fC">Circle</button></div>
+        <button id="fit">Fit traced points</button><button id="fitClr">Clear fit</button>
+      </div>
+      <div class="msg" id="fitMsg"></div>
+      <label style="margin-top:6px"><input type="checkbox" id="ans"> Teacher view: show axes and answers</label>
+      <div id="answer" class="answer" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2>Ruler measurements</h2>
+      <div class="muted">Choose <b>Ruler</b>, then click two points. To measure the major axis, click the two ends of the fitted orbit that are farthest apart.</div>
+      <ol id="rulers"></ol>
+      <div class="muted">Each line is tagged with the star it snapped to. Use the menus to correct the star or say what you measured.</div>
+      <div class="row"><label>Your name <input type="text" id="who" placeholder="optional" autocomplete="name"></label></div>
+      <div class="row"><button id="save" class="on">Save measurements (CSV)</button><button id="rClr">Clear ruler lines</button></div>
+      <div class="muted">The file lists every ruler line and every start/end motion, with star names and years. Open it in Excel or Google Sheets to work out the masses.</div>
+    </div>
+
+    <div class="card">
+      <h2>Kepler's third law</h2>
+      <div class="muted">M = a³ / P², with a in AU and P in years, gives the mass in Suns.</div>
+      <div class="row"><label>a <input type="number" id="kA" step="0.001" placeholder="arcsec"> ″</label><label>P <input type="number" id="kP" step="0.1" placeholder="years"> yr</label></div>
+      <dl id="kOut"></dl>
+    </div>
+
+    <div class="card">
+      <h2>Record data</h2>
+      <div class="row"><button id="cpy">Copy traced positions</button><button id="cpyM">Copy measurements</button></div>
+      <textarea id="out" readonly hidden aria-label="Copied data"></textarea>
+    </div>
+
+    <details class="card">
+      <summary>How to use this in class</summary>
+      <ol>
+        <li>Press <b>Play</b> or drag the year slider. The first two seconds show every star's name.</li>
+        <li>Click on a star. Its name appears and the app traces where it has been, with year marks.</li>
+        <li>Stop the movie at one year and press <b>Mark start</b>. Move to a later year and press <b>Mark end</b>. The panel reports how far the star moved in arcseconds and how many years it took.</li>
+        <li>Trace a whole orbit (S0-2, S0-38 and S0-102 complete one or more), press <b>Fit traced points</b>, then use the <b>Ruler</b> to measure the major axis. Half of it is the semi-major axis a.</li>
+        <li>Find the period P from the year marks, then use Kepler's third law to estimate the black hole's mass.</li>
+        <li>Measure several stars, then press <b>Save measurements (CSV)</b> to keep the data and finish the calculations offline.</li>
+      </ol>
+      <p>North is up and east is to the left. Positions are offsets from Sgr A* (the white star symbol), using the movie's scale bar: 0.1″ = 120 movie pixels. Each orbit you see is tilted, so the ellipse on the sky is a projection of the true orbit.</p>
+    </details>
+  </aside>
+</main>
+<footer>Movie: Keck/UCLA Galactic Center Group. Star positions were measured from every frame of the movie and smoothed with Kepler orbit fits. Built for Astronomy 150, Models of Time and Space.</footer>
+
+<script>
+{
+const STARS=__STARS__;
+const PX=1200;                 // movie pixels per arcsecond (0.1″ scale bar = 120 px)
+const BH=[989.1,539.1];        // Sgr A* marker position in movie pixels
+const VW=1920,VH=1080,NE=299;
+const COLORS=['#ffd23f','#5fd4ff','#b6ff5c','#ff7ab6','#ff9a3c','#ffffff','#c49bff','#4dffc3'];
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d'),vid=$('vid'),stage=$('stage');
+const yr=k=>1995.5+0.1*k;
+const fmtY=k=>yr(k).toFixed(1);
+const epochOfFrame=f=>f<60?0:f>=951?298:Math.floor((f-60)/3)+1;
+const frameOfEpoch=k=>k<=0?30:k>=298?980:60+3*(k-1)+1;
+const posOf=(s,k)=>{const j=k-s.k0;if(j<0||2*j+1>=s.xy.length)return null;return [s.xy[2*j],s.xy[2*j+1]]};
+const lastK=s=>s.k0+s.xy.length/2-1;
+const onField=p=>p&&p[0]>8&&p[0]<VW-8&&p[1]>8&&p[1]<VH-8;
+const arc=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1])/PX;
+const offs=p=>{const e=-(p[0]-BH[0])/PX,n=-(p[1]-BH[1])/PX;return `${Math.abs(e).toFixed(3)}″ ${e>=0?'E':'W'}, ${Math.abs(n).toFixed(3)}″ ${n>=0?'N':'S'}`};
+
+let mediaT=0,cur=0,mode='sel',zoom=1,cx=VW/2,cy=VH/2,W=0,H=0,dpr=1;
+let traced=[],active=null,rulers=[],pend=null,mouse=null,fitType='ellipse';
+const marks={},fits={};
+
+// ---------- video ----------
+fetch('gc_orbits.mp4').then(r=>{if(!r.ok)throw 0;return r.blob()}).then(b=>{vid.src=URL.createObjectURL(b)}).catch(()=>{vid.src='gc_orbits.mp4'});
+vid.addEventListener('loadeddata',()=>{$('loading').remove();vid.currentTime=frameOfEpoch(0)/30;});
+vid.addEventListener('error',()=>{$('loading').textContent='The movie file could not be loaded.'});
+if('requestVideoFrameCallback' in vid){const cb=(n,m)=>{mediaT=m.mediaTime;vid.requestVideoFrameCallback(cb)};vid.requestVideoFrameCallback(cb)}
+function curEpoch(){const t=('requestVideoFrameCallback' in vid)?mediaT:vid.currentTime;return epochOfFrame(Math.floor(t*30+0.01))}
+function seekEpoch(k){k=Math.max(0,Math.min(298,k));vid.pause();vid.currentTime=(frameOfEpoch(k)+0.5)/30;mediaT=vid.currentTime;}
+$('play').onclick=()=>{if(vid.paused){if(vid.ended||curEpoch()>=298&&!vid.loop)vid.currentTime=0;vid.play()}else vid.pause()};
+vid.addEventListener('play',()=>$('play').textContent='❚❚ Pause');
+vid.addEventListener('pause',()=>$('play').textContent='▶ Play');
+$('stop').onclick=()=>{vid.pause();vid.currentTime=0;mediaT=0};
+$('loop').onclick=()=>{vid.loop=!vid.loop;$('loop').classList.toggle('on',vid.loop)};
+$('back').onclick=()=>seekEpoch(cur-1);
+$('fwd').onclick=()=>seekEpoch(cur+1);
+$('speed').onchange=e=>vid.playbackRate=+e.target.value;
+$('scrub').oninput=e=>seekEpoch(+e.target.value);
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if(e.key===' '){e.preventDefault();$('play').click()} else if(e.key==='ArrowLeft'){e.preventDefault();seekEpoch(cur-1)} else if(e.key==='ArrowRight'){e.preventDefault();seekEpoch(cur+1)} else if(e.key==='Escape'){pend=null}});
+
+// ---------- view ----------
+const base=()=>W/VW;
+const toS=p=>[(p[0]-cx)*base()*zoom+W/2,(p[1]-cy)*base()*zoom+H/2];
+const toV=(x,y)=>[(x-W/2)/(base()*zoom)+cx,(y-H/2)/(base()*zoom)+cy];
+function clampView(){zoom=Math.max(1,Math.min(12,zoom));const hw=VW/2/zoom,hh=VH/2/zoom;cx=Math.max(hw,Math.min(VW-hw,cx));cy=Math.max(hh,Math.min(VH-hh,cy))}
+function zoomAt(f,sx,sy){const v=toV(sx,sy);zoom*=f;clampView();const s=toS(v);cx+=(s[0]-sx)/(base()*zoom);cy+=(s[1]-sy)/(base()*zoom);clampView()}
+$('zin').onclick=()=>zoomAt(1.5,W/2,H/2);$('zout').onclick=()=>zoomAt(1/1.5,W/2,H/2);$('zfit').onclick=()=>{zoom=1;clampView()};
+const ro=new ResizeObserver(()=>{dpr=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr});ro.observe(cv);
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(e.deltaY<0?1.2:1/1.2,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+let down=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);down={x:e.clientX,y:e.clientY,cx,cy,moved:false}});
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();mouse=[e.clientX-r.left,e.clientY-r.top];
+  if(down){const dx=e.clientX-down.x,dy=e.clientY-down.y;if(Math.hypot(dx,dy)>5){down.moved=true;stage.classList.add('pan')}
+    if(down.moved){cx=down.cx-dx/(base()*zoom);cy=down.cy-dy/(base()*zoom);clampView()}}});
+cv.addEventListener('pointerup',e=>{stage.classList.remove('pan');const r=cv.getBoundingClientRect();if(down&&!down.moved)click(e.clientX-r.left,e.clientY-r.top);down=null});
+cv.addEventListener('pointerleave',()=>{mouse=null});
+
+// ---------- tools ----------
+function setMode(m){mode=m;$('mSel').classList.toggle('on',m==='sel');$('mRul').classList.toggle('on',m==='rul');pend=null;
+  say(m==='rul'?'Ruler: click the first point.':'Click on a star to identify it.')}
+$('mSel').onclick=()=>setMode('sel');$('mRul').onclick=()=>setMode('rul');
+function say(t,bad){const m=$('msg');m.textContent=t;m.classList.toggle('warn',!!bad)}
+function click(sx,sy){
+  if(mode==='sel'){
+    let best=null,bd=1e9;
+    for(const s of STARS){const p=posOf(s,cur);if(!onField(p))continue;const q=toS(p),d=Math.hypot(q[0]-sx,q[1]-sy);if(d<bd){bd=d;best=s}}
+    const lim=Math.max(16,40*base()*zoom);
+    if(!best||bd>lim){say('No star there. Click on the bright center of a star.',true);return}
+    if(!traced.includes(best))traced.push(best);
+    active=best;say(`${best.n} selected. Play the movie to trace its motion.`);renderChips();renderFit();
+  }else{
+    const v=snapPt(sx,sy);
+    if(!pend){pend=v;say('Ruler: click the second point.')}
+    else{const nm=[pend.n,v.n].filter(n=>n&&n!=='Sgr A*');const star=nm[0]||(active?active.n:'');
+      const what=pend.on==='fit'&&v.on==='fit'?'major axis':(pend.n==='Sgr A*'||v.n==='Sgr A*')?'distance from Sgr A*':'other';
+      rulers.push({a:pend.p,b:v.p,star,what,k:cur});pend=null;renderRulers();say(`Ruler ${rulers.length}${star?' for '+star:''}: ${arc(rulers[rulers.length-1].a,v.p).toFixed(3)}″. Click the first point of the next measurement.`)}
+  }
+}
+function snapTargets(){
+  const t=[{p:BH,n:'Sgr A*',on:'bh'}];
+  for(const s of traced){const k1=$('full').checked?lastK(s):Math.min(cur,lastK(s));for(let k=s.k0;k<=k1;k++)t.push({p:posOf(s,k),n:s.n,on:'trace'})}
+  for(const s of traced){const f=fits[s.n];if(f)for(let i=0;i<720;i++){const a=i/720*2*Math.PI;t.push({p:ellPt(f,a),n:s.n,on:'fit'})}}
+  return t;
+}
+function snapPt(sx,sy){const v=toV(sx,sy);let best={p:v,n:null,on:null};if(!$('snap').checked)return best;let bd=14;
+  for(const t of snapTargets()){const q=toS(t.p),d=Math.hypot(q[0]-sx,q[1]-sy);if(d<bd){bd=d;best=t}}return {p:[best.p[0],best.p[1]],n:best.n,on:best.on}}
+const STAR_OPTS=['',...STARS.map(s=>s.n)],WHAT_OPTS=['major axis','minor axis','distance from Sgr A*','distance moved','other'];
+function renderRulers(){$('rulers').innerHTML=rulers.map((r,i)=>`<li><select data-i="${i}" data-f="star" aria-label="Star for ruler ${i+1}">${STAR_OPTS.map(n=>`<option value="${n}"${n===r.star?' selected':''}>${n||'no star'}</option>`).join('')}</select> <b>${arc(r.a,r.b).toFixed(3)}″</b> <select data-i="${i}" data-f="what" aria-label="What ruler ${i+1} measures">${WHAT_OPTS.map(w=>`<option${w===r.what?' selected':''}>${w}</option>`).join('')}</select><button data-i="${i}">remove</button></li>`).join('')||'<li class="muted" style="list-style:none;margin-left:-22px">No measurements yet.</li>'}
+$('rulers').onclick=e=>{const i=e.target.dataset.i;if(i!==undefined&&e.target.tagName==='BUTTON'){rulers.splice(+i,1);renderRulers()}};
+$('rulers').onchange=e=>{const i=e.target.dataset.i,f=e.target.dataset.f;if(i!==undefined&&f)rulers[+i][f]=e.target.value};
+$('rClr').onclick=()=>{rulers=[];pend=null;renderRulers()};
+function renderChips(){
+  $('chips').innerHTML=traced.map((s,i)=>`<span class="chip${s===active?' act':''}" data-n="${s.n}"><i style="background:${COLORS[i%COLORS.length]}"></i><b>${s.n}</b><button class="x" data-x="${s.n}" aria-label="Stop tracing ${s.n}">×</button></span>`).join('');
+}
+$('chips').onclick=e=>{const x=e.target.closest('[data-x]');const c=e.target.closest('[data-n]');
+  if(x){const s=STARS.find(t=>t.n===x.dataset.x);traced=traced.filter(t=>t!==s);delete fits[s.n];if(active===s)active=traced[traced.length-1]||null;renderChips();renderFit();return}
+  if(c){active=STARS.find(t=>t.n===c.dataset.n);renderChips();renderFit()}};
+const colorOf=s=>COLORS[traced.indexOf(s)%COLORS.length];
+
+// motion between dates
+$('mStart').onclick=()=>markAt('start');$('mEnd').onclick=()=>markAt('end');
+$('mClr').onclick=()=>{if(active)delete marks[active.n];};
+function markAt(w){if(!active){say('Select a star first.',true);return}const p=posOf(active,cur);
+  if(!onField(p)){say(`${active.n} is not in the field of view in ${fmtY(cur)}.`,true);return}
+  (marks[active.n]=marks[active.n]||{})[w]={k:cur,p};say(`${w==='start'?'Start':'End'} marked for ${active.n} at ${fmtY(cur)}.`)}
+
+// ---------- fitting ----------
+$('fE').onclick=()=>{fitType='ellipse';$('fE').classList.add('on');$('fC').classList.remove('on')};
+$('fC').onclick=()=>{fitType='circle';$('fC').classList.add('on');$('fE').classList.remove('on')};
+function solve3(M,b){const [a,bb,c]=M[0],[d,e,f]=M[1],[g,h,i]=M[2];
+  const det=a*(e*i-f*h)-bb*(d*i-f*g)+c*(d*h-e*g);if(Math.abs(det)<1e-14)return null;
+  const inv=[[e*i-f*h,c*h-bb*i,bb*f-c*e],[f*g-d*i,a*i-c*g,c*d-a*f],[d*h-e*g,bb*g-a*h,a*e-bb*d]].map(r=>r.map(v=>v/det));
+  return b?inv.map(r=>r[0]*b[0]+r[1]*b[1]+r[2]*b[2]):inv}
+const mm=(A,B)=>A.map(r=>B[0].map((_,j)=>r[0]*B[0][j]+r[1]*B[1][j]+r[2]*B[2][j]));
+const tr=A=>A[0].map((_,j)=>A.map(r=>r[j]));
+function cubicRoots(a,b,c){const p=b-a*a/3,q=2*a*a*a/27-a*b/3+c,D=q*q/4+p*p*p/27,s=-a/3;
+  if(D>1e-18){const u=Math.cbrt(-q/2+Math.sqrt(D)),v=Math.cbrt(-q/2-Math.sqrt(D));return [u+v+s]}
+  if(Math.abs(p)<1e-15)return [s];const r=2*Math.sqrt(-p/3),ph=Math.acos(Math.max(-1,Math.min(1,3*q/(p*r))))/3;
+  return [0,1,2].map(k=>r*Math.cos(ph-2*Math.PI*k/3)+s)}
+function fitEllipse(P){
+  const n=P.length;let mx=0,my=0;for(const p of P){mx+=p[0];my+=p[1]}mx/=n;my/=n;
+  let sc=0;for(const p of P)sc+=Math.hypot(p[0]-mx,p[1]-my);sc=sc/n||1;
+  const S1=[[0,0,0],[0,0,0],[0,0,0]],S2=[[0,0,0],[0,0,0],[0,0,0]],S3=[[0,0,0],[0,0,0],[0,0,0]];
+  for(const p of P){const x=(p[0]-mx)/sc,y=(p[1]-my)/sc,d1=[x*x,x*y,y*y],d2=[x,y,1];
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++){S1[i][j]+=d1[i]*d1[j];S2[i][j]+=d1[i]*d2[j];S3[i][j]+=d2[i]*d2[j]}}
+  const iS3=solve3(S3);if(!iS3)return null;
+  const T=mm(iS3,tr(S2)).map(r=>r.map(v=>-v));const M=mm(S2,T).map((r,i)=>r.map((v,j)=>v+S1[i][j]));
+  const N=[M[2].map(v=>v/2),M[1].map(v=>-v),M[0].map(v=>v/2)];
+  const t=N[0][0]+N[1][1]+N[2][2];
+  const c2=N[0][0]*N[1][1]-N[0][1]*N[1][0]+N[0][0]*N[2][2]-N[0][2]*N[2][0]+N[1][1]*N[2][2]-N[1][2]*N[2][1];
+  const det=N[0][0]*(N[1][1]*N[2][2]-N[1][2]*N[2][1])-N[0][1]*(N[1][0]*N[2][2]-N[1][2]*N[2][0])+N[0][2]*(N[1][0]*N[2][1]-N[1][1]*N[2][0]);
+  let best=null;
+  for(const L of cubicRoots(-t,c2,-det)){
+    const R=N.map((r,i)=>r.map((v,j)=>v-(i===j?L:0)));
+    const cr=(u,v)=>[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    let v=[cr(R[0],R[1]),cr(R[0],R[2]),cr(R[1],R[2])].sort((a,b)=>Math.hypot(...b)-Math.hypot(...a))[0];
+    if(4*v[0]*v[2]-v[1]*v[1]>0){best=v;break}}
+  if(!best)return null;
+  const a2=T.map(r=>r[0]*best[0]+r[1]*best[1]+r[2]*best[2]);
+  const [A,B,C]=best,[D,E,F]=a2;
+  const den=B*B-4*A*C;if(den>=0)return null;
+  const x0=(2*C*D-B*E)/den,y0=(2*A*E-B*D)/den,F0=F+(D*x0+E*y0)/2;
+  const m=(A+C)/2,dd=Math.sqrt(((A-C)/2)**2+(B/2)**2),l1=m-dd,l2=m+dd;
+  if(-F0/l1<=0||-F0/l2<=0)return null;
+  const ra=Math.sqrt(-F0/l1),rb=Math.sqrt(-F0/l2);
+  let vx=B/2,vy=l1-A;if(Math.hypot(vx,vy)<1e-12){vx=l1-C;vy=B/2}if(Math.hypot(vx,vy)<1e-12){vx=1;vy=0}
+  return {type:'ellipse',x:x0*sc+mx,y:y0*sc+my,a:ra*sc,b:rb*sc,th:Math.atan2(vy,vx)}
+}
+function fitCircle(P){let S=[[0,0,0],[0,0,0],[0,0,0]],r=[0,0,0];
+  for(const p of P){const v=[p[0],p[1],1],z=-(p[0]*p[0]+p[1]*p[1]);for(let i=0;i<3;i++){r[i]+=v[i]*z;for(let j=0;j<3;j++)S[i][j]+=v[i]*v[j]}}
+  const s=solve3(S,r);if(!s)return null;const x=-s[0]/2,y=-s[1]/2,rr=Math.sqrt(x*x+y*y-s[2]);
+  return isFinite(rr)?{type:'circle',x,y,a:rr,b:rr,th:0}:null}
+const ellPt=(f,t)=>[f.x+f.a*Math.cos(t)*Math.cos(f.th)-f.b*Math.sin(t)*Math.sin(f.th),f.y+f.a*Math.cos(t)*Math.sin(f.th)+f.b*Math.sin(t)*Math.cos(f.th)];
+function tracedPts(s){const k1=$('full').checked?lastK(s):Math.min(cur,lastK(s));const P=[];for(let k=s.k0;k<=k1;k++){const p=posOf(s,k);if(onField(p))P.push(p)}return P}
+$('fit').onclick=()=>{
+  if(!active){fm('Select a star and trace part of its orbit first.',true);return}
+  const P=tracedPts(active);if(P.length<8){fm('Trace at least a year of motion before fitting.',true);return}
+  const f=fitType==='ellipse'?fitEllipse(P):fitCircle(P);
+  if(!f||!isFinite(f.a)||f.a>3*VW){fm('These points do not define a closed orbit yet. Trace more of the orbit or try the circle fit.',true);delete fits[active.n];renderFit();return}
+  // how much of the fitted curve is covered by data
+  const ang=P.map(p=>{const dx=p[0]-f.x,dy=p[1]-f.y,u=(dx*Math.cos(f.th)+dy*Math.sin(f.th))/f.a,v=(-dx*Math.sin(f.th)+dy*Math.cos(f.th))/f.b;return (Math.atan2(v,u)+2*Math.PI)%(2*Math.PI)}).sort((a,b)=>a-b);
+  let gap=2*Math.PI-ang[ang.length-1]+ang[0];for(let i=1;i<ang.length;i++)gap=Math.max(gap,ang[i]-ang[i-1]);
+  f.cover=Math.round((2*Math.PI-gap)/(2*Math.PI)*100);f.n=P.length;f.k1=Math.min(cur,lastK(active));
+  fits[active.n]=f;
+  fm(`${fitType==='ellipse'?'Ellipse':'Circle'} fitted to ${P.length} positions. The traced points cover about ${f.cover}% of the curve.`+(f.cover<45?' Only a small part of the orbit is traced, so the fitted shape is uncertain.':''),f.cover<45);
+  renderFit()};
+function fm(t,bad){$('fitMsg').textContent=t;$('fitMsg').classList.toggle('warn',!!bad);say(t,bad)}
+$('ans').onchange=renderFit;
+$('fitClr').onclick=()=>{if(active){delete fits[active.n];fm('Fit cleared.')}};
+function renderFit(){const el=$('answer');el.hidden=!$('ans').checked;if(el.hidden)return;
+  if(!active){el.innerHTML='<div class="muted">Select a star.</div>';return}
+  const f=fits[active.n],m=active.m;let h='';
+  if(f){const e=f.type==='ellipse'?Math.sqrt(1-(f.b/f.a)**2):0;
+    h+=`<dl><dt>Fitted ${f.type} semi-major axis</dt><dd>${(f.a/PX).toFixed(3)}″</dd><dt>Major axis</dt><dd>${(2*f.a/PX).toFixed(3)}″</dd>`+
+    (f.type==='ellipse'?`<dt>Semi-minor axis</dt><dd>${(f.b/PX).toFixed(3)}″</dd><dt>Shape on the sky (e)</dt><dd>${e.toFixed(2)}</dd>`:'')+`</dl>`}
+  else h+='<div class="muted">Fit the orbit to see the fitted axes.</div>';
+  if(m)h+=`<div class="muted" style="margin-top:8px">Orbit model fitted to the whole movie for ${active.n} (true orbit, not the tilted view):</div><dl><dt>Period P</dt><dd>${m.P} yr</dd><dt>Eccentricity e</dt><dd>${m.e}</dd><dt>True semi-major axis a</dt><dd>${m.a.toFixed(3)}″</dd></dl>`;
+  else h+=`<div class="muted" style="margin-top:8px">${active.n} completes too little of its orbit in this movie to pin down its period.</div>`;
+  el.innerHTML=h}
+
+// Kepler calculator
+function kep(){const a=+$('kA').value,P=+$('kP').value,d=+$('dist').value;let h='';
+  if(a>0&&d>0){const au=a*d*1000;h+=`<dt>a in AU</dt><dd>${Math.round(au).toLocaleString()} AU</dd>`;
+    if(P>0){const M=au**3/P**2;h+=`<dt>Mass</dt><dd>${(M/1e6).toFixed(2)} million Suns</dd>`}}
+  $('kOut').innerHTML=h||'<dt>Enter a and P</dt><dd></dd>'}
+['kA','kP','dist'].forEach(i=>$(i).addEventListener('input',kep));kep();
+
+// copy data
+function copyText(t){const o=$('out');o.hidden=false;o.value=t;
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>say('Copied. You can also select the text below.')).catch(()=>{o.select();say('Select the text below and copy it.')})}
+$('cpy').onclick=()=>{if(!active){say('Select a star first.',true);return}
+  const k1=$('full').checked?lastK(active):Math.min(cur,lastK(active));let t=`star,year,east_arcsec,north_arcsec\n`;
+  for(let k=active.k0;k<=k1;k++){const p=posOf(active,k);if(!onField(p))continue;t+=`${active.n},${fmtY(k)},${(-(p[0]-BH[0])/PX).toFixed(4)},${(-(p[1]-BH[1])/PX).toFixed(4)}\n`}copyText(t)};
+const hasData=()=>rulers.length||Object.values(marks).some(m=>m.start&&m.end);
+$('cpyM').onclick=()=>{if(!hasData()){say('No measurements yet.',true);return}copyText(buildCSV())};
+const cell=v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const eN=p=>[(-(p[0]-BH[0])/PX).toFixed(4),(-(p[1]-BH[1])/PX).toFixed(4)];
+function buildCSV(){const who=$('who').value.trim();
+  const rows=[['student','type','star','what','year','length_arcsec','half_length_arcsec','start_year','end_year','elapsed_years','x1_east_arcsec','y1_north_arcsec','x2_east_arcsec','y2_north_arcsec']];
+  rulers.forEach(r=>{const d=arc(r.a,r.b);rows.push([who,'ruler',r.star,r.what,fmtY(r.k),d.toFixed(4),(d/2).toFixed(4),'','','',...eN(r.a),...eN(r.b)])});
+  for(const [n,mk] of Object.entries(marks))if(mk.start&&mk.end){const d=arc(mk.start.p,mk.end.p);
+    rows.push([who,'motion',n,'motion between two dates','',d.toFixed(4),'',fmtY(mk.start.k),fmtY(mk.end.k),(Math.abs(mk.end.k-mk.start.k)/10).toFixed(1),...eN(mk.start.p),...eN(mk.end.p)])}
+  if($('ans').checked)for(const [n,f] of Object.entries(fits))rows.push([who,'fit (teacher view)',n,f.type+' fit','',(2*f.a/PX).toFixed(4),(f.a/PX).toFixed(4),'',fmtY(f.k1),'','','','','']);
+  return rows.map(r=>r.map(cell).join(',')).join('\n')+'\n'}
+let DL=null;try{if(window.claude&&typeof window.claude.use==='function')window.claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
+$('save').onclick=async()=>{
+  if(!hasData()){say('No measurements to save yet. Use the ruler or Mark start and Mark end first.',true);return}
+  const csv=buildCSV(),who=$('who').value.trim().replace(/[^A-Za-z0-9_-]+/g,'_'),fn=`gc_measurements${who?'_'+who:''}.csv`;
+  let dl=DL;if(!dl&&window.claude&&typeof window.claude.use==='function'){try{dl=await Promise.race([window.claude.use('downloads'),new Promise(r=>setTimeout(()=>r(null),1500))])}catch(e){}}
+  if(dl){try{await dl.save({filename:fn,data:csv});say(`Saved ${fn}.`)}catch(e){if(e&&e.code==='declined')say('Save cancelled.',true);else{copyText(csv)}}return}
+  try{const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);say(`Saved ${fn} to your downloads folder.`)}catch(e){copyText(csv)}};
+
+// ---------- panel readouts ----------
+let lastSig='';
+function readouts(){
+  const sig=[cur,active&&active.n,JSON.stringify(active&&marks[active.n]),$('dist').value].join('|');if(sig===lastSig)return;lastSig=sig;
+  $('year').textContent=fmtY(cur);$('scrub').value=cur;
+  if(!active){$('sName').textContent='None yet';$('sNow').innerHTML='';$('motion').innerHTML='';return}
+  $('sName').textContent=active.n;
+  const p=posOf(active,cur),first=fmtY(Math.max(active.k0,0)),last=fmtY(lastK(active));
+  $('sNote').textContent=active.n==='Unlabeled'?`This star is not named in the movie. It enters the field in ${first}.`:`Tracked from ${first} to ${last}.`;
+  $('sNow').innerHTML=onField(p)?`<dt>Year</dt><dd>${fmtY(cur)}</dd><dt>Position from Sgr A*</dt><dd>${offs(p)}</dd><dt>Distance from Sgr A*</dt><dd>${arc(p,BH).toFixed(3)}″</dd>`:
+    `<dt>Year</dt><dd>${fmtY(cur)}</dd><dt colspan="2" style="grid-column:1/3">${cur<active.k0?'Not yet in the field of view.':'Outside the field of view.'}</dt>`;
+  const mk=marks[active.n]||{};let h='';
+  if(mk.start)h+=`<dt>Start</dt><dd>${fmtY(mk.start.k)}: ${offs(mk.start.p)}</dd>`;
+  if(mk.end)h+=`<dt>End</dt><dd>${fmtY(mk.end.k)}: ${offs(mk.end.p)}</dd>`;
+  if(mk.start&&mk.end){const d=arc(mk.start.p,mk.end.p),dt=Math.abs(mk.end.k-mk.start.k)/10,mu=dt>0?d/dt:0,v=4.74*mu*(+$('dist').value*1000);
+    h+=`<dt>Distance moved</dt><dd><b>${d.toFixed(3)}″</b></dd><dt>Time elapsed</dt><dd><b>${dt.toFixed(1)} yr</b></dd><dt>Angular speed</dt><dd>${mu.toFixed(4)}″/yr</dd><dt>Speed across the sky</dt><dd>${dt>0?Math.round(v).toLocaleString()+' km/s':'–'}</dd>`}
+  $('motion').innerHTML=h}
+
+// ---------- drawing ----------
+function line(a,b){ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.stroke()}
+function tag(t,x,y,col,al){ctx.font='600 14px Archivo,sans-serif';const w=ctx.measureText(t).width;const X=al==='r'?x-w-8:x;
+  ctx.fillStyle='rgba(7,10,18,.8)';ctx.fillRect(X-4,y-15,w+8,20);ctx.fillStyle=col;ctx.fillText(t,X,y)}
+function draw(){
+  cur=curEpoch();
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  const k=base()*zoom;
+  if(vid.readyState>=2){ctx.save();ctx.translate(W/2-cx*k,H/2-cy*k);ctx.scale(k,k);ctx.drawImage(vid,0,0,VW,VH);ctx.restore()}
+  if($('grid').checked){ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;ctx.font='12px Archivo,sans-serif';ctx.fillStyle='rgba(255,255,255,.7)';
+    for(let i=-9;i<=9;i++){const x=toS([BH[0]+i*120,0])[0];if(x>0&&x<W){line([x,0],[x,H]);if(i)ctx.fillText(`${(Math.abs(i)/10).toFixed(1)}″${i<0?'E':'W'}`,x+3,14)}
+      const y=toS([0,BH[1]+i*120])[1];if(y>0&&y<H){line([0,y],[W,y]);if(i)ctx.fillText(`${(Math.abs(i)/10).toFixed(1)}″${i<0?'N':'S'}`,4,y-3)}}}
+  if($('labels').checked)for(const s of STARS){const p=posOf(s,cur);if(onField(p)){const q=toS(p);tag(s.n,q[0]+10,q[1]-10,'#fff')}}
+  const tick=+$('ticks').value;
+  for(const s of traced){
+    const f=fits[s.n];if(f){const c=toS([f.x,f.y]);ctx.save();
+      for(const [w,col] of [[6,'rgba(0,0,0,.85)'],[2.5,'#ffffff']]){ctx.lineWidth=w;ctx.strokeStyle=col;ctx.beginPath();ctx.ellipse(c[0],c[1],f.a*k,f.b*k,f.th,0,7);ctx.stroke()}
+      ctx.restore();let top=ellPt(f,0);for(let i=0;i<72;i++){const q=ellPt(f,i/72*2*Math.PI);if(q[1]<top[1])top=q}const tq=toS(top);tag(`fitted orbit of ${s.n}`,tq[0]+8,tq[1]-8,'#ffffff');
+      if($('ans').checked&&s===active){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;line(toS(ellPt(f,0)),toS(ellPt(f,Math.PI)));if(f.type==='ellipse')line(toS(ellPt(f,Math.PI/2)),toS(ellPt(f,-Math.PI/2)));
+        ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(c[0],c[1],4,0,7);ctx.fill()}}
+  }
+  for(const s of traced){const col=colorOf(s),k1=$('full').checked?lastK(s):Math.min(cur,lastK(s));if(k1<s.k0)continue;
+    ctx.strokeStyle=col;ctx.globalAlpha=.9;ctx.lineWidth=1.5;ctx.beginPath();let st=false;
+    for(let j=s.k0;j<=k1;j++){const q=toS(posOf(s,j));st?ctx.lineTo(...q):ctx.moveTo(...q);st=true}ctx.stroke();ctx.globalAlpha=1;
+    const r=zoom>2.5?3:2.2;
+    for(let j=s.k0;j<=k1;j++){const q=toS(posOf(s,j));ctx.beginPath();ctx.arc(q[0],q[1],r,0,7);ctx.fillStyle=j>cur?'rgba(255,255,255,.35)':col;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='#000';ctx.stroke()}
+    if(tick&&s===active)for(let j=s.k0;j<=k1;j++){const y=yr(j);if(Math.abs(y-Math.round(y))>.01||Math.round(y)%tick)continue;
+      const q=toS(posOf(s,j));ctx.beginPath();ctx.arc(q[0],q[1],r+2.5,0,7);ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='#000';ctx.stroke();tag(String(Math.round(y)),q[0]+8,q[1]+16,col)}
+    const p=posOf(s,cur);if(onField(p)){const q=toS(p);ctx.strokeStyle=col;ctx.lineWidth=s===active?3:2;ctx.beginPath();ctx.arc(q[0],q[1],s===active?17:13,0,7);ctx.stroke();tag(s.n,q[0]+20,q[1]-14,col)}
+    const mk=marks[s.n];if(mk&&s===active){ctx.strokeStyle='#f5b83d';ctx.lineWidth=2;
+      for(const w of ['start','end'])if(mk[w]){const q=toS(mk[w].p);line([q[0],q[1]],[q[0],q[1]-30]);ctx.fillStyle='#f5b83d';ctx.fillRect(q[0],q[1]-30,14,9);tag(`${w} ${fmtY(mk[w].k)}`,q[0]-6,q[1]-36,'#f5b83d','r')}
+      if(mk.start&&mk.end){ctx.save();ctx.setLineDash([4,4]);line(toS(mk.start.p),toS(mk.end.p));ctx.restore()}}
+  }
+  ctx.lineWidth=2;ctx.strokeStyle='#f5b83d';
+  rulers.forEach((r,i)=>{const a=toS(r.a),b=toS(r.b);line(a,b);for(const q of [a,b]){ctx.beginPath();ctx.arc(q[0],q[1],4,0,7);ctx.fillStyle='#f5b83d';ctx.fill()}
+    tag(`${i+1}: ${r.star?r.star+' ':''}${arc(r.a,r.b).toFixed(3)}″`,(a[0]+b[0])/2+8,(a[1]+b[1])/2-8,'#f5b83d')});
+  let hud=mode==='sel'?'Click on a star to identify it':'Ruler: click two points';
+  if(mouse){const v=mode==='rul'?snapPt(...mouse).p:toV(...mouse);hud=`Cursor: ${offs(v)}`;
+    if(pend){const a=toS(pend.p),b=toS(v);ctx.save();ctx.setLineDash([6,5]);line(a,b);ctx.restore();hud+=`  ·  ruler ${arc(pend.p,v).toFixed(3)}″`}
+    if(mode==='rul'&&$('snap').checked){const q=toS(v);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(q[0],q[1],7,0,7);ctx.stroke()}}
+  if(zoom>1)hud+=`  ·  zoom ${zoom.toFixed(1)}×`;
+  $('hud').textContent=hud;
+  readouts();renderFitLive();
+  requestAnimationFrame(draw)}
+let lastAnsSig='';function renderFitLive(){const s=[active&&active.n,$('ans').checked,active&&fits[active.n]&&fits[active.n].a].join('|');if(s!==lastAnsSig){lastAnsSig=s;renderFit()}}
+renderRulers();setMode('sel');requestAnimationFrame(draw);
+}
+</script>
+</body>
+</html>

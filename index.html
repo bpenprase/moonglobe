@@ -52,7 +52,7 @@ h2{font-family:Spectral,Georgia,serif;font-weight:500;font-size:clamp(28px,3.4vw
 .app li{padding-left:16px;position:relative;margin:4px 0}
 .app li:before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .app .go{margin-top:auto;font-weight:600;font-size:14.5px;color:var(--accent)}
-.sky{--accent:var(--sky)} .hz{--accent:var(--gold)} .hudf{--accent:#d6a8ff} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
+.sky{--accent:var(--sky)} .hz{--accent:var(--gold)} .hudf{--accent:#d6a8ff} .bh{--accent:#ffcf5a} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
 .more{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:28px}
 .res{display:block;padding:24px 26px;background:var(--card);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:inherit;transition:border-color .25s}
 .res:hover{border-color:rgba(233,201,143,.5)}
@@ -112,7 +112,7 @@ footer a{color:var(--muted)}
 
 <section id="apps">
   <p class="kicker">The apps</p>
-  <h2>Explore the sky, the Moon, Mars and the distant universe</h2>
+  <h2>Explore the sky, the Moon, Mars, our galaxy&rsquo;s black hole and the distant universe</h2>
   <div class="apps">
     <a class="app sky" href="sky/">
       <div class="pic" style="background-image:url(assets/app_sky.jpg)" role="img" aria-label="The constellations around Orion with Flamsteed's figures"></div>
@@ -168,6 +168,20 @@ footer a{color:var(--muted)}
         <span class="go">Open the Mars Globe &rarr;</span>
       </div>
     </a>
+    <a class="app bh" href="blackhole/">
+      <div class="pic" style="background-image:url(assets/app_blackhole.jpg)" role="img" aria-label="Stars orbiting the black hole at the center of the Milky Way, with the orbits of S0-2, S0-38 and S0-102 traced"></div>
+      <div class="body">
+        <h3>The Galactic Center Black Hole</h3>
+        <p>The Keck/UCLA Galactic Center Group&rsquo;s movie of stars orbiting Sgr A*, the black hole at the center of the Milky Way, from 1995 to 2025.</p>
+        <ul>
+          <li>Click any of 19 stars to name it and trace its path year by year</li>
+          <li>Measure how far a star moves in arcseconds and how long it takes</li>
+          <li>Fit an ellipse to an orbit and measure its axes with a ruler</li>
+          <li>Save measurements as a CSV file and find the black hole&rsquo;s mass</li>
+        </ul>
+        <span class="go">Open the Galactic Center &rarr;</span>
+      </div>
+    </a>
     <a class="app hudf" href="hudf/">
       <div class="pic" style="background-image:url(assets/app_hudf.jpg)" role="img" aria-label="Galaxies in the Hubble Ultra Deep Field outlined and colored by redshift"></div>
       <div class="body">
@@ -208,7 +222,7 @@ footer a{color:var(--muted)}
 
 <footer>
   Exploring Space &middot; Bryan Penprase, Soka University of America<br>
-  Data from NASA, ESA/Hubble, the USGS and IAU planetary nomenclature, Hipparcos via d3-celestial, the UVUDF and MUSE surveys, and John Flamsteed&rsquo;s <i>Atlas Coelestis</i> (1729). Details are in each app.
+  Data from NASA, ESA/Hubble, the USGS and IAU planetary nomenclature, Hipparcos via d3-celestial, the UVUDF and MUSE surveys, the Keck/UCLA Galactic Center Group, and John Flamsteed&rsquo;s <i>Atlas Coelestis</i> (1729). Details are in each app.
 </footer>
 
 </div>
