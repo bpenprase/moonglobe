@@ -66,6 +66,19 @@ h1{font-family:Spectral,serif;font-weight:600;font-size:23px;margin:0 0 2px}
 details{font-size:11.5px;color:var(--muted);line-height:1.5}
 details summary{cursor:pointer;color:var(--text);font-size:12px}
 details a{color:#9cc8ff}
+.btns3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.btn:disabled{opacity:.45;cursor:default}.btn:disabled:hover{border-color:var(--line)}
+.chk.off{opacity:.45}
+#roster{margin-top:6px;max-height:230px;overflow:auto}
+.rs{display:flex;gap:8px;align-items:baseline;padding:5px 4px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer;border-radius:6px}
+.rs:hover{background:rgba(255,255,255,.04)}
+.rs b{font-weight:600;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs span{color:var(--muted);font-size:11.5px;margin-left:auto;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs span i{color:#ffcf9c;font-style:normal}
+.rs.bad{cursor:default}.rs.bad span{color:#ff9b8a}
+#pasteBox{display:none;margin-top:7px}
+#pasteBox textarea{width:100%;box-sizing:border-box;height:110px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:var(--text);font:12.5px/1.45 Inter,sans-serif;padding:7px 9px;outline:none;resize:vertical}
+#rosterCv{position:fixed;inset:0;pointer-events:none;z-index:1}
 #toggle{position:fixed;top:14px;left:14px;z-index:5;display:none;background:var(--panel);border:1px solid var(--line);color:var(--text);
   border-radius:10px;padding:8px 12px;font:600 13px Inter,sans-serif;cursor:pointer}
 #hide{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
@@ -111,6 +124,7 @@ details a{color:#9cc8ff}
 <body>
 <canvas id="scene"></canvas>
 <div id="labels"></div>
+<canvas id="rosterCv"></canvas>
 <div id="loader"><div class="t">Celestial Sphere Explorer</div><div class="bar"><i id="lbar"></i></div><div class="s" id="lstat">Loading the stars</div></div>
 <div id="hint">Drag to look around &middot; scroll or pinch to zoom &middot; click a star or object for details</div>
 
@@ -123,6 +137,20 @@ details a{color:#9cc8ff}
   <div class="sec">
     <input id="search" placeholder="Find a star, constellation or Messier object" autocomplete="off" spellcheck="false">
     <div id="results"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Class list</h2>
+    <div class="note" style="margin:0 0 7px">Load a list with a student name in the first column and a constellation, star or deep-sky object in the second
+    (such as <b>Orion</b>, <b>Betelgeuse</b>, <b>M42</b> or <b>Andromeda Galaxy</b>). Partial or misspelled names find the closest match.</div>
+    <div class="btns3"><button class="btn" id="rsUpload">Load list</button><button class="btn" id="rsPaste">Paste list</button><button class="btn" id="rsTemplate">Template</button></div>
+    <input type="file" id="rsFile" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain" style="display:none">
+    <div id="pasteBox"><textarea id="rsText" placeholder="Maria Lopez, Orion&#10;Ken Sato, Betelgeuse&#10;Ava Chen, M31"></textarea>
+      <div class="btns" style="margin-top:5px"><button class="btn" id="rsUse">Use this list</button><button class="btn" id="rsCancel">Cancel</button></div></div>
+    <label class="chk off" id="rsShowRow" style="margin-top:8px"><input type="checkbox" id="rsShow" disabled><span class="sw" style="background:#ffbe78"></span>Show student names</label>
+    <div class="note" id="rsNote"></div>
+    <div id="roster"></div>
+    <div class="btns" style="margin-top:6px"><button class="btn" id="rsFit" disabled>Zoom to show all</button><button class="btn" id="rsClear" disabled>Clear list</button></div>
   </div>
 
   <div class="sec">
@@ -276,7 +304,8 @@ function pushPolyline(out, pts, greatCircle, step = 1.5) {
   }
 }
 const gridL = lineLayer(0x4d6fa3, 0.30, 1), eqL = lineLayer(0x6f93cc, 0.55, 1), eclL = lineLayer(0xd9b44a, 0.6, 1), galL = lineLayer(0xb48ad9, 0.5, 1);
-const boundL = lineLayer(0xc8935a, 0.42, 2), figL = lineLayer(0x6fa8dc, 0.62, 4);
+const boundL = lineLayer(0xc8935a, 0.42, 2), figL = lineLayer(0x6fa8dc, 0.62, 4), rosterL = lineLayer(0xffbe78, 0.95, 5);
+rosterL.visible = false;
 { // grid, equator, ecliptic, galactic equator
   const g = [], e = [];
   for (let ra = 0; ra < 360; ra += 15) { const p = []; for (let d = -80; d <= 80; d += 2) p.push([ra, d]); pushPolyline(g, p, false); }
@@ -367,6 +396,7 @@ async function loadAll() {
   const mwImg = await bitmap(await (await fetch('data/milkyway.jpg')).blob());
   const t = new THREE.Texture(mwImg); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; mwUniforms.tex.value = t;
   await loadFlamsteed();
+  rosterReady();
   setLoad(1, 'Ready');
   $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 700);
   setTimeout(() => { $('hint').style.opacity = 0; }, 7000);
@@ -468,7 +498,7 @@ function skyWidth() {
 const layers = { names: true, lines: true, bounds: false, con: true, flam: false, mes: true, gal: true, show: false, mw: true, grid: true, ecl: true, galeq: false };
 let density = 1;
 function setDepth(on) {
-  for (const o of [gridL, eqL, eclL, galL, boundL, figL, starPts, ...flam.plates]) { o.material.depthTest = on; o.material.needsUpdate = true; }
+  for (const o of [gridL, eqL, eclL, galL, boundL, figL, rosterL, starPts, ...flam.plates]) { o.material.depthTest = on; o.material.needsUpdate = true; }
   mwMat.depthWrite = on; mwMat.transparent = !on; mwMat.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending; mwMat.side = on ? THREE.FrontSide : THREE.DoubleSide;
   mwMesh.scale.setScalar(on ? 0.995 : 1.02); mwMat.needsUpdate = true;
 }
@@ -616,6 +646,297 @@ function select(it, fly) {
   }
 }
 $('infoX').onclick = () => { $('info').style.display = 'none'; };
+
+
+// ---------------------------------------------------------------- class list
+// Students and the constellation, star or object each will report on. Names are matched forgivingly: catalog numbers
+// (M42, NGC 224), exact names, names without words like "nebula" or "the", the start of a name, then the closest spelling.
+const GREEKW = { α: 'alpha', β: 'beta', γ: 'gamma', δ: 'delta', ε: 'epsilon', ζ: 'zeta', η: 'eta', θ: 'theta', ι: 'iota', κ: 'kappa', λ: 'lambda', μ: 'mu', ν: 'nu',
+  ξ: 'xi', ο: 'omicron', π: 'pi', ρ: 'rho', σ: 'sigma', ς: 'sigma', τ: 'tau', υ: 'upsilon', φ: 'phi', χ: 'chi', ψ: 'psi', ω: 'omega' };
+const FILLER = new Set(['the', 'constellation', 'star', 'stars', 'nebula', 'galaxy', 'galaxies', 'cluster', 'great', 'object', 'my', 'is', 'of', 'in', 'assigned', 'target', 'deep', 'sky']);
+const SKY_ALIASES = { 'big dipper': 'Ursa Major', 'the plough': 'Ursa Major', 'plough': 'Ursa Major', 'great bear': 'Ursa Major', 'little dipper': 'Ursa Minor',
+  'little bear': 'Ursa Minor', 'north star': 'Polaris', 'pole star': 'Polaris', 'dog star': 'Sirius', 'seven sisters': 'Pleiades (Seven Sisters)',
+  'subaru': 'Pleiades (Seven Sisters)', 'praesepe': 'Beehive Cluster (Praesepe)', 'southern cross': 'Crux', 'sagittarius a': 'Galactic Center (Sagittarius A*)',
+  'sgr a': 'Galactic Center (Sagittarius A*)', 'galactic center': 'Galactic Center (Sagittarius A*)', 'teapot': 'Sagittarius', 'w': 'Cassiopeia', 'scorpio': 'Scorpius',
+  'great nebula in orion': 'M42', 'orion nebula': 'M42', 'andromeda galaxy': 'M31', 'hercules cluster': 'M13', 'the twins': 'Gemini', 'the hunter': 'Orion' };
+function skyNorm(t) {
+  return String(t ?? '').normalize('NFKD').replace(/[α-ω]/g, c => ' ' + (GREEKW[c] || c) + ' ').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[’'`*]/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/([a-z])(\d)/g, '$1 $2').replace(/(\d)([a-z])/g, '$1 $2').trim().replace(/\s+/g, ' ');
+}
+const skyStrip = n => n.split(' ').filter(w => !FILLER.has(w)).join(' ');
+const KIND_W = { con: 6, mes: 5, star: 4, gal: 3, show: 3, bayer: 1 };
+const GROUP = { con: 'con', star: 'star', bayer: 'star', mes: 'dso', gal: 'dso', show: 'dso' };
+let SX = null;
+function skyIndex() {
+  if (SX) return SX;
+  if (!items.length) return null;
+  SX = { list: [], exact: new Map(), strip: new Map(), mes: new Map(), cat: new Map() };
+  const add = (m, k, e) => { if (!k) return; if (!m.has(k)) m.set(k, []); if (!m.get(k).includes(e)) m.get(k).push(e); };
+  for (const it of items) {
+    if (!GROUP[it.kind]) continue;
+    const names = new Set();
+    if (it.kind === 'con') { const c = it.c; names.add(c.name); names.add(c.en); names.add(c.gen); }
+    else if (it.kind === 'star' || it.kind === 'bayer') { for (const x of it.lc.split('|')) names.add(x); for (const d of it.desigs) names.add(d); }
+    else {
+      const o = it.o; names.add(o.name || ''); names.add(o.id);
+      const m = (o.name || '').match(/^(.*?)\s*\((.*)\)\s*$/); if (m) { names.add(m[1]); names.add(m[2]); }
+      if (it.kind === 'mes') { SX.mes.set(+o.id.slice(1), it); if (o.ngc) SX.cat.set(skyNorm(o.ngc), it); }
+      if (/^(ngc|ic)\s*\d/i.test(o.id)) { if (!SX.cat.has(skyNorm(o.id))) SX.cat.set(skyNorm(o.id), it); }
+    }
+    const e = { it, keys: [], w: KIND_W[it.kind] * 1e4 - (it.mag ?? 5), g: GROUP[it.kind] };
+    for (const n of names) {
+      const k = skyNorm(n); if (!k) continue;
+      add(SX.exact, k, e); const s2 = skyStrip(k); if (s2) { add(SX.strip, s2, e); e.keys.push(s2); }
+    }
+    if (it.kind === 'con') add(SX.exact, it.c.id.toLowerCase(), e);
+    SX.list.push(e);
+  }
+  return SX;
+}
+function skyBest(L, hint) { const W = e => e.w + (hint && e.g === hint ? 1e6 : 0); return L.reduce((a, b) => (W(b) > W(a) ? b : a)); }
+const SKY_RANK = { catalog: 6, exact: 6, alias: 6, strip: 5, start: 3, close: 2, word: 1 };
+// a constellation, star or object written any reasonable way -> { it, how } or null
+function resolveSky(raw, wordsToo = true) {
+  const X = skyIndex(); if (!X) return null;
+  const n = skyNorm(raw); if (!n) return null;
+  const hint = /\b(nebula|galaxy|galaxies|cluster|globular|messier|ngc|remnant)\b/.test(n) ? 'dso' : /\bconstellation\b/.test(n) ? 'con' : /\bstar\b/.test(n) ? 'star' : null;
+  let m;
+  if ((m = n.match(/\b(?:m|messier)\s?(\d{1,3})\b/))) { const it = X.mes.get(+m[1]); if (it) return { it, how: 'catalog' }; }
+  if ((m = n.match(/\b(ngc|ic)\s?(\d{1,4})\b/))) { const it = X.cat.get(m[1] + ' ' + m[2]); if (it) return { it, how: 'catalog' }; }
+  const al = SKY_ALIASES[n] || SKY_ALIASES[n.replace(/^the /, '')];
+  if (al) { const r = resolveSky(al, false); if (r) return { it: r.it, how: 'alias' }; }
+  let c = X.exact.get(n); if (c) return { it: skyBest(c, hint).it, how: 'exact' };
+  const q = skyStrip(n); if (!q) return null;
+  c = X.strip.get(q); if (c) return { it: skyBest(c, hint).it, how: 'strip' };
+  if (q.length >= 4) {
+    c = X.list.filter(e => e.keys.some(k => k.startsWith(q) || k.includes(' ' + q)));
+    if (c.length) return { it: skyBest(c, hint).it, how: 'start' };
+  }
+  const L = q.length, tol = L < 4 ? 0 : L < 5 ? 1 : L < 8 ? 1 : L < 12 ? 2 : 3;
+  if (tol) {
+    let best = null, bd = tol + 1;
+    const W = e => e.w + (hint && e.g === hint ? 1e6 : 0);
+    for (const e of X.list) for (const k of e.keys) {
+      let d = editDist(q, k, tol);
+      if (d > tol && L >= 5 && k.length > L) { const d2 = editDist(q, k.slice(0, L), tol); if (d2 <= tol) d = d2 + 0.5 + 0.02 * (k.length - L); }
+      if (d < bd || (d === bd && best && W(e) > W(best))) { bd = d; best = e; }
+    }
+    if (best && bd <= tol) return { it: best.it, how: 'close' };
+  }
+  if (wordsToo) {
+    const words = n.split(' ').filter(w => w.length >= 4 && !FILLER.has(w));
+    if (words.length > 1 || (words.length === 1 && words[0] !== q)) {
+      let best = null;
+      // a word like "nebula" or "galaxy" in the name points to that kind of object first
+      const sc = r => SKY_RANK[r.how] + (hint && GROUP[r.it.kind] === hint ? 10 : 0);
+      for (const w of words) { const r = resolveSky(w, false); if (r && (!best || sc(r) > sc(best))) best = r; }
+      if (best) return { it: best.it, how: 'word' };
+    }
+  }
+  return null;
+}
+// edit distance with swapped neighbours counted as one edit
+function editDist(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let p2 = null, p = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const c = [i]; let lo = i;
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+      c.push(v); if (v < lo) lo = v;
+    }
+    if (lo > max) return max + 1;
+    p2 = p; p = c;
+  }
+  return p[b.length];
+}
+function splitLine(line, delim) {
+  const out = []; let cur = '', qt = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (qt && line[i + 1] === '"') { cur += '"'; i++; } else qt = !qt; }
+    else if (ch === delim && !qt) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur); return out.map(x => x.trim());
+}
+function tableFromText(text) {
+  const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const first = lines.slice(0, 5).join('\n');
+  const delim = first.includes('\t') ? '\t' : (first.split(';').length > first.split(',').length ? ';' : ',');
+  return lines.map(l => splitLine(l, delim));
+}
+// one cell holding both, such as "Maria Lopez - Orion" or "Maria Lopez Orion Nebula"
+function splitOneCell(t) {
+  const m = t.match(/^(.+?)\s*(?:\s[-–—]\s|:|=|→|->)\s*(.+)$/); if (m) return { name: m[1].trim(), obj: m[2].trim() };
+  const w = t.trim().split(/\s+/); let best = null, bs = 0;
+  for (let k = 1; k < w.length; k++) {
+    const r = resolveSky(w.slice(k).join(' '), false), sc = r ? SKY_RANK[r.how] * 10 - k * 0.01 : 0;
+    if (sc > bs) { bs = sc; best = { name: w.slice(0, k).join(' '), obj: w.slice(k).join(' ') }; }
+  }
+  return best || { name: t, obj: '' };
+}
+function rosterFromTable(T) {
+  T = T.map(r => r.map(c => String(c ?? '').trim())).filter(r => r.some(c => c));
+  if (!T.length) return [];
+  const h = T[0].map(c => c.toLowerCase());
+  const looksHeader = h.some(c => /student|name|constellation|object|target|assigned|topic|star/.test(c)) && !(T[0][1] && SKY_RANK[(resolveSky(T[0][1]) || {}).how] >= 6);
+  let ni = 0, oi = 1, body = T;
+  if (looksHeader) {
+    body = T.slice(1);
+    const find = re => h.findIndex(c => re.test(c));
+    ni = Math.max(0, find(/student|^name|full name|first/));
+    oi = find(/constellation|object|target|assigned|topic|star|galaxy|nebula|cluster/);
+    if (oi < 0 || oi === ni) oi = ni === 0 ? 1 : 0;
+  }
+  return body.map(r => {
+    let name = r[ni] || '', obj = r[oi] || '';
+    if (!obj) { const cells = r.filter(c => c); if (cells.length === 1) ({ name, obj } = splitOneCell(cells[0])); else if (cells.length > 1) obj = cells.find((c, i) => i !== ni) || ''; }
+    return { name: name || '(no name)', obj };
+  }).filter(r => r.name !== '(no name)' || r.obj);
+}
+const roster = { rows: [], show: false };
+try { const r = JSON.parse(localStorage.getItem('sky-roster') || 'null'); if (r) roster.rows = r; } catch (e) {}
+const saveRoster = () => { try { localStorage.setItem('sky-roster', JSON.stringify(roster.rows)); } catch (e) {} };
+let rosterCache = null;
+function rosterResolved() {
+  if (!rosterCache) rosterCache = roster.rows.map(r => ({ ...r, hit: items.length ? resolveSky(r.obj) : null }));
+  return rosterCache;
+}
+const kindWord = it => it.kind === 'con' ? 'constellation' : it.kind === 'star' || it.kind === 'bayer' ? 'star' : (it.o.tname || 'object').toLowerCase();
+function setRoster(rows) {
+  roster.rows = rows; rosterCache = null; saveRoster();
+  roster.show = rows.length > 0; drawRosterList(); rosterLines();
+  if (roster.show) fitRoster();
+  dirty = true;
+}
+function rosterButtons() {
+  const n = roster.rows.length;
+  $('rsShow').disabled = !n; $('rsShowRow').classList.toggle('off', !n); $('rsShow').checked = roster.show && n > 0;
+  $('rsFit').disabled = !n; $('rsClear').disabled = !n;
+}
+function drawRosterList() {
+  rosterButtons();
+  if (!items.length) { $('rsNote').textContent = roster.rows.length ? `${roster.rows.length} students in the saved list` : ''; return; }
+  const R = rosterResolved(), ok = R.filter(r => r.hit).length;
+  let note = roster.rows.length ? `${roster.rows.length} students, ${ok} found` + (ok < roster.rows.length ? `, ${roster.rows.length - ok} not found (in red)` : '') : '';
+  if (R.some(r => r.hit && !['exact', 'catalog', 'alias'].includes(r.hit.how))) note += '. Matches in orange came from a partial or different spelling, so check them.';
+  $('rsNote').textContent = note;
+  $('roster').innerHTML = R.map((r, i) => {
+    if (!r.hit) return `<div class="rs bad"><b>${esc(r.name)}</b><span>${r.obj ? `"${esc(r.obj)}" not found` : 'nothing assigned'}</span></div>`;
+    const exact = ['exact', 'catalog', 'alias'].includes(r.hit.how), it = r.hit.it;
+    const nm = it.kind === 'mes' ? it.name.replace(' · ', ', ') : it.name;
+    const tip = (exact ? '' : `Written as "${r.obj}". `) + `${nm} (${kindWord(it)}). Click to go there.`;
+    return `<div class="rs" data-i="${i}" title="${esc(tip)}"><b>${esc(r.name)}</b><span>${exact ? esc(nm) : `<i>${esc(nm)}</i>`}</span></div>`;
+  }).join('');
+}
+// the students' constellations drawn in orange
+function rosterLines() {
+  const pts = [];
+  if (roster.show) for (const r of rosterResolved()) if (r.hit && r.hit.it.kind === 'con') pts.push(...r.hit.it.c._lines);
+  setSegments(rosterL, pts); rosterL.visible = pts.length > 0; dirty = true;
+}
+function fitRoster() {
+  const P = rosterResolved().filter(r => r.hit).map(r => r.hit.it); if (!P.length) return;
+  const m = new THREE.Vector3(); for (const it of P) m.add(new THREE.Vector3(it.x, it.y, it.z));
+  let th = 90, rd = { ra: P[0].ra, dec: P[0].dec };
+  if (m.length() >= 0.3 * P.length) {
+    m.normalize(); rd = toRaDec(m); th = 0;
+    for (const it of P) th = Math.max(th, Math.acos(Math.min(1, m.x * it.x + m.y * it.y + m.z * it.z)) / DEG + (it.kind === 'con' ? 12 : 2));
+  }
+  flyTo(rd.ra, rd.dec, Math.max(25, Math.min(120, th * 2.3)));
+  if (view.outside && anim) anim.f1 = Math.max(1.35, Math.min(3.6, 1 + th / 24));   // on the globe, back away far enough to see the spread
+}
+const rcv = $('rosterCv'), r2 = rcv.getContext('2d');
+function sizeRosterCv() { const k = Math.min(devicePixelRatio, 2); rcv.width = innerWidth * k; rcv.height = innerHeight * k; r2.setTransform(k, 0, 0, k, 0, 0); dirty = true; }
+sizeRosterCv(); addEventListener('resize', sizeRosterCv);
+const rpv = new THREE.Vector3();
+function rScreen(v) { rpv.copy(v).project(camera); return rpv.z > 1 ? null : [(rpv.x * 0.5 + 0.5) * innerWidth, (-rpv.y * 0.5 + 0.5) * innerHeight]; }
+function rVisible(v) { return view.outside ? v.dot(camera.position) > 1.02 : v.dot(camDir) > 0.1; }
+function drawRoster() {
+  r2.clearRect(0, 0, innerWidth, innerHeight);
+  if (!roster.show || !roster.rows.length || !items.length) return;
+  camera.getWorldDirection(camDir);
+  const groups = new Map();
+  for (const r of rosterResolved()) { if (!r.hit) continue; const it = r.hit.it; if (!groups.has(it)) groups.set(it, []); groups.get(it).push(r.name); }
+  const placed = []; let hidden = 0;
+  for (const [it, names] of groups) {
+    const v = new THREE.Vector3(it.x, it.y, it.z);
+    const p = rVisible(v) && rScreen(v);
+    if (!p || p[0] < 0 || p[1] < 0 || p[0] > innerWidth || p[1] > innerHeight) { hidden += names.length; continue; }
+    const [sx, sy] = p;
+    let rad = 0;
+    r2.strokeStyle = '#ffbe78'; r2.lineWidth = 2;
+    if (it.kind !== 'con') {
+      // a ring the size of the object (at least a few pixels), or a small ring around a star
+      let ang = it.kind === 'star' || it.kind === 'bayer' ? 0 : (parseFloat(it.o.dim) || 5) / 120;
+      const e = vec(it.ra, Math.min(89.9, it.dec + ang)), q = ang ? rScreen(e) : null;
+      rad = Math.max(it.kind === 'star' || it.kind === 'bayer' ? 9 : 10, Math.min(220, q ? Math.hypot(q[0] - sx, q[1] - sy) : 0));
+      r2.beginPath(); r2.arc(sx, sy, rad, 0, 2 * Math.PI); r2.stroke();
+    }
+    const nm = it.kind === 'mes' ? it.label + (it.o.name ? ' (' + it.o.name.replace(/\s*\(.*\)$/, '') + ')' : '') : it.kind === 'con' ? it.c.name : it.name;
+    r2.font = '600 13px Inter,sans-serif';
+    const t1 = names.join(', '), w1 = r2.measureText(t1).width;
+    r2.font = '400 12px Inter,sans-serif';
+    const t2 = nm, w2 = r2.measureText(t2).width;
+    const tw = Math.max(w1, w2) + 16, th = 36;
+    let tx, ty;
+    if (it.kind === 'con') { tx = sx - tw / 2; ty = sy + 12; }                 // under the constellation's name
+    else { tx = sx + rad * 0.7 + 14; ty = sy - rad * 0.7 - th - 4; }
+    for (let k = 0; k < 12 && placed.some(b => tx < b[2] && tx + tw > b[0] && ty < b[3] && ty + th > b[1]); k++) ty += th + 4;
+    placed.push([tx, ty, tx + tw, ty + th]);
+    if (it.kind !== 'con') { r2.strokeStyle = 'rgba(255,190,120,.85)'; r2.lineWidth = 1.2; r2.beginPath(); r2.moveTo(sx + rad * 0.7, sy - rad * 0.7); r2.lineTo(tx, ty + th / 2); r2.stroke(); }
+    r2.fillStyle = 'rgba(22,15,8,.88)'; r2.beginPath(); r2.roundRect(tx, ty, tw, th, 7); r2.fill();
+    r2.strokeStyle = '#ffbe78'; r2.lineWidth = 1.2; r2.stroke();
+    r2.textAlign = 'left'; r2.textBaseline = 'middle';
+    r2.font = '600 13px Inter,sans-serif'; r2.fillStyle = '#ffe6c9'; r2.fillText(t1, tx + 8, ty + 11.5);
+    r2.font = '400 12px Inter,sans-serif'; r2.fillStyle = '#e8b77d'; r2.fillText(t2, tx + 8, ty + 26);
+  }
+  if (hidden) {
+    const msg = `${hidden} more out of view. Use Zoom to show all.`;
+    r2.font = '500 12px Inter,sans-serif'; const w = r2.measureText(msg).width + 18, x = innerWidth / 2 - w / 2, y = innerHeight - 76;
+    r2.fillStyle = 'rgba(22,15,8,.82)'; r2.beginPath(); r2.roundRect(x, y, w, 22, 11); r2.fill();
+    r2.fillStyle = '#ffcf9c'; r2.textAlign = 'center'; r2.textBaseline = 'middle'; r2.fillText(msg, innerWidth / 2, y + 11.5);
+  }
+}
+async function readRosterFile(f) {
+  try {
+    let T;
+    if (/\.xlsx?$/i.test(f.name)) {
+      $('rsNote').textContent = 'Reading the spreadsheet…';
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+      const wb = XLSX.read(await f.arrayBuffer());
+      T = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+    } else T = tableFromText(await f.text());
+    const rows = rosterFromTable(T);
+    if (!rows.length) { $('rsNote').textContent = 'No names were found in that file.'; return; }
+    setRoster(rows);
+  } catch (e) { $('rsNote').textContent = 'Could not read that file: ' + e.message; }
+}
+$('rsUpload').onclick = () => $('rsFile').click();
+$('rsFile').onchange = e => { const f = e.target.files[0]; if (f) readRosterFile(f); e.target.value = ''; };
+$('rsPaste').onclick = () => { $('pasteBox').style.display = 'block'; $('rsText').value = roster.rows.map(r => `${r.name}, ${r.obj}`).join('\n'); $('rsText').focus(); };
+$('rsCancel').onclick = () => { $('pasteBox').style.display = 'none'; };
+$('rsUse').onclick = () => { const rows = rosterFromTable(tableFromText($('rsText').value)); $('pasteBox').style.display = 'none'; setRoster(rows); };
+$('rsShow').onchange = e => { roster.show = e.target.checked; rosterLines(); if (roster.show) fitRoster(); dirty = true; };
+$('rsFit').onclick = fitRoster;
+$('rsClear').onclick = () => { if (confirm('Remove the class list from this browser?')) setRoster([]); };
+$('roster').addEventListener('click', e => {
+  const d = e.target.closest('.rs[data-i]'); if (!d) return;
+  const h = rosterResolved()[+d.dataset.i].hit; if (h) select(h.it, true);
+});
+const SKY_TEMPLATE = ['student,object', 'Student One,Orion', 'Student Two,Betelgeuse', 'Student Three,M31', 'Student Four,Pleiades', 'Student Five,Scorpius'];
+$('rsTemplate').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([SKY_TEMPLATE.join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = 'sky_class_list_template.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+drawRosterList();
+function rosterReady() {    // once the catalogs have loaded
+  rosterCache = null; roster.show = roster.rows.length > 0; drawRosterList(); rosterLines();
+  if (roster.rows.length) $('rsNote').textContent += ' (saved from last time)';
+}
 
 // ---------------------------------------------------------------- smooth moves
 let anim = null;
@@ -822,7 +1143,7 @@ function loop(now) {
   starUniforms.scale.value = view.outside ? 0.8 : 1;
   figL.material.opacity = sw < 3 ? 0.35 : 0.62;
   renderer.render(scene, camera);
-  if (sky) updateLabels();
+  if (sky) { updateLabels(); drawRoster(); }
   const z = sw >= 10 ? Math.round(sw) + '°' : sw.toFixed(1) + '°';
   if (z !== lastZ) { lastZ = z; $('zAlt').innerHTML = `<b>${z}</b>${view.outside ? 'on globe' : 'view'}`; }
 }

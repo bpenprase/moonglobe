@@ -210,6 +210,14 @@ The sky as a sphere, at `https://bpenprase.github.io/moonglobe/sky/`. Look out f
   each piece of sky is drawn from one plate, so the figures join up across plate edges. **Engraving** shows the figures
   as light lines on the night sky; **Printed plate** shows them as dark ink on parchment. The images (about 14 MB)
   load the first time the layer is turned on.
+- **Class list**: **Load list** reads a CSV or Excel file (or **Paste list**) with a student name in the first column
+  and a constellation, star or deep-sky object in the second. With **Show student names** checked, each assigned
+  constellation's figure is drawn in orange with a tag below its name. Each star or object gets a ring and a tag. The
+  tags give the student names and the object's name. The search accepts catalog numbers (M42, Messier 31, NGC 224),
+  names with or without words like "the" or "nebula", common names (Big Dipper, North Star, Seven Sisters), Bayer names
+  (Alpha Centauri, α Ori), the start of a name, and misspellings (Orian, Betelguese, Cassiopea). Matches from a
+  different spelling are shown in orange in the list so they can be checked. Clicking a student flies to the object,
+  and **Zoom to show all** frames the whole class, inside or on the globe. The list is kept in the browser.
 
 | Path | What it is |
 |---|---|
