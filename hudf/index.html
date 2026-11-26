@@ -59,6 +59,16 @@ select{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);
 .mk input{width:100%;background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.15);color:var(--text);font:500 12.5px Inter,sans-serif;padding:1px 0;outline:none}
 .mk small{display:block;color:var(--muted);font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
 .mk .del{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;line-height:1}
+#roster{margin-top:6px;max-height:260px;overflow:auto}
+.rs{display:flex;gap:8px;align-items:baseline;padding:5px 4px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer;border-radius:6px}
+.rs:hover{background:rgba(255,255,255,.04)}
+.rs b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs span{color:var(--muted);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rs.bad{cursor:default} .rs.bad span{color:#ff9b8a}
+#pasteBox{display:none;margin-top:7px}
+#pasteBox textarea{width:100%;height:110px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:var(--text);font:12.5px/1.45 Inter,sans-serif;padding:7px 9px;outline:none;resize:vertical}
+.btn.big{background:rgba(255,190,120,.16);border-color:rgba(255,190,120,.6);font-weight:600}
+.btn.big.on{background:#ffbe78;border-color:#ffbe78;color:#2a1704}
 details{font-size:11.5px;color:var(--muted);line-height:1.5}
 details summary{cursor:pointer;color:var(--text);font-size:12px}
 details a{color:#9cc8ff}
@@ -138,7 +148,8 @@ details a{color:#9cc8ff}
 
   <div class="sec">
     <h2>Catalog overlay</h2>
-    <label class="chk"><input type="checkbox" id="showCat" checked>Show catalog galaxies</label>
+    <div class="note" style="margin:0 0 8px;font-size:12.5px;color:#cfd5e2">Click on the options below to identify galaxies, and learn about their redshifts and distances.</div>
+    <label class="chk"><input type="checkbox" id="showCat">Show catalog galaxies</label>
     <label class="chk"><input type="checkbox" id="showLbl">Write redshifts beside galaxies</label>
     <label class="chk"><input type="checkbox" id="hideStars" checked>Leave out stars</label>
     <div class="row" style="margin-top:8px"><label>Redshifts to use</label></div>
@@ -162,6 +173,21 @@ details a{color:#9cc8ff}
     <div class="note" style="margin:0 0 7px">Choose <b>Mark</b> at the top, then click galaxies to number them. Each mark records its pixel position and its right ascension and declination. Your marks stay in this browser.</div>
     <div class="btns3"><button class="btn" id="mkMode">Mark mode</button><button class="btn" id="mkCsv">Save CSV</button><button class="btn" id="mkClear">Clear all</button></div>
     <div id="marks"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Class galaxy list</h2>
+    <div class="note" style="margin:0 0 7px">Upload a list of student names, each with the galaxy that student will report on, then show the names on the image.
+    The list can be a CSV or Excel file, or pasted from a spreadsheet: one student per row, the name first and then the galaxy
+    (a UVUDF number such as <b>7440</b>, a MUSE number such as <b>MUSE 12</b>, or a position such as <b>53.1554 -27.7811</b>).</div>
+    <div class="btns3"><button class="btn" id="rsUpload">Upload list</button><button class="btn" id="rsPaste">Paste list</button><button class="btn" id="rsTemplate">Template</button></div>
+    <input type="file" id="rsFile" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain" style="display:none">
+    <div id="pasteBox"><textarea id="rsText" placeholder="Maria Lopez, 7440&#10;Ken Sato, MUSE 12&#10;Ava Chen, 53.1610 -27.7920"></textarea>
+      <div class="btns" style="margin-top:5px"><button class="btn" id="rsUse">Use this list</button><button class="btn" id="rsCancel">Cancel</button></div></div>
+    <button class="btn big" id="rsShow" style="width:100%;margin-top:8px" disabled>Show student names on the image</button>
+    <div class="note" id="rsNote"></div>
+    <div id="roster"></div>
+    <div class="btns" style="margin-top:6px"><button class="btn" id="rsFit" disabled>Zoom to show all</button><button class="btn" id="rsClear" disabled>Clear list</button></div>
   </div>
 
   <div class="sec">
@@ -289,7 +315,7 @@ const toScr = (x, y) => [VS.ox + x * VS.s, VS.oy + y * VS.s];
 const toImg = (sx, sy) => [(sx - VS.ox) / VS.s, (sy - VS.oy) / VS.s];
 
 // ---------------------------------------------------------------- filtering
-const filt = { kind: 'best', zAll: true, zlo: 1, zhi: 3, mag: 31, hideStars: true, show: true, labels: false };
+const filt = { kind: 'best', zAll: true, zlo: 1, zhi: 3, mag: 31, hideStars: true, show: false, labels: false };
 let shown = [];
 function zFor(g) { return filt.kind === 'spec' ? g.zs : filt.kind === 'phot' ? g.zb : zBest(g); }
 let pool = [];                              // passes every filter except the redshift range (for the bar chart)
@@ -417,7 +443,15 @@ function draw() {
       if (++nDrawn > 6000) break;
     }
     g2.setLineDash([]);
+  } else {
+    for (const g of [hoverG, selG]) {
+      if (!g) continue;
+      const [sx, sy] = toScr(g.x, g.y), z = zFor(g);
+      g2.strokeStyle = zColor(z, 1); g2.lineWidth = 2;
+      g2.beginPath(); g2.ellipse(sx, sy, Math.max(g.a * 1.6 * VS.s, 5), Math.max(g.b * 1.6 * VS.s, 5), g.pa * DEG, 0, 2 * Math.PI); g2.stroke();
+    }
   }
+  if (roster.show) drawRoster();
   // marks
   for (const m of marks) {
     const [sx, sy] = toScr(m.x, m.y); if (sx < -30 || sy < -30 || sx > innerWidth + 30 || sy > innerHeight + 30) continue;
@@ -479,7 +513,7 @@ function hoverAt(sx, sy) {
   const [x, y] = toImg(sx, sy); hoverPt = [x, y];
   if (x < 0 || y < 0 || x > W || y > H) { tip.style.display = 'none'; hoverG = null; $('readout').innerHTML = 'Outside the image'; dirty = true; return; }
   const s = pxToSky(x, y);
-  const g = filt.show ? pick(x, y) : null;
+  const g = pick(x, y);
   if (g !== hoverG) { hoverG = g; dirty = true; }
   if (ruler) dirty = true;
   $('readout').innerHTML = `x <b>${x.toFixed(1)}</b> y <b>${y.toFixed(1)}</b> px &nbsp;&middot;&nbsp; RA <b>${fmtRA(s.ra)}</b> &nbsp;Dec <b>${fmtDec(s.dec)}</b>` +
@@ -504,7 +538,7 @@ viewer.addHandler('canvas-click', e => {
   const r = viewer.element.getBoundingClientRect(), sx = e.position.x + r.left, sy = e.position.y + r.top;
   const [x, y] = toImg(e.position.x, e.position.y);
   if (x < 0 || y < 0 || x > W || y > H) return;
-  const g = filt.show ? pick(x, y, 12) : null;
+  const g = pick(x, y, 12);
   if (mode === 'mark') { addMark(g && insideEll(g, x, y) <= 1 ? g.x : x, g && insideEll(g, x, y) <= 1 ? g.y : y, g && insideEll(g, x, y) <= 1 ? g : null); return; }
   if (mode === 'ruler') {
     if (ruler.pts.length >= 2) ruler.pts = [];
@@ -640,6 +674,170 @@ function drawHist() {
   x.fillStyle = '#9aa6bd'; x.font = '9.5px Inter'; x.textAlign = 'center';
   for (const z of [0, 2, 4, 6, 8]) x.fillText('z ' + z, Math.max(10, Math.min(w - 10, z / maxZ * w)), h - 1);
 }
+
+// ---------------------------------------------------------------- class galaxy list
+const byId = new Map(G.map(g => [g.id, g])), byMuse = new Map(G.filter(g => g.muse).map(g => [g.muse, g])), byCoe = new Map(G.filter(g => g.coe).map(g => [g.coe, g]));
+const roster = { rows: [], show: false };
+try { const r = JSON.parse(localStorage.getItem('hudf-roster') || 'null'); if (r) roster.rows = r; } catch (e) {}
+const saveRoster = () => { try { localStorage.setItem('hudf-roster', JSON.stringify(roster.rows)); } catch (e) {} };
+function nearestTo(ra, dec, maxArcsec = 1.0) {
+  const p = skyToPx(ra, dec); let best = null, bd = maxArcsec / PIX;
+  for (const g of G) { const d = Math.hypot(g.x - p.x, g.y - p.y); if (d < bd) { bd = d; best = g; } }
+  return { g: best, x: p.x, y: p.y };
+}
+function parseRADec(t) {
+  const n = t.replace(/[hdms°′″'":]/g, ' ').trim().split(/[\s,;]+/).filter(Boolean);
+  const v = n.map(Number); if (!v.every(isFinite)) return null;
+  if (v.length === 2) return { ra: v[0], dec: v[1] };
+  if (v.length === 6) { const neg = /^[-−]/.test(n[3]); return { ra: (v[0] + v[1] / 60 + v[2] / 3600) * 15, dec: (neg ? -1 : 1) * (Math.abs(v[3]) + v[4] / 60 + v[5] / 3600) }; }
+  return null;
+}
+// a galaxy written any of the usual ways -> { g, x, y } or null
+function resolveGalaxy(raw) {
+  const t = String(raw ?? '').trim().replace(/−/g, '-'); if (!t) return null;
+  const l = t.toLowerCase(); let m;
+  if ((m = l.match(/^muse\s*(?:id)?\s*[#:]?\s*(\d+)$/))) { const g = byMuse.get(+m[1]); return g ? { g, x: g.x, y: g.y } : null; }
+  if ((m = l.match(/^coe\s*[#:]?\s*(\d+)$/))) { const g = byCoe.get(+m[1]); return g ? { g, x: g.x, y: g.y } : null; }
+  if ((m = l.match(/^(?:uvudf|\[?rtg2015\]?|udf|id|galaxy)?\s*[#:]?\s*(\d+)(?:\.0+)?$/))) { const g = byId.get(+m[1]); return g ? { g, x: g.x, y: g.y } : null; }
+  const c = parseRADec(t);
+  if (c && Math.abs(c.ra - WCS.ra0) < 0.2 && Math.abs(c.dec - WCS.dec0) < 0.2) {
+    const r = nearestTo(c.ra, c.dec); if (r.x < 0 || r.y < 0 || r.x > W || r.y > H) return null;
+    return r.g ? { g: r.g, x: r.g.x, y: r.g.y } : { g: null, x: r.x, y: r.y };
+  }
+  return null;
+}
+function splitLine(line, delim) {
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
+    else if (ch === delim && !q) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur); return out.map(x => x.trim());
+}
+function tableFromText(text) {
+  const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const first = lines.slice(0, 5).join('\n');
+  const delim = first.includes('\t') ? '\t' : (first.split(';').length > first.split(',').length ? ';' : ',');
+  return lines.map(l => splitLine(l, delim));
+}
+// turn a table (rows of cells) into roster rows: find the name column and the galaxy column (or RA and Dec)
+function rosterFromTable(T) {
+  T = T.map(r => r.map(c => String(c ?? '').trim())).filter(r => r.some(c => c));
+  if (!T.length) return [];
+  const h = T[0].map(c => c.toLowerCase());
+  const looksHeader = h.some(c => /student|name|galaxy|object|target|uvudf|ra\b|dec\b|id\b/.test(c)) && !T[0].some(c => resolveGalaxy(c));
+  let ni = 0, gi = 1, ri = -1, di = -1, body = T;
+  if (looksHeader) {
+    body = T.slice(1);
+    const find = re => h.findIndex(c => re.test(c));
+    ni = Math.max(0, find(/student|^name|full name|first/));
+    gi = find(/galaxy|object|target|uvudf|^id$|catalog|muse/);
+    ri = find(/^ra(\b|_|\s|$)|right ascension/); di = find(/^dec(\b|_|\s|$)|declination/);
+    if (gi === ni) gi = -1;
+    if (gi < 0 && ri < 0) gi = ni === 0 ? 1 : 0;
+  } else if (T[0].length >= 3 && T.every(r => isFinite(+r[1]) && isFinite(+r[2]) && Math.abs(+r[1] - WCS.ra0) < 0.2)) { ri = 1; di = 2; gi = -1; }
+  return body.map(r => {
+    const name = r[ni] || '(no name)';
+    let text = gi >= 0 ? (r[gi] || '') : '';
+    if (!text && ri >= 0 && di >= 0) text = `${r[ri]} ${r[di]}`;
+    if (gi >= 0 && r.length > gi + 1 && !resolveGalaxy(text) && resolveGalaxy(`${r[gi]} ${r[gi + 1]}`)) text = `${r[gi]} ${r[gi + 1]}`;
+    return { name, galaxy: text };
+  }).filter(r => r.name || r.galaxy);
+}
+function setRoster(rows) {
+  roster.rows = rows; saveRoster(); drawRosterList();
+  if (rows.length) { roster.show = true; rosterButtons(); fitRoster(); } else { roster.show = false; rosterButtons(); }
+  dirty = true;
+}
+function rosterResolved() { return roster.rows.map(r => ({ ...r, hit: resolveGalaxy(r.galaxy) })); }
+function drawRosterList() {
+  const R = rosterResolved(), ok = R.filter(r => r.hit).length;
+  $('rsNote').textContent = roster.rows.length ? `${roster.rows.length} students, ${ok} found on the image` + (ok < roster.rows.length ? `, ${roster.rows.length - ok} not found (shown in red)` : '') : '';
+  $('roster').innerHTML = R.map((r, i) => {
+    if (!r.hit) return `<div class="rs bad"><b>${esc(r.name)}</b><span>${r.galaxy ? `"${esc(r.galaxy)}" not found` : 'no galaxy given'}</span></div>`;
+    const g = r.hit.g, z = g ? zBest(g) : null;
+    return `<div class="rs" data-i="${i}" title="Go to this galaxy"><b>${esc(r.name)}</b><span>${g ? `UVUDF ${g.id}` : 'position'}${z != null && g && !g.star ? ` · <span style="color:${zColor(z)}">z ${z.toFixed(g.zs != null ? 2 : 1)}</span>` : ''}</span></div>`;
+  }).join('');
+  rosterButtons();
+}
+function rosterButtons() {
+  const n = roster.rows.length;
+  $('rsShow').disabled = !n; $('rsFit').disabled = !n; $('rsClear').disabled = !n;
+  $('rsShow').classList.toggle('on', roster.show);
+  $('rsShow').textContent = roster.show ? 'Hide student names' : 'Show student names on the image';
+}
+function fitRoster() {
+  const P = rosterResolved().filter(r => r.hit).map(r => r.hit); if (!P.length) return;
+  const xs = P.map(p => p.x), ys = P.map(p => p.y), pad = 300;
+  let x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad * 2, y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+  // leave room for the panel on the left and the tool bar at the top
+  const left = $('panel').classList.contains('hidden') || innerWidth < 720 ? 20 : $('panel').getBoundingClientRect().right + 10;
+  const freeW = Math.max(200, innerWidth - left - 20), freeH = Math.max(200, innerHeight - 140);
+  const scale = Math.max((x1 - x0) / freeW, (y1 - y0) / freeH);          // image pixels per screen pixel
+  x0 -= left * scale; x1 += 20 * scale; y0 -= 70 * scale; y1 += 70 * scale;
+  viewer.viewport.fitBounds(new OpenSeadragon.Rect(x0 / W, y0 / W, (x1 - x0) / W, (y1 - y0) / W));
+}
+function drawRoster() {
+  // group students who share a galaxy, so their names sit together
+  const groups = new Map();
+  for (const r of rosterResolved()) { if (!r.hit) continue; const k = r.hit.g ? 'g' + r.hit.g.id : r.hit.x.toFixed(0) + ',' + r.hit.y.toFixed(0); if (!groups.has(k)) groups.set(k, { hit: r.hit, names: [] }); groups.get(k).names.push(r.name); }
+  const placed = [];
+  g2.font = '600 13px Inter,sans-serif';
+  for (const { hit, names } of groups.values()) {
+    const [sx, sy] = toScr(hit.x, hit.y);
+    if (sx < -200 || sy < -60 || sx > innerWidth + 200 || sy > innerHeight + 60) continue;
+    const g = hit.g, ra = g ? Math.max(g.a * 1.7 * VS.s, 9) : 9, rb = g ? Math.max(g.b * 1.7 * VS.s, 9) : 9;
+    g2.strokeStyle = '#ffbe78'; g2.lineWidth = 2.2; g2.setLineDash([]);
+    g2.beginPath(); g2.ellipse(sx, sy, ra, rb, g ? g.pa * DEG : 0, 0, 2 * Math.PI); g2.stroke();
+    // the name tag, up and to the right, nudged down if it would cover another tag
+    const txt = names.join(', '), tw = g2.measureText(txt).width + 14, th = 21, r = Math.max(ra, rb);
+    let tx = sx + r * 0.7 + 10, ty = sy - r * 0.7 - 26;
+    for (let k = 0; k < 8 && placed.some(b => tx < b[2] && tx + tw > b[0] && ty < b[3] && ty + th > b[1]); k++) ty += th + 3;
+    placed.push([tx, ty, tx + tw, ty + th]);
+    g2.strokeStyle = 'rgba(255,190,120,.8)'; g2.lineWidth = 1.2;
+    g2.beginPath(); g2.moveTo(sx + r * 0.62, sy - r * 0.62); g2.lineTo(tx, ty + th / 2); g2.stroke();
+    g2.fillStyle = 'rgba(20,14,8,.85)'; g2.beginPath(); g2.roundRect(tx, ty, tw, th, 6); g2.fill();
+    g2.strokeStyle = '#ffbe78'; g2.lineWidth = 1.2; g2.stroke();
+    g2.fillStyle = '#ffe2c2'; g2.textAlign = 'left'; g2.textBaseline = 'middle'; g2.fillText(txt, tx + 7, ty + th / 2 + 0.5);
+  }
+}
+async function readRosterFile(f) {
+  try {
+    let T;
+    if (/\.xlsx?$/i.test(f.name)) {
+      $('rsNote').textContent = 'Reading the spreadsheet…';
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+      const wb = XLSX.read(await f.arrayBuffer());
+      T = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+    } else T = tableFromText(await f.text());
+    const rows = rosterFromTable(T);
+    if (!rows.length) { $('rsNote').textContent = 'No names were found in that file.'; return; }
+    setRoster(rows);
+  } catch (e) { $('rsNote').textContent = 'Could not read that file: ' + e.message; }
+}
+$('rsUpload').onclick = () => $('rsFile').click();
+$('rsFile').onchange = e => { const f = e.target.files[0]; if (f) readRosterFile(f); e.target.value = ''; };
+$('rsPaste').onclick = () => { $('pasteBox').style.display = 'block'; $('rsText').value = roster.rows.map(r => `${r.name}, ${r.galaxy}`).join('\n'); $('rsText').focus(); };
+$('rsCancel').onclick = () => { $('pasteBox').style.display = 'none'; };
+$('rsUse').onclick = () => { const rows = rosterFromTable(tableFromText($('rsText').value)); $('pasteBox').style.display = 'none'; setRoster(rows); };
+$('rsShow').onclick = () => { roster.show = !roster.show; rosterButtons(); dirty = true; if (roster.show) fitRoster(); };
+$('rsFit').onclick = fitRoster;
+$('rsClear').onclick = () => { if (confirm('Remove the class list from this browser?')) setRoster([]); };
+$('roster').addEventListener('click', e => {
+  const d = e.target.closest('.rs[data-i]'); if (!d) return;
+  const h = resolveGalaxy(roster.rows[+d.dataset.i].galaxy); if (!h) return;
+  flyTo(h.x, h.y, 400); if (h.g) showGalaxy(h.g); else showPoint(h.x, h.y);
+});
+$('rsTemplate').onclick = () => {
+  const ex = ['student,galaxy', 'Student One,7440', 'Student Two,MUSE 12', 'Student Three,UVUDF 4444', 'Student Four,53.16285 -27.79180'];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ex.join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = 'hudf_class_list_template.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+drawRosterList();
+if (roster.rows.length) $('rsNote').textContent += ' (saved from last time)';
 
 // ---------------------------------------------------------------- panel controls
 const seg = (id, fn) => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset.v); });

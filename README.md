@@ -56,6 +56,12 @@ CC BY 4.0) as zoomable tiles, with a catalog overlay.
   catalog and fits a polynomial solution (median error 0.37 px, about 0.01 arcsec). Every pixel then has an RA and Dec.
 - **Marking**: Mark mode numbers clicked galaxies and records pixel position, RA, Dec, catalog number and redshift. Marks
   can be named, annotated, kept in the browser and saved as a CSV file.
+- **Class galaxy list**: upload a CSV or Excel file, or paste a list, with a student name and a galaxy on each row
+  (UVUDF number, MUSE or Coe number, or RA and Dec). "Show student names on the image" circles each galaxy and writes the
+  names beside it, grouping students who share a galaxy. Rows that do not match are flagged. The list is kept in the
+  browser. Excel files are read with SheetJS, loaded only when one is uploaded.
+- The app opens with just the image: the catalog overlay starts off and "All redshifts" is checked. Hovering and clicking
+  still identify galaxies with the overlay off.
 - **Measuring**: Measure mode gives the separation of two points in pixels and arcseconds, and in kiloparsecs at the
   redshift of the galaxy the measurement starts on. Distances use a flat universe with H0 = 67.7 and Omega_m = 0.31.
 
