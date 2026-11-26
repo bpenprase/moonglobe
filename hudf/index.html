@@ -179,7 +179,8 @@ details a{color:#9cc8ff}
     <h2>Class galaxy list</h2>
     <div class="note" style="margin:0 0 7px">Upload a list of student names, each with the galaxy that student will report on, then show the names on the image.
     The list can be a CSV or Excel file, or pasted from a spreadsheet: one student per row, the name first and then the galaxy
-    (a UVUDF number such as <b>7440</b>, a MUSE number such as <b>MUSE 12</b>, or a position such as <b>53.1554 -27.7811</b>).</div>
+    (a UVUDF number such as <b>7440</b>, a MUSE number such as <b>MUSE 12</b>, or a position such as <b>53.1554 -27.7811</b>).
+    Extra words such as "galaxy" are ignored, and a plain number is read as a UVUDF number.</div>
     <div class="btns3"><button class="btn" id="rsUpload">Upload list</button><button class="btn" id="rsPaste">Paste list</button><button class="btn" id="rsTemplate">Template</button></div>
     <input type="file" id="rsFile" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain" style="display:none">
     <div id="pasteBox"><textarea id="rsText" placeholder="Maria Lopez, 7440&#10;Ken Sato, MUSE 12&#10;Ava Chen, 53.1610 -27.7920"></textarea>
@@ -692,19 +693,50 @@ function parseRADec(t) {
   if (v.length === 6) { const neg = /^[-−]/.test(n[3]); return { ra: (v[0] + v[1] / 60 + v[2] / 3600) * 15, dec: (neg ? -1 : 1) * (Math.abs(v[3]) + v[4] / 60 + v[5] / 3600) }; }
   return null;
 }
-// a galaxy written any of the usual ways -> { g, x, y } or null
+// a galaxy written any of the usual ways -> { g, x, y } or null.
+// Forgiving: extra words ("galaxy", "my galaxy is", "#") are ignored, and a bare number is read as a UVUDF id.
+function idNumbers(l) {
+  // whole numbers in the text (decimals such as z=1.2 are skipped; 23,794 is read as 23794)
+  const out = [];
+  for (const m of l.matchAll(/\d+(?:[.,]\d+)*/g)) {
+    const s = m[0];
+    if (/^\d{1,2}(,\d{3})+$/.test(s)) out.push(+s.replace(/,/g, ''));
+    else if (/^\d+(\.0+)?$/.test(s)) out.push(parseInt(s, 10));
+  }
+  return out;
+}
+function cleanGalaxyText(raw) {
+  return String(raw ?? '').replace(/[−–—]/g, '-').replace(/ /g, ' ').trim().toLowerCase()
+    .replace(/\[?\s*rtg\s*2015\s*\]?/g, ' ')                          // catalog tag [RTG2015] has digits of its own
+    .replace(/rafelski\s*(et\s*al\.?)?\s*,?\s*\(?\s*2015\s*\)?/g, ' ');
+}
 function resolveGalaxy(raw) {
-  const t = String(raw ?? '').trim().replace(/−/g, '-'); if (!t) return null;
-  const l = t.toLowerCase(); let m;
-  if ((m = l.match(/^muse\s*(?:id)?\s*[#:]?\s*(\d+)$/))) { const g = byMuse.get(+m[1]); return g ? { g, x: g.x, y: g.y } : null; }
-  if ((m = l.match(/^coe\s*[#:]?\s*(\d+)$/))) { const g = byCoe.get(+m[1]); return g ? { g, x: g.x, y: g.y } : null; }
-  if ((m = l.match(/^(?:uvudf|\[?rtg2015\]?|udf|id|galaxy)?\s*[#:]?\s*(\d+)(?:\.0+)?$/))) { const g = byId.get(+m[1]); return g ? { g, x: g.x, y: g.y } : null; }
-  const c = parseRADec(t);
+  const l = cleanGalaxyText(raw); if (!l) return null;
+  const hit = g => g ? { g, x: g.x, y: g.y } : null;
+  let m;
+  // MUSE or Coe numbers, when the student says so
+  if ((m = l.match(/muse[^0-9]{0,15}?(\d+)/))) return hit(byMuse.get(+m[1]));
+  if ((m = l.match(/\bcoe[^0-9]{0,15}?(\d+)/))) return hit(byCoe.get(+m[1]));
+  // a position: IAU-style name (J033238.55-274612.3), decimal degrees, or hours/degrees
+  let c = null;
+  if ((m = l.match(/j\s*(\d{2})(\d{2})(\d{2}(?:\.\d+)?)\s*([+-])\s*(\d{2})(\d{2})(\d{2}(?:\.\d+)?)/)))
+    c = { ra: (+m[1] + m[2] / 60 + m[3] / 3600) * 15, dec: (m[4] === '-' ? -1 : 1) * (+m[5] + m[6] / 60 + m[7] / 3600) };
+  else c = parseRADec(l.replace(/\b(ra|dec|right ascension|declination|position|at|coords?|coordinates)\b/g, ' ').replace(/[a-z#=()\[\]_]+/g, ' '));
   if (c && Math.abs(c.ra - WCS.ra0) < 0.2 && Math.abs(c.dec - WCS.dec0) < 0.2) {
     const r = nearestTo(c.ra, c.dec); if (r.x < 0 || r.y < 0 || r.x > W || r.y > H) return null;
     return r.g ? { g: r.g, x: r.g.x, y: r.g.y } : { g: null, x: r.x, y: r.y };
   }
+  // otherwise any whole number is taken as a UVUDF id (the UVUDF prefix is optional)
+  for (const n of idNumbers(l)) { const g = byId.get(n); if (g) return hit(g); }
   return null;
+}
+// a short reason for the red rows
+function galaxyProblem(raw) {
+  const l = cleanGalaxyText(raw); if (!l) return 'no galaxy given';
+  const n = idNumbers(l);
+  if (/muse/.test(l)) return `"${raw}": no MUSE galaxy with that number`;
+  if (n.length) return `"${raw}": no UVUDF galaxy numbered ${n[0]}`;
+  return `"${raw}" not recognized`;
 }
 function splitLine(line, delim) {
   const out = []; let cur = '', q = false;
@@ -740,8 +772,13 @@ function rosterFromTable(T) {
     if (gi < 0 && ri < 0) gi = ni === 0 ? 1 : 0;
   } else if (T[0].length >= 3 && T.every(r => isFinite(+r[1]) && isFinite(+r[2]) && Math.abs(+r[1] - WCS.ra0) < 0.2)) { ri = 1; di = 2; gi = -1; }
   return body.map(r => {
-    const name = r[ni] || '(no name)';
+    let name = r[ni] || '';
     let text = gi >= 0 ? (r[gi] || '') : '';
+    if (!text && r.filter(c => c).length === 1) {
+      const one = r.find(c => c), k = one.search(/\b(uvudf|udf|hudf|muse|coe|galaxy|gal|id|object)\b|[#\[]|\d/i);
+      if (k > 0) { name = one.slice(0, k).replace(/[\s:,;\-–—=]+$/, '').trim(); text = one.slice(k); }
+    }
+    name = name || '(no name)';
     if (!text && ri >= 0 && di >= 0) text = `${r[ri]} ${r[di]}`;
     if (gi >= 0 && r.length > gi + 1 && !resolveGalaxy(text) && resolveGalaxy(`${r[gi]} ${r[gi + 1]}`)) text = `${r[gi]} ${r[gi + 1]}`;
     return { name, galaxy: text };
@@ -757,7 +794,7 @@ function drawRosterList() {
   const R = rosterResolved(), ok = R.filter(r => r.hit).length;
   $('rsNote').textContent = roster.rows.length ? `${roster.rows.length} students, ${ok} found on the image` + (ok < roster.rows.length ? `, ${roster.rows.length - ok} not found (shown in red)` : '') : '';
   $('roster').innerHTML = R.map((r, i) => {
-    if (!r.hit) return `<div class="rs bad"><b>${esc(r.name)}</b><span>${r.galaxy ? `"${esc(r.galaxy)}" not found` : 'no galaxy given'}</span></div>`;
+    if (!r.hit) return `<div class="rs bad"><b>${esc(r.name)}</b><span>${esc(galaxyProblem(r.galaxy))}</span></div>`;
     const g = r.hit.g, z = g ? zBest(g) : null;
     return `<div class="rs" data-i="${i}" title="Go to this galaxy"><b>${esc(r.name)}</b><span>${g ? `UVUDF ${g.id}` : 'position'}${z != null && g && !g.star ? ` · <span style="color:${zColor(z)}">z ${z.toFixed(g.zs != null ? 2 : 1)}</span>` : ''}</span></div>`;
   }).join('');

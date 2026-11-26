@@ -57,7 +57,8 @@ CC BY 4.0) as zoomable tiles, with a catalog overlay.
 - **Marking**: Mark mode numbers clicked galaxies and records pixel position, RA, Dec, catalog number and redshift. Marks
   can be named, annotated, kept in the browser and saved as a CSV file.
 - **Class galaxy list**: upload a CSV or Excel file, or paste a list, with a student name and a galaxy on each row
-  (UVUDF number, MUSE or Coe number, or RA and Dec). "Show student names on the image" circles each galaxy and writes the
+  (UVUDF number, MUSE or Coe number, RA and Dec, or a J-name). Matching is forgiving: extra words such as "galaxy" or
+  "#" are ignored, a bare number is taken as a UVUDF number, and a name and galaxy typed on one line are split. "Show student names on the image" circles each galaxy and writes the
   names beside it, grouping students who share a galaxy. Rows that do not match are flagged. The list is kept in the
   browser. Excel files are read with SheetJS, loaded only when one is uploaded.
 - The app opens with just the image: the catalog overlay starts off and "All redshifts" is checked. Hovering and clicking
