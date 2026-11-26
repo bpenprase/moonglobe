@@ -74,6 +74,13 @@ rep("""      <button class="btn" data-view="near">Near side</button><button clas
 rep("""<div class="note" id="detNote">Sharp LROC images (about 100 m per pixel) fade in as you zoom into these regions.</div>""",
     """<div class="note" id="detNote">Sharp THEMIS infrared images (about 100 m per pixel) fade in as you zoom into these regions.</div>""")
 
+# class feature list: Mars examples
+rep("""Partial or misspelled names find the closest IAU name, so <b>Appenninus</b> finds Montes Apenninus and <b>Sea of Tranquility</b> finds Mare Tranquillitatis.""",
+    """Partial or misspelled names find the closest IAU name, so <b>Olympus</b> finds Olympus Mons and <b>Marineris</b> finds Valles Marineris.""")
+rep('placeholder="Maria Lopez, Copernicus&#10;Ken Sato, Apenninus&#10;Ava Chen, Apollo 15"', 'placeholder="Maria Lopez, Olympus Mons&#10;Ken Sato, Marineris&#10;Ava Chen, Curiosity"')
+rep("""const TEMPLATE = ['student,feature', 'Student One,Copernicus', 'Student Two,Mare Tranquillitatis', 'Student Three,Apenninus', 'Student Four,Apollo 15', 'Student Five,Sea of Crises'];""",
+    """const TEMPLATE = ['student,feature', 'Student One,Olympus Mons', 'Student Two,Valles Marineris', 'Student Three,Gale', 'Student Four,Curiosity', 'Student Five,Hellas'];""")
+
 # about the data
 i0 = s.index("      <p>Surface: LRO Camera"); i1 = s.index("      <p>Longitudes are east positive.")
 s = s[:i0] + """      <p>Color: Viking Orbiter MDIM 2.1 colorized global mosaic (USGS / NASA Ames), about 232 m per pixel in the original.</p>

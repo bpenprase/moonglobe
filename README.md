@@ -114,6 +114,14 @@ relief, and turn feature names on or off.
   smaller craters, mountains, rilles and finally the lettered satellite craters (Copernicus A, B...) and the small
   names used by the Apollo crews appear. **Label density** (Fewer / Normal / More) changes how crowded this gets.
 - **Click** the surface for latitude, longitude and elevation, or a label for details.
+- **Class feature list**: upload a CSV or Excel file, or paste a list, with a student name in the first column and a
+  feature in the second. "Show student names on the globe" circles each crater (or marks the center of a sea, mountain
+  range or landing site) and writes the names beside it. Matching is forgiving. It tries the exact IAU name, then the
+  name without its descriptor word ("Apenninus" finds Montes Apenninus), common English names ("Sea of Tranquility"),
+  the start of a name ("Tranquil"), and finally the closest spelling ("Appenninus", "Platoo"). Words such as "crater"
+  or "the" are ignored, and a name and feature typed on one line are split. Features matched from a different spelling
+  are shown in orange in the list so they can be checked. Clicking a student flies to the feature. The list is kept in
+  the browser. The Mars globe has the same tool, with Mars names.
 
 ## What is in this folder
 

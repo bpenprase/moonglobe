@@ -104,6 +104,20 @@ details a{color:#9cc8ff}
 #loader .bar{width:240px;height:3px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
 #loader .bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
 #loader .s{font-size:12px;color:var(--muted)}
+.btns3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.btn:disabled{opacity:.45;cursor:default}.btn:disabled:hover{border-color:var(--line)}
+.btn.big{background:rgba(255,190,120,.16);border-color:rgba(255,190,120,.6);font-weight:600;width:100%;margin-top:8px}
+.btn.big.on{background:#ffbe78;border-color:#ffbe78;color:#2a1704}
+#roster{margin-top:6px;max-height:240px;overflow:auto}
+.rs{display:flex;gap:8px;align-items:baseline;padding:5px 4px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer;border-radius:6px}
+.rs:hover{background:rgba(255,255,255,.04)}
+.rs b{font-weight:600;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs span{color:var(--muted);font-size:11.5px;margin-left:auto;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs span i{color:#ffcf9c;font-style:normal}
+.rs.bad{cursor:default} .rs.bad span{color:#ff9b8a}
+#pasteBox{display:none;margin-top:7px}
+#pasteBox textarea{width:100%;box-sizing:border-box;height:110px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:var(--text);font:12.5px/1.45 Inter,sans-serif;padding:7px 9px;outline:none;resize:vertical}
+#rosterCv{position:fixed;inset:0;pointer-events:none}
 #hint{position:fixed;left:50%;top:16px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;transition:opacity 1s}
 @media (max-width:720px){
   #panel{width:calc(100% - 28px);max-height:58%;top:auto;bottom:14px}
@@ -120,6 +134,7 @@ details a{color:#9cc8ff}
 <body>
 <canvas id="scene"></canvas>
 <div id="labels"></div>
+<canvas id="rosterCv"></canvas>
 
 <div id="loader"><div class="t">Mars Globe Explorer</div><div class="bar"><i id="lbar"></i></div><div class="s" id="lstat">Loading Mars</div></div>
 <div id="hint">Drag to rotate &middot; scroll or pinch to zoom &middot; click the surface or a label for details</div>
@@ -133,6 +148,20 @@ details a{color:#9cc8ff}
   <div class="sec">
     <input id="search" placeholder="Find a volcano, canyon, crater or lander" autocomplete="off" spellcheck="false">
     <div id="results"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Class feature list</h2>
+    <div class="note" id="rsHelp" style="margin:0 0 7px">Upload a list with a student name in the first column and a feature in the second, then show the names on the globe.
+    Partial or misspelled names find the closest IAU name, so <b>Olympus</b> finds Olympus Mons and <b>Marineris</b> finds Valles Marineris.</div>
+    <div class="btns3"><button class="btn" id="rsUpload">Upload list</button><button class="btn" id="rsPaste">Paste list</button><button class="btn" id="rsTemplate">Template</button></div>
+    <input type="file" id="rsFile" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain" style="display:none">
+    <div id="pasteBox"><textarea id="rsText" placeholder="Maria Lopez, Olympus Mons&#10;Ken Sato, Marineris&#10;Ava Chen, Curiosity"></textarea>
+      <div class="btns" style="margin-top:5px"><button class="btn" id="rsUse">Use this list</button><button class="btn" id="rsCancel">Cancel</button></div></div>
+    <button class="btn big" id="rsShow" disabled>Show student names on the globe</button>
+    <div class="note" id="rsNote"></div>
+    <div id="roster"></div>
+    <div class="btns" style="margin-top:6px"><button class="btn" id="rsFit" disabled>Zoom to show all</button><button class="btn" id="rsClear" disabled>Clear list</button></div>
   </div>
 
   <div class="sec">
@@ -484,6 +513,7 @@ async function loadAll() {
   for (const [name, lat, lon, desc] of fj.landings) items.push({ name, lat, lon, diam: 0, kind: 'land', desc });
   for (const it of items) { const v = vec(it.lat, it.lon); it.x = v[0]; it.y = v[1]; it.z = v[2]; it.r = it.diam / R_KM; it.el = null; it.lc = it.name.toLowerCase(); }
   await loadDetailInfo();
+  rosterReady();
   setLoad(1, 'Ready');
   $('loader').style.opacity = 0; setTimeout(() => $('loader').remove(), 700);
   setTimeout(() => { $('hint').style.opacity = 0; }, 7000);
@@ -637,6 +667,318 @@ sInput.addEventListener('keydown', e => {
   else if (e.key === 'Escape') { sList = []; drawRes(); }
 });
 function pick(i) { const it = sList[i]; if (!it) return; if (!layer[it.kind]) { layer[it.kind] = true; const c = $('L-' + it.kind); if (c) c.checked = true; } select(it, true); sList = []; drawRes(); sInput.blur(); }
+
+
+// ---------------------------------------------------------------- class feature list
+// Students and the features they will report on. Feature names are matched forgivingly: exact IAU name first,
+// then the name without its descriptor word (Apenninus -> Montes Apenninus), English names (Sea of Tranquility),
+// the start of a name (Tranquil), and finally the closest spelling (Appenninus -> Apenninus).
+const GENERIC_FAMILY = {
+  mare: 'mare', maria: 'mare', sea: 'mare', oceanus: 'oceanus', ocean: 'oceanus', lacus: 'lacus', lake: 'lacus', sinus: 'sinus', bay: 'sinus',
+  palus: 'palus', marsh: 'palus', mons: 'mons', montes: 'mons', mount: 'mons', mt: 'mons', mts: 'mons', mtn: 'mons', mtns: 'mons', mns: 'mons', mnt: 'mons', mountain: 'mons', mountains: 'mons', range: 'mons',
+  promontorium: 'promontorium', cape: 'promontorium', vallis: 'vallis', valles: 'vallis', valley: 'vallis', valleys: 'vallis',
+  rima: 'rima', rimae: 'rima', rille: 'rima', rilles: 'rima', rupes: 'rupes', scarp: 'rupes', wall: 'rupes', cliff: 'rupes',
+  dorsum: 'dorsum', dorsa: 'dorsum', ridge: 'dorsum', ridges: 'dorsum', catena: 'catena', catenae: 'catena', chain: 'catena',
+  statio: 'statio', station: 'statio', planitia: 'planitia', plain: 'planitia', plains: 'planitia', planum: 'planum', plateau: 'planum',
+  terra: 'terra', terrae: 'terra', chasma: 'chasma', chasmata: 'chasma', canyon: 'chasma', chaos: 'chaos', fossa: 'fossa', fossae: 'fossa',
+  patera: 'patera', paterae: 'patera', tholus: 'tholus', tholi: 'tholus', mensa: 'mensa', mensae: 'mensa', colles: 'colles', labyrinthus: 'labyrinthus',
+  basin: 'basin', vastitas: 'vastitas', sulcus: 'sulcus', sulci: 'sulcus', unda: 'unda', undae: 'unda', cavus: 'cavus', cavi: 'cavus',
+  scopulus: 'scopulus', scopuli: 'scopulus', fluctus: 'fluctus', lingula: 'lingula', volcano: 'mons'
+};
+const NOISE = new Set(['the', 'of', 'my', 'is', 'feature', 'lunar', 'moon', 'moons', 'mars', 'martian', 'crater', 'craters', 'landing', 'site', 'region',
+  'area', 'called', 'named', 'near', 'on', 'in', 'at', 'and', 'galaxy', 'object', 'target', 'assigned', 'its', 'it']);
+const ALIASES = {
+  'sea of tranquility': 'Mare Tranquillitatis', 'sea of tranquillity': 'Mare Tranquillitatis', 'sea of serenity': 'Mare Serenitatis',
+  'sea of crises': 'Mare Crisium', 'sea of crisis': 'Mare Crisium', 'sea of rains': 'Mare Imbrium', 'sea of showers': 'Mare Imbrium',
+  'ocean of storms': 'Oceanus Procellarum', 'sea of clouds': 'Mare Nubium', 'sea of nectar': 'Mare Nectaris', 'sea of fertility': 'Mare Fecunditatis',
+  'sea of plenty': 'Mare Fecunditatis', 'sea of moisture': 'Mare Humorum', 'sea of vapors': 'Mare Vaporum', 'sea of vapours': 'Mare Vaporum',
+  'sea of cold': 'Mare Frigoris', 'sea of islands': 'Mare Insularum', 'sea of knowledge': 'Mare Cognitum', 'known sea': 'Mare Cognitum',
+  'sea that has become known': 'Mare Cognitum', 'sea of waves': 'Mare Undarum', 'foaming sea': 'Mare Spumans', 'sea of foam': 'Mare Spumans',
+  'eastern sea': 'Mare Orientale', 'edge sea': 'Mare Marginis', 'marginal sea': 'Mare Marginis', 'southern sea': 'Mare Australe',
+  'smyths sea': 'Mare Smythii', 'sea of muscovy': 'Mare Moscoviense', 'bay of rainbows': 'Sinus Iridum', 'bay of dew': 'Sinus Roris',
+  'central bay': 'Sinus Medii', 'seething bay': 'Sinus Aestuum', 'bay of heats': 'Sinus Aestuum', 'bay of love': 'Sinus Amoris',
+  'lake of dreams': 'Lacus Somniorum', 'lake of death': 'Lacus Mortis', 'marsh of decay': 'Palus Putredinis', 'marsh of sleep': 'Palus Somni',
+  'marsh of epidemics': 'Palus Epidemiarum', 'marsh of diseases': 'Palus Epidemiarum',
+  'apennine mountains': 'Montes Apenninus', 'apennines': 'Montes Apenninus', 'lunar apennines': 'Montes Apenninus', 'alps': 'Montes Alpes',
+  'lunar alps': 'Montes Alpes', 'alpine valley': 'Vallis Alpes', 'caucasus mountains': 'Montes Caucasus', 'carpathian mountains': 'Montes Carpatus',
+  'carpathians': 'Montes Carpatus', 'jura mountains': 'Montes Jura', 'pyrenees': 'Montes Pyrenaeus', 'pyrenees mountains': 'Montes Pyrenaeus',
+  'haemus mountains': 'Montes Haemus', 'taurus mountains': 'Montes Taurus', 'riphaeus mountains': 'Montes Riphaeus', 'straight range': 'Montes Recti',
+  'straight wall': 'Rupes Recta', 'hadley rille': 'Rima Hadley', 'mount hadley': 'Mons Hadley', 'mount pico': 'Mons Pico', 'mount piton': 'Mons Piton',
+  'schroters valley': 'Vallis Schröteri', 'rheita valley': 'Vallis Rheita'
+};
+const deaccent = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
+// lower case, no accents or punctuation, digits split from letters, English descriptor words left as they are
+function normName(t) {
+  return deaccent(String(t ?? '')).toLowerCase().replace(/[’'`]/g, '').replace(/[^a-z0-9]+/g, ' ')
+    .replace(/([a-z])(\d)/g, '$1 $2').replace(/(\d)([a-z])/g, '$1 $2').trim().replace(/\s+/g, ' ');
+}
+function splitName(t) {
+  const w = normName(t).split(' ').filter(x => x && !NOISE.has(x));
+  const fam = w.filter(x => GENERIC_FAMILY[x]).map(x => GENERIC_FAMILY[x]);
+  const core = w.filter(x => !GENERIC_FAMILY[x]).join(' ');
+  return { full: w.map(x => GENERIC_FAMILY[x] || x).join(' '), core, fam };
+}
+// edit distance with swapped neighbours counted as one edit
+function editDist(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let p2 = null, p = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const c = [i]; let lo = i;
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+      c.push(v); if (v < lo) lo = v;
+    }
+    if (lo > max) return max + 1;
+    p2 = p; p = c;
+  }
+  return p[b.length];
+}
+// when two features share a name (Olympus Mons and Olympus Rupes), the better-known kind wins
+const KIND_PREF = { mare: 3, region: 2, volcano: 3, crater: 3, mount: 2, canyon: 2, land: 2, l100: 1, other: 1, albedo: 0, satellite: 0 };
+let FX = null;   // feature index, built once the names are loaded
+function featureIndex() {
+  if (FX) return FX;
+  if (!items.length) return { list: [], full: new Map(), core: new Map(), alias: new Map() };
+  FX = { list: [], full: new Map(), core: new Map(), alias: new Map() };
+  for (const it of items) {
+    if (it.kind === 'det') continue;
+    const n = splitName(it.name);
+    const e = { it, full: n.full, core: n.core, fam: n.fam, w: (it.kind === 'satellite' ? 0 : 1e5) + (it.kind === 'land' || it.kind === 'l100' || it.l100 ? 5e4 : 0) + (KIND_PREF[it.kind] || 0) * 1e4 + (it.diam || 0) };
+    FX.list.push(e);
+    for (const [k, m] of [[n.full, FX.full], [n.core, FX.core]]) if (k) { if (!m.has(k)) m.set(k, []); m.get(k).push(e); }
+  }
+  for (const [k, v] of Object.entries(ALIASES)) { const c = FX.full.get(splitName(v).full); if (c) FX.alias.set(normName(k), c); }
+  return FX;
+}
+// among equal matches: a plain name (a crater) when no descriptor was written, then the bigger or better-known feature
+const bestOf = (L, q) => { const W = e => e.w + (q && !q.fam.length && !e.fam.length ? 2e5 : 0); return L.reduce((a, b) => (W(b) > W(a) ? b : a)); };
+const RANK = { exact: 5, alias: 5, core: 4, start: 3, close: 2, word: 1 };
+// a feature written any reasonable way -> { it, how } or null
+function resolveFeature(raw, wordsToo = true) {
+  const X = featureIndex(); if (!X.list.length) return null;
+  const n0 = normName(raw); if (!n0) return null;
+  const al = X.alias.get(n0) || X.alias.get(n0.replace(/^the /, '')); if (al) return { it: bestOf(al).it, how: 'alias' };
+  const q = splitName(raw); if (!q.full) return null;
+  const famOK = e => q.fam.every(f => e.fam.includes(f));
+  let c = X.full.get(q.full); if (c) return { it: bestOf(c, q).it, how: 'exact' };
+  if (q.core) {
+    c = (X.core.get(q.core) || []).filter(famOK); if (c.length) return { it: bestOf(c, q).it, how: 'core' };
+    if (q.core.length >= 4) {
+      c = X.list.filter(e => famOK(e) && (e.core.startsWith(q.core) || e.core.includes(' ' + q.core)));
+      if (c.length) return { it: bestOf(c, q).it, how: 'start' };
+    }
+    const L = q.core.length, tol = L < 5 ? (L >= 4 ? 1 : 0) : L < 8 ? 1 : L < 12 ? 2 : 3;
+    if (tol) {
+      const W = e => e.w + (!q.fam.length && !e.fam.length ? 2e5 : 0);
+      let best = null, bd = tol + 1;
+      for (const e of X.list) {
+        if (!e.core || !famOK(e)) continue;
+        let d = editDist(q.core, e.core, tol);
+        // a misspelled start of a longer name counts a little less, and less again the more is left over
+        if (d > tol && L >= 5 && e.core.length > L) { const d2 = editDist(q.core, e.core.slice(0, L), tol); if (d2 <= tol) d = d2 + 0.5 + 0.02 * (e.core.length - L); }
+        if (d < bd || (d === bd && best && W(e) > W(best))) { bd = d; best = e; }
+      }
+      if (best && bd <= tol) return { it: best.it, how: 'close' };
+    }
+  }
+  // last try: any single word of what was written (e.g. "Copernicus and its rays")
+  if (wordsToo) {
+    const words = normName(raw).split(' ').filter(w => w.length >= 4 && !NOISE.has(w) && !GENERIC_FAMILY[w]);
+    if (words.length > 1 || (words.length === 1 && words[0] !== q.core)) {
+      let best = null;
+      for (const w of words) { const r = resolveFeature(w, false); if (r && (!best || RANK[r.how] > RANK[best.how])) best = r; }
+      if (best) return { it: best.it, how: 'word' };
+    }
+  }
+  return null;
+}
+function splitLine(line, delim) {
+  const out = []; let cur = '', qt = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (qt && line[i + 1] === '"') { cur += '"'; i++; } else qt = !qt; }
+    else if (ch === delim && !qt) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur); return out.map(x => x.trim());
+}
+function tableFromText(text) {
+  const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const first = lines.slice(0, 5).join('\n');
+  const delim = first.includes('\t') ? '\t' : (first.split(';').length > first.split(',').length ? ';' : ',');
+  return lines.map(l => splitLine(l, delim));
+}
+// one cell holding both, such as "Maria Lopez - Copernicus" or "Maria Lopez Mare Imbrium"
+function splitOneCell(t) {
+  const m = t.match(/^(.+?)\s*(?:\s[-–—]\s|:|=|→|->)\s*(.+)$/); if (m) return { name: m[1].trim(), feature: m[2].trim() };
+  const w = t.trim().split(/\s+/); let best = null, bs = 0;
+  for (let k = 1; k < w.length; k++) {
+    const r = resolveFeature(w.slice(k).join(' '), false), sc = r ? RANK[r.how] * 10 - k * 0.01 : 0;
+    if (sc > bs) { bs = sc; best = { name: w.slice(0, k).join(' '), feature: w.slice(k).join(' ') }; }
+  }
+  return best || { name: t, feature: '' };
+}
+function rosterFromTable(T) {
+  T = T.map(r => r.map(c => String(c ?? '').trim())).filter(r => r.some(c => c));
+  if (!T.length) return [];
+  const h = T[0].map(c => c.toLowerCase());
+  const looksHeader = h.some(c => /student|name|feature|crater|target|object|assigned|site|location|topic/.test(c)) && !(T[0][1] && (resolveFeature(T[0][1]) || {}).how === 'exact');
+  let ni = 0, fi = 1, body = T;
+  if (looksHeader) {
+    body = T.slice(1);
+    const find = re => h.findIndex(c => re.test(c));
+    ni = Math.max(0, find(/student|^name|full name|first/));
+    fi = find(/feature|crater|target|object|assigned|site|location|topic|mare|mountain/);
+    if (fi < 0 || fi === ni) fi = ni === 0 ? 1 : 0;
+  }
+  return body.map(r => {
+    let name = r[ni] || '', feature = r[fi] || '';
+    if (!feature) { const cells = r.filter(c => c); if (cells.length === 1) ({ name, feature } = splitOneCell(cells[0])); else if (cells.length > 1) feature = cells.find((c, i) => i !== ni) || ''; }
+    return { name: name || '(no name)', feature };
+  }).filter(r => r.name !== '(no name)' || r.feature);
+}
+const rosterKey = 'globe-roster:' + document.title;
+const roster = { rows: [], show: false };
+try { const r = JSON.parse(localStorage.getItem(rosterKey) || 'null'); if (r) roster.rows = r; } catch (e) {}
+const saveRoster = () => { try { localStorage.setItem(rosterKey, JSON.stringify(roster.rows)); } catch (e) {} };
+let rosterCache = null;
+function rosterResolved() {
+  if (!rosterCache) rosterCache = roster.rows.map(r => ({ ...r, hit: items.length ? resolveFeature(r.feature) : null }));
+  return rosterCache;
+}
+function setRoster(rows) {
+  roster.rows = rows; rosterCache = null; saveRoster(); drawRosterList();
+  roster.show = rows.length > 0; rosterButtons(); if (roster.show) fitRoster();
+  dirty = true;
+}
+function drawRosterList() {
+  if (!items.length) { $('rsNote').textContent = roster.rows.length ? `${roster.rows.length} students in the saved list` : ''; rosterButtons(); return; }
+  const R = rosterResolved(), ok = R.filter(r => r.hit).length;
+  $('rsNote').textContent = roster.rows.length ? `${roster.rows.length} students, ${ok} features found` + (ok < roster.rows.length ? `, ${roster.rows.length - ok} not found (shown in red)` : '') : '';
+  $('roster').innerHTML = R.map((r, i) => {
+    if (!r.hit) return `<div class="rs bad"><b>${esc(r.name)}</b><span>${r.feature ? `"${esc(r.feature)}" not found` : 'no feature given'}</span></div>`;
+    const exact = r.hit.how === 'exact';
+    const shown = exact ? esc(r.hit.it.name) : `<i>${esc(r.hit.it.name)}</i>`;
+    const tip = exact ? 'Go to this feature' : `Written as "${r.feature}", matched to ${r.hit.it.name}. Click to go there.`;
+    return `<div class="rs" data-i="${i}" title="${esc(tip)}"><b>${esc(r.name)}</b><span>${shown}</span></div>`;
+  }).join('');
+  if (R.some(r => r.hit && r.hit.how !== 'exact')) $('rsNote').textContent += '. Names in orange were matched from a partial or different spelling, so check them.';
+  rosterButtons();
+}
+function rosterButtons() {
+  const n = roster.rows.length;
+  $('rsShow').disabled = !n; $('rsFit').disabled = !n; $('rsClear').disabled = !n;
+  $('rsShow').classList.toggle('on', roster.show);
+  $('rsShow').textContent = roster.show ? 'Hide student names' : 'Show student names on the globe';
+}
+function fitRoster() {
+  const P = rosterResolved().filter(r => r.hit).map(r => r.hit.it); if (!P.length) return;
+  const m = new THREE.Vector3(); for (const it of P) m.add(new THREE.Vector3(it.x, it.y, it.z));
+  if (m.length() < 0.25 * P.length) { flyTo(0, 0, 4.2 * fitK()); return; }
+  m.normalize();
+  let th = 0; for (const it of P) th = Math.max(th, Math.acos(Math.min(1, m.x * it.x + m.y * it.y + m.z * it.z)) + Math.min(0.15, (it.diam || 0) / 2 / R_KM));
+  th = Math.max(th, 0.06);
+  const half = Math.min(camera.fov / 2, Math.atan(Math.tan(camera.fov * DEG / 2) * camera.aspect) / DEG) * DEG * 0.72;
+  let d = 1.02;
+  for (; d < 4.2 * fitK(); d += 0.01) { if (Math.cos(Math.min(th, 1.45)) * d > 1.05 && Math.atan(Math.sin(th) / (d - Math.cos(th))) < half) break; }
+  if (th > 1.3) d = 4.2 * fitK();
+  flyTo(Math.asin(m.y) / DEG, Math.atan2(m.x, m.z) / DEG, d);
+}
+const rcv = $('rosterCv'), r2 = rcv.getContext('2d');
+function sizeRosterCv() { const k = Math.min(devicePixelRatio, 2); rcv.width = innerWidth * k; rcv.height = innerHeight * k; r2.setTransform(k, 0, 0, k, 0, 0); }
+sizeRosterCv(); addEventListener('resize', sizeRosterCv);
+const rv = new THREE.Vector3();
+function scr(x, y, z) { rv.set(x, y, z).project(camera); return [(rv.x * 0.5 + 0.5) * innerWidth, (-rv.y * 0.5 + 0.5) * innerHeight]; }
+function drawRoster() {
+  r2.clearRect(0, 0, innerWidth, innerHeight);
+  if (!roster.show || !roster.rows.length || !items.length) return;
+  const C = camera.position;
+  const groups = new Map();
+  for (const r of rosterResolved()) { if (!r.hit) continue; const it = r.hit.it; if (!groups.has(it)) groups.set(it, []); groups.get(it).push(r.name); }
+  const placed = []; let hidden = 0;
+  r2.font = '600 13px Inter,sans-serif';
+  for (const [it, names] of groups) {
+    if (it.x * C.x + it.y * C.y + it.z * C.z < 1.002) { hidden += names.length; continue; }   // on the far side
+    const [sx, sy] = scr(it.x, it.y, it.z);
+    if (sx < 0 || sy < 0 || sx > innerWidth || sy > innerHeight) { hidden += names.length; continue; }
+    let rad = 8;
+    const ring = it.diam > 2 && it.diam < 400 && it.kind !== 'mare';
+    r2.strokeStyle = '#ffbe78'; r2.lineWidth = 2.2;
+    if (ring) {
+      // the crater's rim, traced on the sphere so it foreshortens toward the limb
+      const v = new THREE.Vector3(it.x, it.y, it.z), e1 = new THREE.Vector3(0, 1, 0).cross(v); if (e1.length() < 1e-6) e1.set(1, 0, 0); e1.normalize();
+      const e2 = v.clone().cross(e1), a = Math.min(0.6, it.diam / 2 / R_KM), ca = Math.cos(a), sa = Math.sin(a);
+      const pts = []; let maxr = 0;
+      for (let k = 0; k <= 48; k++) {
+        const t = k / 48 * 2 * Math.PI, px = ca * v.x + sa * (Math.cos(t) * e1.x + Math.sin(t) * e2.x), py = ca * v.y + sa * (Math.cos(t) * e1.y + Math.sin(t) * e2.y), pz = ca * v.z + sa * (Math.cos(t) * e1.z + Math.sin(t) * e2.z);
+        const vis = px * C.x + py * C.y + pz * C.z > 1.0; const q = scr(px, py, pz); pts.push([q[0], q[1], vis]); maxr = Math.max(maxr, Math.hypot(q[0] - sx, q[1] - sy));
+      }
+      if (maxr < 7) { r2.beginPath(); r2.arc(sx, sy, 7, 0, 2 * Math.PI); r2.stroke(); rad = 7; }
+      else {
+        r2.beginPath(); let pen = false;
+        for (const [x, y, vis] of pts) { if (!vis) { pen = false; continue; } if (pen) r2.lineTo(x, y); else { r2.moveTo(x, y); pen = true; } }
+        r2.stroke(); rad = Math.min(maxr, 160);
+      }
+    } else {
+      // seas, mountain ranges and landing sites get a marker at their center
+      r2.fillStyle = 'rgba(255,190,120,.9)'; r2.beginPath(); r2.arc(sx, sy, 4.5, 0, 2 * Math.PI); r2.fill();
+      r2.beginPath(); r2.arc(sx, sy, 9, 0, 2 * Math.PI); r2.stroke(); rad = 9;
+    }
+    const txt = names.join(', '), tw = r2.measureText(txt).width + 14, th = 21;
+    let tx = sx + rad * 0.7 + 12, ty = sy - rad * 0.7 - 26;
+    for (let k = 0; k < 10 && placed.some(b => tx < b[2] && tx + tw > b[0] && ty < b[3] && ty + th > b[1]); k++) ty += th + 3;
+    placed.push([tx, ty, tx + tw, ty + th]);
+    r2.strokeStyle = 'rgba(255,190,120,.85)'; r2.lineWidth = 1.2;
+    r2.beginPath(); r2.moveTo(sx + rad * 0.68, sy - rad * 0.68); r2.lineTo(tx, ty + th / 2); r2.stroke();
+    r2.fillStyle = 'rgba(20,14,8,.86)'; r2.beginPath(); r2.roundRect(tx, ty, tw, th, 6); r2.fill();
+    r2.strokeStyle = '#ffbe78'; r2.lineWidth = 1.2; r2.stroke();
+    r2.fillStyle = '#ffe2c2'; r2.textAlign = 'left'; r2.textBaseline = 'middle'; r2.fillText(txt, tx + 7, ty + th / 2 + 0.5);
+  }
+  if (hidden) {
+    const msg = `${hidden} more out of view. Use Zoom to show all.`;
+    r2.font = '500 12px Inter,sans-serif'; const w = r2.measureText(msg).width + 18, x = innerWidth / 2 - w / 2, y = innerHeight - 76;
+    r2.fillStyle = 'rgba(20,14,8,.8)'; r2.beginPath(); r2.roundRect(x, y, w, 22, 11); r2.fill();
+    r2.fillStyle = '#ffcf9c'; r2.textAlign = 'center'; r2.textBaseline = 'middle'; r2.fillText(msg, innerWidth / 2, y + 11.5);
+  }
+}
+async function readRosterFile(f) {
+  try {
+    let T;
+    if (/\.xlsx?$/i.test(f.name)) {
+      $('rsNote').textContent = 'Reading the spreadsheet…';
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+      const wb = XLSX.read(await f.arrayBuffer());
+      T = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+    } else T = tableFromText(await f.text());
+    const rows = rosterFromTable(T);
+    if (!rows.length) { $('rsNote').textContent = 'No names were found in that file.'; return; }
+    setRoster(rows);
+  } catch (e) { $('rsNote').textContent = 'Could not read that file: ' + e.message; }
+}
+$('rsUpload').onclick = () => $('rsFile').click();
+$('rsFile').onchange = e => { const f = e.target.files[0]; if (f) readRosterFile(f); e.target.value = ''; };
+$('rsPaste').onclick = () => { $('pasteBox').style.display = 'block'; $('rsText').value = roster.rows.map(r => `${r.name}, ${r.feature}`).join('\n'); $('rsText').focus(); };
+$('rsCancel').onclick = () => { $('pasteBox').style.display = 'none'; };
+$('rsUse').onclick = () => { const rows = rosterFromTable(tableFromText($('rsText').value)); $('pasteBox').style.display = 'none'; setRoster(rows); };
+$('rsShow').onclick = () => { roster.show = !roster.show; rosterButtons(); dirty = true; if (roster.show) fitRoster(); };
+$('rsFit').onclick = fitRoster;
+$('rsClear').onclick = () => { if (confirm('Remove the class list from this browser?')) setRoster([]); };
+$('roster').addEventListener('click', e => {
+  const d = e.target.closest('.rs[data-i]'); if (!d) return;
+  const h = rosterResolved()[+d.dataset.i].hit; if (h) select(h.it, true);
+});
+const TEMPLATE = ['student,feature', 'Student One,Olympus Mons', 'Student Two,Valles Marineris', 'Student Three,Gale', 'Student Four,Curiosity', 'Student Five,Hellas'];
+$('rsTemplate').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([TEMPLATE.join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = document.title.split(' ')[0].toLowerCase() + '_class_list_template.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+rosterButtons(); drawRosterList();
+function rosterReady() {   // called once the feature names have loaded
+  rosterCache = null; drawRosterList();
+  if (roster.rows.length) { $('rsNote').textContent += ' (saved from last time)'; }
+}
 
 // ---------------------------------------------------------------- pointer readout and click
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), unit = new THREE.Sphere(new THREE.Vector3(), 1), hitP = new THREE.Vector3();
@@ -965,6 +1307,7 @@ function loop(now) {
   updateLight();
   renderer.render(scene, camera);
   if (items.length) updateLabels();
+  drawRoster();
 }
 requestAnimationFrame(loop);
 loadAll().catch(err => { $('lstat').textContent = 'Could not load the Mars data: ' + err.message; console.error(err); });
