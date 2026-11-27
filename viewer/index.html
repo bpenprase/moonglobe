@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nieves Image Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#020306;--panel:rgba(14,19,32,.9);--line:rgba(160,180,220,.16);--text:#e6ebf5;--muted:#9aa6bd;--gold:#e2b45c;--meas:#7cf0c8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+#stage{position:fixed;left:0;top:0;width:100vw;height:100vh;background:#000;touch-action:none;cursor:grab}
+#stage.dragging{cursor:grabbing}
+#stage.measure{cursor:crosshair}
+#imgCv,#ovCv{position:fixed;left:0;top:0;pointer-events:none}
+#imgCv.pix{image-rendering:pixelated}
+#panel{position:fixed;top:14px;left:14px;width:330px;max-height:calc(100% - 28px);overflow:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:16px 16px 12px;box-shadow:0 10px 40px rgba(0,0,0,.45);
+  scrollbar-width:thin;transition:transform .25s;z-index:5}
+#panel.hidden{transform:translateX(calc(-100% - 20px))}
+h1{font-family:Spectral,serif;font-weight:600;font-size:22px;margin:0 0 2px;line-height:1.15}
+.sub{color:var(--muted);font-size:12px;margin:4px 0 12px;line-height:1.5}
+.xlink{color:#9cc8ff;text-decoration:none}.xlink:hover{text-decoration:underline}
+.sec{border-top:1px solid var(--line);padding:11px 0 9px}
+.sec h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin:0 0 8px;font-weight:600}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.row label{flex:1}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0;cursor:pointer}
+.chk input{accent-color:var(--gold);width:15px;height:15px;margin:0}
+.seg{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px Inter,sans-serif;padding:6px 4px;border-radius:7px;cursor:pointer}
+.seg button.on{background:rgba(226,180,92,.18);color:var(--text)}
+.btn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);font:500 12.5px Inter,sans-serif;padding:7px 9px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:rgba(226,180,92,.5)}
+.btn:disabled{opacity:.45;cursor:default}.btn:disabled:hover{border-color:var(--line)}
+.btn.gold{background:rgba(226,180,92,.16);border-color:rgba(226,180,92,.6);font-weight:600}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pre4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.pre4 button{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);font:500 11.5px Inter,sans-serif;padding:6px 2px;border-radius:7px;cursor:pointer}
+.pre4 button:hover{border-color:rgba(226,180,92,.5)}
+.pre4 button.on{background:rgba(226,180,92,.18);border-color:rgba(226,180,92,.6)}
+select,.num{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:var(--text);font:13px Inter,sans-serif;padding:7px 9px;outline:none;color-scheme:dark}
+select{width:100%}
+.num{width:96px;text-align:right;font-variant-numeric:tabular-nums}
+.num:focus,select:focus{border-color:rgba(226,180,92,.6)}
+input[type=range]{width:100%;accent-color:var(--gold);margin:2px 0}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.note b{color:var(--text);font-weight:500}
+.suggest{margin-top:7px;padding:8px 9px;border-radius:8px;background:rgba(226,180,92,.09);border:1px solid rgba(226,180,92,.35);font-size:11.5px;line-height:1.45;color:var(--text)}
+.suggest button{margin-top:6px}
+#hist{width:100%;height:90px;display:block;margin-top:4px;cursor:ew-resize;touch-action:none;border-radius:6px;background:rgba(255,255,255,.03)}
+.hticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.sl{display:grid;grid-template-columns:44px 1fr 96px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
+#meas{margin-top:6px;max-height:220px;overflow:auto}
+.ms{display:grid;grid-template-columns:22px 1fr auto;gap:6px;align-items:start;padding:6px 4px;border-bottom:1px solid var(--line);font-size:12.5px}
+.ms .n{width:20px;height:20px;border-radius:50%;background:var(--meas);color:#04261b;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center}
+.ms b{font-weight:600;font-variant-numeric:tabular-nums}
+.ms small{display:block;color:var(--muted);font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
+.ms .del{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;line-height:1}
+table.info{width:100%;border-collapse:collapse;font-size:12px}
+table.info td{padding:2px 0;vertical-align:top}
+table.info td:first-child{color:var(--muted);width:40%}
+details{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:6px}
+details summary{cursor:pointer;color:var(--text);font-size:12px}
+details a{color:#9cc8ff}
+#hdr{max-height:260px;overflow:auto;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:11px/1.35 ui-monospace,Menlo,Consolas,monospace;color:#cdd6e6;white-space:pre;margin-top:6px}
+#toggle{position:fixed;top:14px;left:14px;z-index:6;display:none;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 12px;font:600 13px Inter,sans-serif;cursor:pointer}
+#hide{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+#readout{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:7px 16px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;z-index:4;max-width:calc(100vw - 140px);overflow:hidden;text-overflow:ellipsis}
+#readout b{color:var(--text);font-weight:500}
+#zoomCtl{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:6px;z-index:4}
+#zoomCtl button{width:44px;height:36px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);font:600 15px Inter,sans-serif;cursor:pointer}
+#zoomCtl button.sm{font-size:11.5px}
+#zoomCtl button:hover{border-color:rgba(226,180,92,.5)}
+#zv{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;padding:2px 0}
+#welcome{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3;pointer-events:none}
+#welcome .box{pointer-events:auto;text-align:center;max-width:460px;padding:28px 30px;border:2px dashed rgba(160,180,220,.3);border-radius:18px;background:rgba(10,14,24,.6)}
+#welcome h3{font-family:Spectral,serif;font-weight:600;font-size:24px;margin:0 0 8px}
+#welcome p{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0 0 14px}
+#welcome .btns{max-width:340px;margin:0 auto}
+body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);outline-offset:-12px}
+#busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:8;background:rgba(0,0,0,.45);font-size:15px}
+#busy span{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 18px}
+#toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:var(--panel);border:1px solid rgba(255,155,138,.6);color:#ffd6cf;border-radius:10px;
+  padding:9px 14px;font-size:13px;z-index:9;display:none;max-width:min(560px,90vw);line-height:1.45}
+@media (max-width:720px){#panel{width:calc(100% - 28px)}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<canvas id="imgCv"></canvas>
+<canvas id="ovCv"></canvas>
+
+<div id="welcome"><div class="box">
+  <h3>Open an image</h3>
+  <p>Choose a JPG, PNG or FITS image from the telescope, or drop it anywhere on this page.
+  FITS images with sky coordinates (a WCS) also show right ascension and declination.</p>
+  <div class="btns"><button class="btn gold" id="wOpen">Open image…</button><button class="btn" id="wSample">Try a sample</button></div>
+</div></div>
+<div id="busy"><span id="busyTxt">Reading the image…</span></div>
+<div id="toast"></div>
+
+<button id="toggle">&#9776; Controls</button>
+<aside id="panel">
+  <button id="hide" title="Hide panel">&times;</button>
+  <h1>Nieves Image Viewer</h1>
+  <div class="sub"><a class="xlink" href="../">Exploring Space</a> &middot; Astronomy 150 &middot; Models of Time and Space<br>
+    <a class="xlink" href="https://sites.soka.edu/suo/" target="_blank" rel="noopener">Soka University Nieves Observatory</a></div>
+
+  <div class="sec">
+    <h2>Image</h2>
+    <div class="btns"><button class="btn gold" id="open">Open image…</button>
+      <select id="sample" title="Sample images"><option value="">Samples…</option><option value="ngc253">NGC 253 (HyperStar, JPG)</option><option value="horse">Horsehead Nebula (FITS with WCS)</option></select></div>
+    <input type="file" id="file" accept=".fits,.fit,.fts,.fits.gz,.fit.gz,.jpg,.jpeg,.png,.webp,image/*" style="display:none">
+    <div id="imgInfo" class="note">No image loaded.</div>
+    <details id="hdrBox" style="display:none"><summary>FITS header</summary><div id="hdr"></div></details>
+  </div>
+
+  <div class="sec">
+    <h2>Telescope and camera</h2>
+    <select id="inst"></select>
+    <div class="row" id="binRow"><label for="bin">Binning</label>
+      <select id="bin" style="width:110px"><option value="1">1 × 1</option><option value="2">2 × 2</option><option value="3">3 × 3</option><option value="4">4 × 4</option></select></div>
+    <div class="row"><label for="scale">Plate scale (arcsec per pixel)</label><input class="num" id="scale" type="number" step="any" min="0" placeholder="enter"></div>
+    <div class="note" id="fov"></div>
+    <div id="suggest"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Display (stretch)</h2>
+    <canvas id="hist"></canvas>
+    <div class="hticks"><span id="hLo"></span><span id="hMid"></span><span id="hHi"></span></div>
+    <div class="note" style="margin-top:2px">Number of pixels at each brightness. Drag the lines, or use the sliders, to choose the values shown as black and white.</div>
+    <div class="sl"><span>Black</span><input type="range" id="sLo" min="0" max="1000" step="1"><input class="num" id="nLo" type="number" step="any"></div>
+    <div class="sl"><span>White</span><input type="range" id="sHi" min="0" max="1000" step="1"><input class="num" id="nHi" type="number" step="any"></div>
+    <div class="pre4" id="presets"><button data-p="100" title="Darkest pixel to brightest pixel">Min–max</button><button data-p="99.5">99.5%</button><button data-p="99">99%</button><button data-p="sky" title="Shows faint detail: black just below the sky background">Faint</button></div>
+    <div class="row" style="margin-top:9px"><label for="curve">Brightness curve</label>
+      <select id="curve" style="width:150px"><option value="lin">Linear</option><option value="sqrt">Square root</option><option value="log">Logarithmic</option><option value="asinh">Asinh</option></select></div>
+    <label class="chk"><input type="checkbox" id="invert">Invert (dark stars on white)</label>
+  </div>
+
+  <div class="sec">
+    <h2>Measure distances</h2>
+    <div class="seg" id="mode"><button data-m="pan" class="on">Move the image</button><button data-m="measure">Measure</button></div>
+    <div class="note">In <b>Measure</b> mode, click one spot and then another. The line between them is measured in arcseconds using the plate scale. Dragging still moves the image. Esc cancels a half-finished line.</div>
+    <label class="chk"><input type="checkbox" id="snap">Snap to the center of a star</label>
+    <div id="meas"></div>
+    <div class="btns" style="margin-top:6px"><button class="btn" id="mCsv" disabled>Save as CSV</button><button class="btn" id="mClear" disabled>Clear all</button></div>
+  </div>
+
+  <div class="sec">
+    <details>
+      <summary>About this viewer</summary>
+      <p>Plate scales come from the Nieves Observatory imaging table (1 × 1 binning): 0.303″ per pixel for the ASI6200MM Pro and ASI2600MC Pro on the
+      PlaneWave CDK14 (2,563 mm, f/7.2), 0.233″ for the ASI585MC Pro on the CDK14, and 1.436″ for the ASI2600MC Pro on the 11-inch HyperStar v4 (540 mm, f/1.9).
+      Binning multiplies the scale. A plate-solved frame gives the definitive value.</p>
+      <p>Pixel positions: for FITS images, x and y follow the FITS convention, counting from 1 at the lower left, and the image is shown with row 1 at the bottom.
+      For JPG and PNG images, x and y count from 0 at the upper left. RA and Dec use the image's own WCS (gnomonic projection, with SIP distortion terms when present).</p>
+      <p>Samples: NGC 253 from the Nieves Observatory HyperStar system. The Horsehead Nebula FITS image is from the Digitized Sky Survey (STScI, UK Schmidt plate),
+      as distributed with the astropy tutorials.</p>
+      <p>Everything runs in your browser. Images are not uploaded anywhere.</p>
+    </details>
+  </div>
+</aside>
+
+<div id="readout">Open an image to begin</div>
+<div id="zoomCtl"><button id="zIn" title="Zoom in (+)">+</button><div id="zv">–</div><button id="zOut" title="Zoom out (−)">−</button><button id="zFit" class="sm" title="Fit to window (0)">Fit</button><button id="z1" class="sm" title="One image pixel per screen pixel (1)">1:1</button></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+
+// ---------------------------------------------------------------- instruments (Nieves Observatory imaging table, 1x1 binning)
+const INSTRUMENTS = [
+  { id: 'cdk6200', label: 'CDK14 + ZWO ASI6200MM Pro (monochrome)', scale: 0.303, sensor: [9576, 6388], cam: '6200', fl: 2563 },
+  { id: 'cdk2600', label: 'CDK14 + ZWO ASI2600MC Pro (color)', scale: 0.303, sensor: [6248, 4176], cam: '2600', fl: 2563 },
+  { id: 'cdk585', label: 'CDK14 + ZWO ASI585MC Pro (planetary)', scale: 0.233, sensor: [3840, 2160], cam: '585', fl: 2563 },
+  { id: 'hyper', label: '11-inch HyperStar v4 + ASI2600MC Pro (wide field)', scale: 1.436, sensor: [6248, 4176], cam: '2600', fl: 540 },
+];
+function fillInstruments(wcsScale) {
+  const sel = $('inst'), cur = sel.value;
+  let h = '<option value="">Choose the telescope and camera…</option>';
+  for (const I of INSTRUMENTS) h += `<option value="${I.id}">${I.label} · ${I.scale}″/px</option>`;
+  if (wcsScale) h += `<option value="wcs">From the image's WCS · ${wcsScale.toFixed(3)}″/px</option>`;
+  h += '<option value="other">Other (type in the plate scale)</option>';
+  sel.innerHTML = h;
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+// ---------------------------------------------------------------- state
+let img = null;            // { name, kind, w, h, ch:[arrays], levels:[], hdr, cards, wcs, min, max, sample }
+const view = { zoom: 1, ox: 0, oy: 0 };   // image coordinate at the screen's top-left corner, and screen pixels per image pixel
+const st = { lo: 0, hi: 1, curve: 'lin', invert: false, axLo: 0, axHi: 1, preset: null };
+let scale = null;          // arcsec per pixel
+let mode = 'pan';
+let meas = [], pending = null, cursor = null;
+let needImg = true, needOv = true;
+
+// ---------------------------------------------------------------- canvases (display size set explicitly so high-density screens line up)
+const stage = $('stage'), imgCv = $('imgCv'), ovCv = $('ovCv');
+const ictx = imgCv.getContext('2d'), octx = ovCv.getContext('2d');
+let W = 0, H = 0, dpr = 1, imgData = null;
+function resize() {
+  W = innerWidth; H = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+  imgCv.width = W; imgCv.height = H; imgCv.style.width = W + 'px'; imgCv.style.height = H + 'px';
+  ovCv.width = Math.round(W * dpr); ovCv.height = Math.round(H * dpr); ovCv.style.width = W + 'px'; ovCv.style.height = H + 'px';
+  octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  imgData = ictx.createImageData(W, H);
+  needImg = needOv = true; kick();
+}
+addEventListener('resize', resize);
+
+// ---------------------------------------------------------------- FITS reading
+function parseCard(card) {
+  const key = card.slice(0, 8).trim();
+  if (card.slice(8, 10) !== '= ') return { key, value: undefined, raw: card };
+  let rest = card.slice(10).trim(), value;
+  if (rest[0] === "'") {
+    let s = '', i = 1;
+    for (; i < rest.length; i++) { if (rest[i] === "'") { if (rest[i + 1] === "'") { s += "'"; i++; } else break; } else s += rest[i]; }
+    value = s.replace(/\s+$/, '');
+  } else {
+    const v = rest.split('/')[0].trim();
+    if (v === 'T') value = true; else if (v === 'F') value = false;
+    else { const n = Number(v.replace(/[dD]/, 'e')); value = v === '' ? undefined : isNaN(n) ? v : n; }
+  }
+  return { key, value, raw: card };
+}
+function readHeader(u8, off) {
+  const cards = [], hdr = {};
+  for (let p = off; p + 80 <= u8.length; p += 80) {
+    let card = ''; for (let i = 0; i < 80; i++) card += String.fromCharCode(u8[p + i]);
+    const c = parseCard(card); cards.push(card.replace(/\s+$/, ''));
+    if (c.key === 'END') { const end = p + 80; return { cards, hdr, dataStart: Math.ceil((end - off) / 2880) * 2880 + off }; }
+    if (c.value !== undefined && !(c.key in hdr)) hdr[c.key] = c.value;
+  }
+  throw new Error('This does not look like a FITS file (no END card found).');
+}
+async function gunzipIfNeeded(buf) {
+  const u8 = new Uint8Array(buf);
+  if (u8[0] === 0x1f && u8[1] === 0x8b) {
+    if (!('DecompressionStream' in window)) throw new Error('This browser cannot open .gz files. Unzip the file first.');
+    const ds = new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip')));
+    return await ds.arrayBuffer();
+  }
+  return buf;
+}
+async function readFits(buf) {
+  buf = await gunzipIfNeeded(buf);
+  const u8 = new Uint8Array(buf);
+  if (String.fromCharCode(...u8.slice(0, 6)) !== 'SIMPLE') throw new Error('This does not look like a FITS file.');
+  let off = 0, primaryHdr = null, primaryCards = null, hdu = 0;
+  while (off < u8.length) {
+    const { cards, hdr, dataStart } = readHeader(u8, off);
+    if (hdu === 0) { primaryHdr = hdr; primaryCards = cards; }
+    const naxis = hdr.NAXIS || 0, dims = []; for (let i = 1; i <= naxis; i++) dims.push(hdr['NAXIS' + i] || 0);
+    const bitpix = hdr.BITPIX, bpp = Math.abs(bitpix) / 8;
+    const n = naxis ? dims.reduce((a, b) => a * b, 1) : 0;
+    const size = (hdr.XTENSION ? (hdr.GCOUNT || 1) * ((hdr.PCOUNT || 0) + n) : n) * bpp;
+    const isImage = !hdr.XTENSION || /IMAGE/.test(hdr.XTENSION);
+    if (hdr.XTENSION && /BINTABLE/.test(hdr.XTENSION) && hdr.ZIMAGE) throw new Error('This is a tile-compressed FITS file (.fz). Uncompress it first (for example with funpack), then open it again.');
+    if (isImage && naxis >= 2 && dims[0] > 1 && dims[1] > 1) {
+      // merge the primary header's keywords under an extension's (WCS is often in the extension)
+      const merged = Object.assign({}, hdu ? primaryHdr : {}, hdr);
+      const allCards = hdu ? [...primaryCards, '', `---- extension ${hdu} ----`, ...cards] : cards;
+      return decodeImage(buf, dataStart, merged, allCards, dims, bitpix, hdu);
+    }
+    off = dataStart + Math.ceil(size / 2880) * 2880; hdu++;
+  }
+  throw new Error('No image was found in this FITS file.');
+}
+function decodeImage(buf, start, hdr, cards, dims, bitpix, hdu) {
+  const w = dims[0], h = dims[1], depth = dims.length > 2 ? dims[2] : 1;
+  if (w * h > 130e6) throw new Error(`This image is ${w} × ${h} pixels, too large to open in a browser. Try a binned or cropped copy.`);
+  const planes = depth === 3 ? 3 : 1;
+  const bz = hdr.BZERO || 0, bs = hdr.BSCALE ?? 1, blank = hdr.BLANK;
+  const dv = new DataView(buf), bpp = Math.abs(bitpix) / 8, plane = w * h;
+  const ch = [];
+  for (let p = 0; p < planes; p++) {
+    const out = new Float32Array(plane);
+    const base = start + p * plane * bpp;
+    if (base + plane * bpp > buf.byteLength) throw new Error('The FITS file is shorter than its header says. It may be incomplete.');
+    for (let fy = 0; fy < h; fy++) {
+      const row = (h - 1 - fy) * w;          // FITS row 1 is at the bottom; store top-down for display
+      let pos = base + fy * w * bpp;
+      for (let x = 0; x < w; x++, pos += bpp) {
+        let v;
+        switch (bitpix) {
+          case 8: v = dv.getUint8(pos); break;
+          case 16: v = dv.getInt16(pos); break;
+          case 32: v = dv.getInt32(pos); break;
+          case -32: v = dv.getFloat32(pos); break;
+          case -64: v = dv.getFloat64(pos); break;
+          case 64: v = Number(dv.getBigInt64(pos)); break;
+          default: throw new Error('Unsupported BITPIX ' + bitpix);
+        }
+        out[row + x] = (bitpix > 0 && blank !== undefined && v === blank) ? NaN : v * bs + bz;
+      }
+    }
+    ch.push(out);
+  }
+  const notes = [];
+  if (depth > 1 && planes === 1) notes.push(`showing plane 1 of ${depth}`);
+  if (planes === 3) notes.push('three planes shown as red, green and blue');
+  if (hdr.BAYERPAT && planes === 1) notes.push(`raw color frame (Bayer ${hdr.BAYERPAT}) shown in gray`);
+  if (hdu) notes.push(`image from extension ${hdu}`);
+  return { kind: 'fits', w, h, ch, hdr, cards, bitpix, notes };
+}
+
+// ---------------------------------------------------------------- JPG / PNG reading
+async function readPicture(blob) {
+  let bm;
+  try { bm = await createImageBitmap(blob); }
+  catch (e) { throw new Error('The browser could not read this picture.'); }
+  const w = bm.width, h = bm.height;
+  if (w * h > 130e6) throw new Error(`This image is ${w} × ${h} pixels, too large to open in a browser.`);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const cx = c.getContext('2d', { willReadFrequently: true }); cx.drawImage(bm, 0, 0); bm.close && bm.close();
+  const d = cx.getImageData(0, 0, w, h).data;
+  const r = new Uint8Array(w * h), g = new Uint8Array(w * h), b = new Uint8Array(w * h);
+  let gray = true;
+  for (let i = 0, j = 0; j < w * h; i += 4, j++) { r[j] = d[i]; g[j] = d[i + 1]; b[j] = d[i + 2]; if (gray && (d[i] !== d[i + 1] || d[i] !== d[i + 2])) gray = false; }
+  return { kind: 'pic', w, h, ch: gray ? [r] : [r, g, b], hdr: {}, cards: [], notes: gray ? ['grayscale'] : [] };
+}
+
+// ---------------------------------------------------------------- WCS (gnomonic, with optional SIP)
+function readWCS(hdr) {
+  const t1 = String(hdr.CTYPE1 || ''), t2 = String(hdr.CTYPE2 || '');
+  if (!/^RA/.test(t1) || !/^DEC/.test(t2) || hdr.CRVAL1 === undefined || hdr.CRPIX1 === undefined) return null;
+  let cd;
+  if (hdr.CD1_1 !== undefined || hdr.CD2_2 !== undefined) cd = [hdr.CD1_1 || 0, hdr.CD1_2 || 0, hdr.CD2_1 || 0, hdr.CD2_2 || 0];
+  else if (hdr.CDELT1 !== undefined) {
+    const c1 = hdr.CDELT1, c2 = hdr.CDELT2 ?? c1;
+    if (hdr.PC1_1 !== undefined || hdr.PC2_2 !== undefined) { const p = [hdr.PC1_1 ?? 1, hdr.PC1_2 || 0, hdr.PC2_1 || 0, hdr.PC2_2 ?? 1]; cd = [c1 * p[0], c1 * p[1], c2 * p[2], c2 * p[3]]; }
+    else { const r = (hdr.CROTA2 || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); cd = [c1 * c, -c2 * s, c1 * s, c2 * c]; }
+  } else return null;
+  const sip = (pre) => {
+    const o = hdr[pre + '_ORDER']; if (!o) return null;
+    const terms = []; for (let p = 0; p <= o; p++) for (let q = 0; q <= o - p; q++) { const v = hdr[`${pre}_${p}_${q}`]; if (v) terms.push([p, q, v]); }
+    return terms;
+  };
+  const w = { ra0: hdr.CRVAL1, dec0: hdr.CRVAL2, px: hdr.CRPIX1, py: hdr.CRPIX2, cd, proj: t1.slice(-3) };
+  if (/-SIP$/.test(t1)) { w.A = sip('A'); w.B = sip('B'); }
+  w.scale = Math.sqrt(Math.abs(cd[0] * cd[3] - cd[1] * cd[2])) * 3600;
+  return w;
+}
+const D2R = Math.PI / 180;
+// FITS pixel coordinates (1-based, pixel centers at integers) -> RA, Dec in degrees
+function pix2sky(w, p1, p2) {
+  let u = p1 - w.px, v = p2 - w.py;
+  if (w.A || w.B) {
+    let du = 0, dv = 0;
+    if (w.A) for (const [p, q, c] of w.A) du += c * u ** p * v ** q;
+    if (w.B) for (const [p, q, c] of w.B) dv += c * u ** p * v ** q;
+    u += du; v += dv;
+  }
+  const xi = (w.cd[0] * u + w.cd[1] * v) * D2R, eta = (w.cd[2] * u + w.cd[3] * v) * D2R;
+  const d0 = w.dec0 * D2R, den = Math.cos(d0) - eta * Math.sin(d0);
+  const ra = w.ra0 + Math.atan2(xi, den) / D2R;
+  const dec = Math.atan2(Math.sin(d0) + eta * Math.cos(d0), Math.hypot(xi, den)) / D2R;
+  return { ra: (ra % 360 + 360) % 360, dec };
+}
+function sep(a, b) {   // arcseconds
+  const s = Math.sin((b.dec - a.dec) * D2R / 2) ** 2 + Math.cos(a.dec * D2R) * Math.cos(b.dec * D2R) * Math.sin((b.ra - a.ra) * D2R / 2) ** 2;
+  return 2 * Math.asin(Math.min(1, Math.sqrt(s))) / D2R * 3600;
+}
+function fmtRA(ra) { let s = ra / 15 * 3600; const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); s -= m * 60;
+  let ss = s.toFixed(2); if (ss === '60.00') { ss = '0.00'; } return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${ss.padStart(5, '0')}s`; }
+function fmtDec(dec) { const sg = dec < 0 ? '−' : '+'; let s = Math.abs(dec) * 3600; const d = Math.floor(s / 3600); s -= d * 3600; const m = Math.floor(s / 60); s -= m * 60;
+  return `${sg}${String(d).padStart(2, '0')}° ${String(m).padStart(2, '0')}′ ${s.toFixed(1).padStart(4, '0')}″`; }
+
+// ---------------------------------------------------------------- image coordinates
+// fx, fy: continuous display coordinates (0..w, 0..h, origin at the top-left corner of the displayed image)
+function pixLabel(fx, fy) {
+  const ix = Math.floor(fx), iy = Math.floor(fy);
+  return img.kind === 'fits' ? { x: ix + 1, y: img.h - iy } : { x: ix, y: iy };
+}
+function fitsPix(fx, fy) { return [fx + 0.5, img.h - fy + 0.5]; }   // continuous FITS pixel coordinates
+function skyAt(fx, fy) { if (!img || !img.wcs) return null; const [p1, p2] = fitsPix(fx, fy); return pix2sky(img.wcs, p1, p2); }
+
+// ---------------------------------------------------------------- statistics and the pyramid of smaller copies (for fast zoomed-out views)
+function lum(ch, i) { return ch.length === 3 ? (ch[0][i] + ch[1][i] + ch[2][i]) / 3 : ch[0][i]; }
+function analyse(im) {
+  const n = im.w * im.h, ch = im.ch;
+  let mn = Infinity, mx = -Infinity;
+  for (const a of ch) for (let i = 0; i < n; i++) { const v = a[i]; if (v < mn) mn = v; if (v > mx) mx = v; }   // NaN fails both tests
+  const step = Math.max(1, Math.floor(n / 1.5e6)), s = [];
+  for (let i = 0; i < n; i += step) { const v = lum(ch, i); if (v === v) s.push(v); }
+  const sample = Float32Array.from(s).sort();
+  im.min = mn; im.max = mx; im.sample = sample;
+  // smaller copies, each half the size of the one before, averaging 2 x 2 blocks
+  im.levels = [{ w: im.w, h: im.h, ch }];
+  let L = im.levels[0];
+  while (Math.max(L.w, L.h) > 1200) {
+    const w2 = Math.floor(L.w / 2), h2 = Math.floor(L.h / 2), nc = [];
+    for (const a of L.ch) {
+      const o = a instanceof Uint8Array ? new Uint8Array(w2 * h2) : new Float32Array(w2 * h2);
+      for (let y = 0; y < h2; y++) {
+        const r0 = 2 * y * L.w, r1 = r0 + L.w;
+        for (let x = 0; x < w2; x++) {
+          const i = r0 + 2 * x, j = r1 + 2 * x;
+          let t = 0, k = 0; const v = [a[i], a[i + 1], a[j], a[j + 1]];
+          for (const q of v) if (q === q) { t += q; k++; }
+          o[y * w2 + x] = k ? t / k : NaN;
+        }
+      }
+      nc.push(o);
+    }
+    L = { w: w2, h: h2, ch: nc }; im.levels.push(L);
+  }
+}
+const pct = q => { const s = img.sample; if (!s.length) return 0; return s[Math.min(s.length - 1, Math.max(0, Math.round(q / 100 * (s.length - 1))))]; };
+
+// ---------------------------------------------------------------- stretch
+const LUT = new Uint8ClampedArray(4096);
+function buildLUT() {
+  for (let i = 0; i < 4096; i++) {
+    const t = i / 4095; let y;
+    switch (st.curve) {
+      case 'sqrt': y = Math.sqrt(t); break;
+      case 'log': y = Math.log10(1 + 999 * t) / 3; break;
+      case 'asinh': y = Math.asinh(10 * t) / Math.asinh(10); break;
+      default: y = t;
+    }
+    LUT[i] = Math.round((st.invert ? 1 - y : y) * 255);
+  }
+}
+function setStretch(lo, hi, from) {
+  if (!(hi > lo)) { if (from === 'lo') lo = hi - (st.hi - st.lo || 1) * 0.001; else hi = lo + (st.hi - st.lo || 1) * 0.001; }
+  st.lo = lo; st.hi = hi;
+  if (from !== 'preset') { st.preset = null; markPreset(); }
+  const fmt = v => fmtVal(v);
+  if (from !== 'nLo') $('nLo').value = fmt(lo);
+  if (from !== 'nHi') $('nHi').value = fmt(hi);
+  if (from !== 'sLo') $('sLo').value = toSlider(lo);
+  if (from !== 'sHi') $('sHi').value = toSlider(hi);
+  drawHist(); needImg = true; kick();
+}
+function fmtVal(v) {
+  if (!isFinite(v)) return '';
+  const a = Math.abs(v);
+  if (img && img.kind === 'pic') return String(Math.round(v));
+  return a >= 1e5 || (a < 1e-3 && a > 0) ? v.toExponential(3) : a >= 100 ? v.toFixed(1) : a >= 1 ? v.toFixed(3) : v.toFixed(5);
+}
+const toSlider = v => Math.round(Math.max(0, Math.min(1, (v - st.axLo) / (st.axHi - st.axLo || 1))) * 1000);
+const fromSlider = s => st.axLo + (st.axHi - st.axLo) * s / 1000;
+function applyPreset(p) {
+  if (!img) return;
+  let lo, hi;
+  if (p === '100') { lo = img.min; hi = img.max; }
+  else if (p === 'sky') { const med = pct(50), lowq = pct(16); const sig = Math.max(med - lowq, (pct(84) - med) * 0.5, 1e-9); lo = med - 1.5 * sig; hi = Math.min(img.max, Math.max(pct(99.8), med + 40 * sig)); }
+  else { const c = (100 - parseFloat(p)) / 2; lo = pct(c); hi = pct(100 - c); }
+  if (img.kind === 'pic' && p === '100') { lo = 0; hi = 255; }
+  st.preset = p; markPreset();
+  setStretch(lo, hi, 'preset');
+}
+function markPreset() { for (const b of $('presets').children) b.classList.toggle('on', b.dataset.p === st.preset); }
+
+// histogram axis: the full range, unless a few very bright (or dark) pixels would squash everything else to one side
+function setAxis() {
+  const lo = img.min, hi = img.max, p1 = pct(0.05), p2 = pct(99.95);
+  let a = lo, b = hi;
+  if (img.kind !== 'pic') {
+    if (hi - p2 > 0.6 * (p2 - lo)) b = p2 + 0.15 * (p2 - lo);
+    if (p1 - lo > 0.6 * (b - p1)) a = p1 - 0.15 * (b - p1);
+  }
+  if (!(b > a)) b = a + 1;
+  st.axLo = a; st.axHi = b;
+  $('hLo').textContent = fmtVal(a); $('hHi').textContent = fmtVal(b) + (b < hi ? ' →' : ''); $('hMid').textContent = fmtVal((a + b) / 2);
+  $('hHi').title = b < hi ? `The brightest pixels reach ${fmtVal(hi)}, beyond the right edge. Type a value in White to go higher.` : '';
+}
+let histBins = null;
+function computeHist() {
+  const nb = 240, bins = new Float64Array(nb), s = img.sample, a = st.axLo, k = nb / (st.axHi - st.axLo);
+  for (let i = 0; i < s.length; i++) { const b = Math.floor((s[i] - a) * k); if (b >= 0 && b < nb) bins[b]++; else if (b >= nb) bins[nb - 1] += 0; }
+  histBins = bins;
+}
+function drawHist() {
+  const c = $('hist'), r = c.getBoundingClientRect(), k = Math.min(devicePixelRatio || 1, 2);
+  if (!r.width) return;
+  c.width = Math.round(r.width * k); c.height = Math.round(r.height * k);
+  const g = c.getContext('2d'); g.setTransform(k, 0, 0, k, 0, 0);
+  const w = r.width, h = r.height; g.clearRect(0, 0, w, h);
+  if (!img || !histBins) return;
+  const nb = histBins.length, mx = Math.log10(1 + Math.max(...histBins));
+  const xl = (st.lo - st.axLo) / (st.axHi - st.axLo) * w, xh = (st.hi - st.axLo) / (st.axHi - st.axLo) * w;
+  g.fillStyle = 'rgba(226,180,92,.08)'; g.fillRect(Math.max(0, xl), 0, Math.min(w, xh) - Math.max(0, xl), h);
+  g.beginPath(); g.moveTo(0, h);
+  for (let i = 0; i < nb; i++) { const y = h - 4 - (h - 8) * Math.log10(1 + histBins[i]) / (mx || 1); g.lineTo(i / nb * w, y); g.lineTo((i + 1) / nb * w, y); }
+  g.lineTo(w, h); g.closePath(); g.fillStyle = 'rgba(156,200,255,.55)'; g.fill();
+  const line = (x, col, lab) => {
+    if (x < -1 || x > w + 1) return;
+    g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke();
+    g.fillStyle = col; g.beginPath(); g.moveTo(x - 5, 0); g.lineTo(x + 5, 0); g.lineTo(x, 7); g.fill();
+  };
+  line(Math.max(1, Math.min(w - 1, xl)), '#8aa0c8'); line(Math.max(1, Math.min(w - 1, xh)), '#ffe08a');
+}
+{ // dragging the black and white lines on the histogram
+  const c = $('hist'); let which = null;
+  const valAt = e => { const r = c.getBoundingClientRect(); return st.axLo + (st.axHi - st.axLo) * Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+  c.addEventListener('pointerdown', e => {
+    if (!img) return; const v = valAt(e);
+    which = Math.abs(v - st.lo) < Math.abs(v - st.hi) ? 'lo' : 'hi';
+    c.setPointerCapture(e.pointerId); move(e);
+  });
+  const move = e => { if (!which) return; const v = valAt(e); if (which === 'lo') setStretch(Math.min(v, st.hi - 1e-9), st.hi, 'lo'); else setStretch(st.lo, Math.max(v, st.lo + 1e-9), 'hi'); };
+  c.addEventListener('pointermove', move);
+  c.addEventListener('pointerup', () => { which = null; });
+}
+$('sLo').oninput = e => { if (img) setStretch(Math.min(fromSlider(+e.target.value), st.hi - 1e-9), st.hi, 'sLo'); };
+$('sHi').oninput = e => { if (img) setStretch(st.lo, Math.max(fromSlider(+e.target.value), st.lo + 1e-9), 'sHi'); };
+$('nLo').onchange = e => { const v = parseFloat(e.target.value); if (img && isFinite(v)) setStretch(v, st.hi, 'nLo'); };
+$('nHi').onchange = e => { const v = parseFloat(e.target.value); if (img && isFinite(v)) setStretch(st.lo, v, 'nHi'); };
+$('presets').onclick = e => { const b = e.target.closest('button'); if (b) applyPreset(b.dataset.p); };
+$('curve').onchange = e => { st.curve = e.target.value; buildLUT(); needImg = true; kick(); };
+$('invert').onchange = e => { st.invert = e.target.checked; buildLUT(); needImg = true; kick(); };
+
+// ---------------------------------------------------------------- drawing the image
+function renderImage() {
+  const out = imgData.data;
+  if (!img) { out.fill(0); for (let i = 3; i < out.length; i += 4) out[i] = 255; ictx.putImageData(imgData, 0, 0); return; }
+  // choose the smallest copy that still has at least one pixel per screen pixel
+  let k = 0; while (k + 1 < img.levels.length && view.zoom * 2 ** (k + 1) <= 1.0001) k++;
+  const L = img.levels[k], f = 2 ** k, ch = L.ch, nc = ch.length;
+  const cols = new Int32Array(W);
+  for (let sx = 0; sx < W; sx++) { const ix = Math.floor((view.ox + (sx + 0.5) / view.zoom) / f); cols[sx] = ix >= 0 && ix < L.w ? ix : -1; }
+  const lo = st.lo, inv = 4095 / (st.hi - st.lo), bg = st.invert ? 255 : 0, nanC = st.invert ? 200 : 40;
+  const c0 = ch[0], c1 = ch[1], c2 = ch[2];
+  const map = v => { if (v !== v) return -1; let t = (v - lo) * inv; t = t <= 0 ? 0 : t >= 4095 ? 4095 : t | 0; return LUT[t]; };
+  let p = 0;
+  for (let sy = 0; sy < H; sy++) {
+    const iy = Math.floor((view.oy + (sy + 0.5) / view.zoom) / f);
+    const inside = iy >= 0 && iy < L.h, row = iy * L.w;
+    for (let sx = 0; sx < W; sx++, p += 4) {
+      const ix = cols[sx];
+      if (!inside || ix < 0) { out[p] = 14; out[p + 1] = 16; out[p + 2] = 22; out[p + 3] = 255; continue; }
+      const i = row + ix;
+      if (nc === 1) { let g = map(c0[i]); if (g < 0) g = nanC; out[p] = out[p + 1] = out[p + 2] = g; }
+      else { let r = map(c0[i]), g = map(c1[i]), b = map(c2[i]); out[p] = r < 0 ? nanC : r; out[p + 1] = g < 0 ? nanC : g; out[p + 2] = b < 0 ? nanC : b; }
+      out[p + 3] = 255;
+    }
+  }
+  ictx.putImageData(imgData, 0, 0);
+  imgCv.classList.toggle('pix', view.zoom >= 2);
+  void bg;
+}
+
+// ---------------------------------------------------------------- the overlay: measurements
+const toScreen = (fx, fy) => [(fx - view.ox) * view.zoom, (fy - view.oy) * view.zoom];
+const toImage = (sx, sy) => [view.ox + sx / view.zoom, view.oy + sy / view.zoom];
+function measText(m) {
+  const px = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]);
+  const arc = scale ? px * scale : null;
+  return { px, arc };
+}
+function fmtArc(a) { if (a == null) return null; return a >= 120 ? `${(a / 60).toFixed(2)}′` : a >= 10 ? `${a.toFixed(1)}″` : `${a.toFixed(2)}″`; }
+function drawOverlay() {
+  octx.clearRect(0, 0, W, H);
+  if (!img) return;
+  const drawOne = (a, b, label, col, n) => {
+    const [x1, y1] = toScreen(a[0], a[1]), [x2, y2] = toScreen(b[0], b[1]);
+    octx.lineWidth = 3.5; octx.strokeStyle = 'rgba(0,0,0,.55)'; octx.beginPath(); octx.moveTo(x1, y1); octx.lineTo(x2, y2); octx.stroke();
+    octx.lineWidth = 1.6; octx.strokeStyle = col; octx.beginPath(); octx.moveTo(x1, y1); octx.lineTo(x2, y2); octx.stroke();
+    for (const [x, y] of [[x1, y1], [x2, y2]]) {
+      octx.strokeStyle = col; octx.lineWidth = 1.6; octx.beginPath(); octx.arc(x, y, 6, 0, 2 * Math.PI); octx.stroke();
+      octx.beginPath(); octx.moveTo(x - 10, y); octx.lineTo(x - 3, y); octx.moveTo(x + 3, y); octx.lineTo(x + 10, y); octx.moveTo(x, y - 10); octx.lineTo(x, y - 3); octx.moveTo(x, y + 3); octx.lineTo(x, y + 10); octx.stroke();
+    }
+    if (label) {
+      octx.font = '600 12.5px Inter,sans-serif';
+      const t = (n ? n + '  ' : '') + label, tw = octx.measureText(t).width + 12, mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      let nx = -(y2 - y1), ny = x2 - x1; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl; if (ny > 0) { nx = -nx; ny = -ny; }
+      const lx = mx + nx * 16 - tw / 2, ly = my + ny * 16 - 10;
+      octx.fillStyle = 'rgba(6,12,18,.85)'; octx.beginPath(); octx.roundRect(lx, ly, tw, 20, 6); octx.fill();
+      octx.strokeStyle = col; octx.lineWidth = 1; octx.stroke();
+      octx.fillStyle = '#eafff7'; octx.textBaseline = 'middle'; octx.fillText(t, lx + 6, ly + 10.5);
+    }
+  };
+  meas.forEach((m, i) => { const { px, arc } = measText(m); drawOne(m.a, m.b, arc != null ? fmtArc(arc) : `${px.toFixed(1)} px`, '#7cf0c8', i + 1); });
+  if (pending) {
+    const [x, y] = toScreen(pending[0], pending[1]);
+    if (cursor) {
+      const b = toImage(cursor[0], cursor[1]); const { px, arc } = measText({ a: pending, b });
+      drawOne(pending, b, arc != null ? fmtArc(arc) : `${px.toFixed(1)} px`, '#ffd37c');
+    } else { octx.strokeStyle = '#ffd37c'; octx.lineWidth = 1.6; octx.beginPath(); octx.arc(x, y, 6, 0, 2 * Math.PI); octx.stroke(); }
+  }
+}
+
+// ---------------------------------------------------------------- frame loop
+let queued = false;
+function kick() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
+function frame() {
+  queued = false;
+  if (needImg) { needImg = false; renderImage(); needOv = true; }
+  if (needOv) { needOv = false; drawOverlay(); }
+  $('zv').textContent = img ? (view.zoom >= 1 ? Math.round(view.zoom * 100) : (view.zoom * 100).toFixed(view.zoom < 0.1 ? 1 : 0)) + '%' : '–';
+}
+
+// ---------------------------------------------------------------- zoom and pan
+function panelRight() { const p = $('panel'); return p.classList.contains('hidden') || innerWidth < 720 ? 0 : p.getBoundingClientRect().right; }
+function fitView() {
+  if (!img) return;
+  const left = panelRight() + 10, aw = W - left - 20, ah = H - 70;
+  view.zoom = Math.min(aw / img.w, ah / img.h);
+  view.ox = img.w / 2 - (left + aw / 2) / view.zoom; view.oy = img.h / 2 - (10 + ah / 2) / view.zoom;
+  needImg = true; kick();
+}
+function zoomAt(sx, sy, f) {
+  if (!img) return;
+  const [fx, fy] = toImage(sx, sy);
+  view.zoom = Math.max(0.01, Math.min(64, view.zoom * f));
+  view.ox = fx - sx / view.zoom; view.oy = fy - sy / view.zoom;
+  needImg = true; kick();
+}
+function zoomTo(z) { zoomAt(W / 2 + panelRight() / 2, H / 2, z / view.zoom); }
+$('zIn').onclick = () => zoomAt(W / 2 + panelRight() / 2, H / 2, 1.6);
+$('zOut').onclick = () => zoomAt(W / 2 + panelRight() / 2, H / 2, 1 / 1.6);
+$('zFit').onclick = fitView;
+$('z1').onclick = () => zoomTo(1);
+stage.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0015))); }, { passive: false });
+
+// pointer: drag to pan, pinch to zoom, click to measure
+const ptrs = new Map(); let drag = null, pinch = null;
+stage.addEventListener('pointerdown', e => {
+  stage.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy, moved: false };
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: view.zoom }; drag = null; }
+});
+stage.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, pinch.z * d / pinch.d / view.zoom); return;
+  }
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) > 4) { drag.moved = true; stage.classList.add('dragging'); }
+    if (drag.moved && img) { view.ox = drag.ox - dx / view.zoom; view.oy = drag.oy - dy / view.zoom; needImg = true; kick(); }
+  }
+  cursor = [e.clientX, e.clientY]; readout(e.clientX, e.clientY);
+  if (pending) { needOv = true; kick(); }
+});
+const endPtr = e => {
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinch = null;
+  if (drag && !drag.moved && e.type === 'pointerup' && mode === 'measure' && img) placePoint(e.clientX, e.clientY);
+  if (ptrs.size === 0) { drag = null; stage.classList.remove('dragging'); }
+};
+stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
+stage.addEventListener('pointerleave', () => { cursor = null; if (pending) { needOv = true; kick(); } });
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.key === 'Escape') { pending = null; needOv = true; kick(); }
+  else if (e.key === '+' || e.key === '=') $('zIn').click();
+  else if (e.key === '-' || e.key === '_') $('zOut').click();
+  else if (e.key === '0') fitView();
+  else if (e.key === '1') zoomTo(1);
+  else if (e.key === 'm' || e.key === 'M') setMode(mode === 'measure' ? 'pan' : 'measure');
+});
+
+// ---------------------------------------------------------------- readout under the cursor
+function valueAt(ix, iy) {
+  const i = iy * img.w + ix, ch = img.ch;
+  if (ch.length === 3) return `R ${fmtVal(ch[0][i])}  G ${fmtVal(ch[1][i])}  B ${fmtVal(ch[2][i])}`;
+  const v = ch[0][i]; return v === v ? fmtVal(v) : 'blank';
+}
+function readout(sx, sy) {
+  if (!img) return;
+  const [fx, fy] = toImage(sx, sy);
+  if (fx < 0 || fy < 0 || fx >= img.w || fy >= img.h) { $('readout').innerHTML = 'Outside the image'; return; }
+  const p = pixLabel(fx, fy);
+  let h = `x <b>${p.x}</b>&nbsp; y <b>${p.y}</b> &nbsp;·&nbsp; value <b>${valueAt(Math.floor(fx), Math.floor(fy))}</b>`;
+  const s = skyAt(Math.floor(fx) + 0.5, Math.floor(fy) + 0.5);
+  if (s) h += ` &nbsp;·&nbsp; RA <b>${fmtRA(s.ra)}</b>&nbsp; Dec <b>${fmtDec(s.dec)}</b> <span style="opacity:.7">(${s.ra.toFixed(5)}°, ${s.dec.toFixed(5)}°)</span>`;
+  $('readout').innerHTML = h;
+}
+
+// ---------------------------------------------------------------- measuring
+function setMode(m) {
+  mode = m; for (const b of $('mode').children) b.classList.toggle('on', b.dataset.m === m);
+  stage.classList.toggle('measure', m === 'measure'); if (m !== 'measure') { pending = null; needOv = true; kick(); }
+}
+$('mode').onclick = e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
+// the brightness-weighted center of the star nearest the click
+function centroid(fx, fy) {
+  const ch = img.ch, w = img.w, h = img.h;
+  let cx = fx, cy = fy;
+  for (let it = 0; it < 3; it++) {
+    const r = 7, x0 = Math.max(0, Math.round(cx) - r), x1 = Math.min(w - 1, Math.round(cx) + r), y0 = Math.max(0, Math.round(cy) - r), y1 = Math.min(h - 1, Math.round(cy) + r);
+    const edge = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (y === y0 || y === y1 || x === x0 || x === x1) { const v = lum(ch, y * w + x); if (v === v) edge.push(v); }
+    edge.sort((a, b) => a - b); const bg = edge.length ? edge[Math.floor(edge.length / 2)] : 0;
+    let sx = 0, sy = 0, sw = 0, peak = -Infinity;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const v = lum(ch, y * w + x) - bg; if (v > peak) peak = v; }
+    if (!(peak > 0)) return [fx, fy];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const v = lum(ch, y * w + x) - bg; if (v > peak * 0.2) { sx += v * (x + 0.5); sy += v * (y + 0.5); sw += v; } }
+    if (!sw) return [fx, fy];
+    cx = sx / sw; cy = sy / sw;
+  }
+  return Math.hypot(cx - fx, cy - fy) < 12 ? [cx, cy] : [fx, fy];
+}
+function placePoint(sx, sy) {
+  let [fx, fy] = toImage(sx, sy);
+  if (fx < 0 || fy < 0 || fx >= img.w || fy >= img.h) return;
+  if ($('snap').checked) [fx, fy] = centroid(fx, fy);
+  if (!pending) pending = [fx, fy];
+  else { meas.push({ a: pending, b: [fx, fy] }); pending = null; listMeas(); }
+  needOv = true; kick();
+}
+function listMeas() {
+  $('mCsv').disabled = $('mClear').disabled = !meas.length;
+  $('meas').innerHTML = meas.map((m, i) => {
+    const { px, arc } = measText(m), pa = pixLabel(m.a[0], m.a[1]), pb = pixLabel(m.b[0], m.b[1]);
+    const exact = img.kind === 'fits' ? (x, y) => `(${(x + 0.5).toFixed(1)}, ${(img.h - y + 0.5).toFixed(1)})` : (x, y) => `(${x.toFixed(1)}, ${y.toFixed(1)})`;
+    let s = `${px.toFixed(1)} px from ${exact(m.a[0], m.a[1])} to ${exact(m.b[0], m.b[1])}`;
+    if (img.wcs) { const d = sep(skyAt(m.a[0], m.a[1]), skyAt(m.b[0], m.b[1])); s += `<br>From the WCS: ${fmtArc(d)}`; }
+    void pa; void pb;
+    return `<div class="ms"><span class="n">${i + 1}</span><div><b>${arc != null ? fmtArc(arc) + (arc >= 120 ? ` (${arc.toFixed(1)}″)` : '') : 'Choose a plate scale'}</b><small>${s}</small></div><button class="del" data-i="${i}" title="Delete">&times;</button></div>`;
+  }).join('') || '';
+}
+$('meas').onclick = e => { const b = e.target.closest('.del'); if (b) { meas.splice(+b.dataset.i, 1); listMeas(); needOv = true; kick(); } };
+$('mClear').onclick = () => { meas = []; pending = null; listMeas(); needOv = true; kick(); };
+$('mCsv').onclick = () => {
+  const rows = [['number', 'x1', 'y1', 'x2', 'y2', 'pixels', 'plate_scale_arcsec_per_px', 'arcsec'].concat(img.wcs ? ['ra1_deg', 'dec1_deg', 'ra2_deg', 'dec2_deg', 'arcsec_from_wcs'] : [])];
+  meas.forEach((m, i) => {
+    const conv = img.kind === 'fits' ? (x, y) => [(x + 0.5).toFixed(2), (img.h - y + 0.5).toFixed(2)] : (x, y) => [x.toFixed(2), y.toFixed(2)];
+    const { px, arc } = measText(m);
+    const r = [i + 1, ...conv(m.a[0], m.a[1]), ...conv(m.b[0], m.b[1]), px.toFixed(2), scale ?? '', arc != null ? arc.toFixed(2) : ''];
+    if (img.wcs) { const a = skyAt(m.a[0], m.a[1]), b = skyAt(m.b[0], m.b[1]); r.push(a.ra.toFixed(6), a.dec.toFixed(6), b.ra.toFixed(6), b.dec.toFixed(6), sep(a, b).toFixed(2)); }
+    rows.push(r);
+  });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = (img.name || 'image').replace(/\.[^.]+(\.gz)?$/, '') + '_measurements.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+
+// ---------------------------------------------------------------- plate scale
+function instById(id) { return INSTRUMENTS.find(I => I.id === id); }
+function updateScale(from) {
+  const id = $('inst').value, I = instById(id), bin = +$('bin').value;
+  $('binRow').style.display = I ? '' : 'none';
+  if (from !== 'typed') {
+    if (I) $('scale').value = +(I.scale * bin).toFixed(4);
+    else if (id === 'wcs' && img && img.wcs) $('scale').value = +img.wcs.scale.toFixed(4);
+    else if (id === '') $('scale').value = '';
+  }
+  const v = parseFloat($('scale').value); scale = v > 0 ? v : null;
+  let f = '';
+  if (img && scale) {
+    const fw = img.w * scale / 60, fh = img.h * scale / 60;
+    const deg = Math.max(fw, fh) >= 120, u = v => deg ? (v / 60).toFixed(2) + '°' : v.toFixed(1) + '′';
+    f = `This image covers <b>${u(fw)} × ${u(fh)}</b> of sky (${img.w} × ${img.h} pixels).`;
+    if (img.wcs && id !== 'wcs' && Math.abs(img.wcs.scale - scale) / img.wcs.scale > 0.03) f += ` The image's WCS gives ${img.wcs.scale.toFixed(3)}″/px.`;
+  } else if (img) f = 'Choose the telescope and camera, or type a plate scale, to measure in arcseconds.';
+  $('fov').innerHTML = f;
+  suggestReduced();
+  listMeas(); needOv = true; kick();
+}
+$('inst').onchange = () => updateScale();
+$('bin').onchange = () => updateScale();
+$('scale').oninput = () => { if ($('inst').value !== 'other') $('inst').value = 'other'; $('binRow').style.display = 'none'; updateScale('typed'); };
+
+// a smaller copy of a full camera frame (for example a JPG saved at reduced size) has a larger scale per pixel
+function suggestReduced() {
+  const box = $('suggest'); box.innerHTML = '';
+  if (!img) return;
+  const I = instById($('inst').value); if (!I) return;
+  const bin = +$('bin').value, sw = I.sensor[0] / bin, sh = I.sensor[1] / bin;
+  const fw = sw / img.w, fh = sh / img.h;
+  const fwr = sw / img.h, fhr = sh / img.w;     // the same frame turned 90 degrees
+  let f = null;
+  if (Math.abs(fw - fh) / fw < 0.006 && fw > 1.03) f = fw; else if (Math.abs(fwr - fhr) / fwr < 0.006 && fwr > 1.03) f = fwr;
+  if (!f) return;
+  const s = I.scale * bin * f;
+  box.innerHTML = `<div class="suggest">This image is ${img.w} × ${img.h} pixels, smaller than this camera's ${sw} × ${sh} frame${bin > 1 ? ` at ${bin} × ${bin} binning` : ''}.
+    If it is a reduced copy of a full frame, each pixel covers <b>${s.toFixed(3)}″</b> (${f.toFixed(3)} times ${(I.scale * bin).toFixed(3)}″).<br>
+    <button class="btn" id="useRed">Use ${s.toFixed(3)}″ per pixel</button></div>`;
+  $('useRed').onclick = () => { $('inst').value = 'other'; $('binRow').style.display = 'none'; $('scale').value = +s.toFixed(4); updateScale('typed');
+    $('fov').innerHTML += ` Scale set for a reduced copy of a full frame from the ${I.label.split(' (')[0]}.`; };
+}
+// guess the instrument from the FITS header or the image size
+function guessInstrument(im) {
+  const h = im.hdr, txt = [h.INSTRUME, h.CAMERA, h.DETECTOR, h.TELESCOP].filter(Boolean).join(' ');
+  let bin = h.XBINNING || h.BINNING || 1; if (typeof bin !== 'number') bin = parseInt(bin) || 1;
+  let cam = /6200/.test(txt) ? '6200' : /2600/.test(txt) ? '2600' : /585/.test(txt) ? '585' : null;
+  if (!cam) for (const I of INSTRUMENTS) for (const b of [1, 2, 3, 4]) {
+    const [sw, sh] = [I.sensor[0] / b, I.sensor[1] / b];
+    if ((Math.abs(im.w - sw) <= 2 && Math.abs(im.h - sh) <= 2) || (Math.abs(im.w - sh) <= 2 && Math.abs(im.h - sw) <= 2)) { cam = cam || I.cam; if (!h.XBINNING) bin = b; }
+  }
+  if (!cam) return null;
+  const opts = INSTRUMENTS.filter(I => I.cam === cam);
+  if (opts.length === 1) return { id: opts[0].id, bin };
+  if (h.FOCALLEN) return { id: h.FOCALLEN < 1500 ? 'hyper' : 'cdk2600', bin };
+  return { id: null, bin, amb: opts };
+}
+
+// ---------------------------------------------------------------- loading
+function busy(t) { $('busyTxt').textContent = t; $('busy').style.display = t ? 'flex' : 'none'; }
+function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => { el.style.display = 'none'; }, 7000); }
+async function openBlob(blob, name, preset) {
+  busy('Reading ' + name + '…');
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const head = new Uint8Array(await blob.slice(0, 6).arrayBuffer());
+    const isGz = head[0] === 0x1f && head[1] === 0x8b, isFits = String.fromCharCode(...head) === 'SIMPLE' || isGz || /\.(fits?|fts)(\.gz)?$/i.test(name);
+    const im = isFits ? await readFits(await blob.arrayBuffer()) : await readPicture(blob);
+    im.name = name;
+    busy('Measuring the image…'); await new Promise(r => setTimeout(r, 20));
+    im.wcs = im.kind === 'fits' ? readWCS(im.hdr) : null;
+    analyse(im);
+    img = im; meas = []; pending = null;
+    $('welcome').style.display = 'none';
+    showInfo(); fillInstruments(img.wcs && img.wcs.scale);
+    // plate scale: sample's known setup, then the header or image size, then the WCS
+    const g = guessInstrument(img);
+    $('inst').value = ''; $('bin').value = '1';
+    if (preset && preset.inst) { $('inst').value = preset.inst; $('bin').value = String(preset.bin || 1); }
+    else if (g && g.id) { $('inst').value = g.id; $('bin').value = String(g.bin); }
+    else if (img.wcs) $('inst').value = 'wcs';
+    if (g && !g.id && g.amb) $('fov').innerHTML = '';
+    updateScale();
+    if (preset && preset.useReduced) { const b = document.getElementById('useRed'); if (b) b.click(); }
+    // stretch
+    st.curve = 'lin'; $('curve').value = 'lin'; st.invert = false; $('invert').checked = false; buildLUT();
+    setAxis(); computeHist();
+    applyPreset(img.kind === 'pic' ? '100' : '99.5');
+    fitView(); listMeas();
+    $('readout').innerHTML = 'Move over the image to read positions' + (img.wcs ? ' and sky coordinates' : '');
+    if (img.kind === 'fits' && !img.wcs) toast('This FITS image has no sky coordinates (WCS), so RA and Dec are not shown. Pixel positions and the plate scale still work.');
+  } catch (e) { console.error(e); toast(e.message || String(e)); }
+  busy('');
+}
+function showInfo() {
+  const h = img.hdr, rows = [];
+  rows.push(['File', esc(img.name)]);
+  rows.push(['Size', `${img.w} × ${img.h} pixels`]);
+  const type = img.kind === 'fits' ? `FITS, ${{ 8: '8-bit', 16: '16-bit', 32: '32-bit', '-32': '32-bit float', '-64': '64-bit float', 64: '64-bit' }[img.bitpix]}` : (img.ch.length === 3 ? 'Color picture' : 'Grayscale picture');
+  rows.push(['Type', type + (img.notes.length ? ` (${img.notes.join(', ')})` : '')]);
+  rows.push(['Values', `${fmtVal(img.min)} to ${fmtVal(img.max)}`]);
+  for (const [k, lab] of [['OBJECT', 'Object'], ['DATE-OBS', 'Date'], ['EXPTIME', 'Exposure (s)'], ['EXPOSURE', 'Exposure (s)'], ['FILTER', 'Filter'], ['TELESCOP', 'Telescope'], ['INSTRUME', 'Camera']])
+    if (h[k] !== undefined && h[k] !== '' && !rows.some(r => r[0] === lab)) rows.push([lab, esc(String(h[k]))]);
+  if (img.kind === 'fits') rows.push(['Sky coordinates', img.wcs ? `Yes (WCS, ${img.wcs.scale.toFixed(3)}″/px)` : 'No WCS in the header']);
+  $('imgInfo').innerHTML = `<table class="info">${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</table>`;
+  $('hdrBox').style.display = img.kind === 'fits' ? '' : 'none';
+  $('hdr').textContent = img.cards.join('\n');
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const SAMPLES = {
+  ngc253: { url: 'data/ngc253_hyperstar.jpg', name: 'NGC 253 (Nieves HyperStar).jpg', inst: 'hyper', bin: 1, useReduced: true },
+  horse: { url: 'data/horsehead.fits', name: 'horsehead.fits' },
+};
+async function loadSample(k) {
+  const S = SAMPLES[k]; if (!S) return;
+  busy('Downloading the sample…');
+  try { const r = await fetch(S.url); if (!r.ok) throw new Error('The sample could not be downloaded.'); await openBlob(await r.blob(), S.name, S); }
+  catch (e) { busy(''); toast(e.message); }
+}
+$('open').onclick = $('wOpen').onclick = () => $('file').click();
+$('file').onchange = e => { const f = e.target.files[0]; if (f) openBlob(f, f.name); e.target.value = ''; };
+$('sample').onchange = e => { const k = e.target.value; e.target.value = ''; loadSample(k); };
+$('wSample').onclick = () => loadSample('ngc253');
+addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dropping'); });
+addEventListener('dragleave', e => { if (e.relatedTarget === null) document.body.classList.remove('dropping'); });
+addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dropping'); const f = e.dataTransfer.files[0]; if (f) openBlob(f, f.name); });
+
+$('hide').onclick = () => { $('panel').classList.add('hidden'); $('toggle').style.display = 'block'; };
+$('toggle').onclick = () => { $('panel').classList.remove('hidden'); $('toggle').style.display = 'none'; };
+addEventListener('resize', () => drawHist());
+
+// ---------------------------------------------------------------- start
+fillInstruments(null); buildLUT(); resize(); updateScale(); drawHist();
+if (innerWidth < 720) $('hide').click();
+const q = new URLSearchParams(location.search).get('sample'); if (q) loadSample(q);
+window.__viewer = { pix2sky: (p1, p2) => img && img.wcs && pix2sky(img.wcs, p1, p2), state: () => ({ img: img && { w: img.w, h: img.h, kind: img.kind, min: img.min, max: img.max, wcs: img.wcs }, scale, st, view, meas }), openBlob, placePoint, setMode, toImage, toScreen };
+})();
+</script>
+</body>
+</html>

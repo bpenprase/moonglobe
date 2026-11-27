@@ -52,7 +52,7 @@ h2{font-family:Spectral,Georgia,serif;font-weight:500;font-size:clamp(28px,3.4vw
 .app li{padding-left:16px;position:relative;margin:4px 0}
 .app li:before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .app .go{margin-top:auto;font-weight:600;font-size:14.5px;color:var(--accent)}
-.sky{--accent:var(--sky)} .hz{--accent:var(--gold)} .hudf{--accent:#d6a8ff} .bh{--accent:#ffcf5a} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
+.sky{--accent:var(--sky)} .hz{--accent:var(--gold)} .hudf{--accent:#d6a8ff} .bh{--accent:#ffcf5a} .vw{--accent:#7cf0c8} .moon{--accent:var(--moon)} .mars{--accent:var(--mars)}
 .more{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:28px}
 .res{display:block;padding:24px 26px;background:var(--card);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:inherit;transition:border-color .25s}
 .res:hover{border-color:rgba(233,201,143,.5)}
@@ -112,7 +112,7 @@ footer a{color:var(--muted)}
 
 <section id="apps">
   <p class="kicker">The apps</p>
-  <h2>Explore the sky, the Moon, Mars, our galaxy&rsquo;s black hole and the distant universe</h2>
+  <h2>Explore the sky, the Moon, Mars, our galaxy&rsquo;s black hole, the distant universe and your own telescope images</h2>
   <div class="apps">
     <a class="app sky" href="sky/">
       <div class="pic" style="background-image:url(assets/app_sky.jpg)" role="img" aria-label="The constellations around Orion with Flamsteed's figures"></div>
@@ -194,6 +194,20 @@ footer a{color:var(--muted)}
           <li>Measure sizes in arcseconds and kiloparsecs</li>
         </ul>
         <span class="go">Open the Deep Field &rarr;</span>
+      </div>
+    </a>
+    <a class="app vw" href="viewer/">
+      <div class="pic" style="background-image:url(assets/app_viewer.jpg)" role="img" aria-label="NGC 253 imaged with the Nieves Observatory HyperStar system, with the galaxy's length measured as 22 arcminutes"></div>
+      <div class="body">
+        <h3>Nieves Image Viewer</h3>
+        <p>Open your own JPG or FITS images from the Nieves Observatory telescopes, and measure what you captured.</p>
+        <ul>
+          <li>Choose the telescope and camera to set the plate scale</li>
+          <li>Read pixel positions, and RA and Dec from a FITS image's WCS</li>
+          <li>Click two points to measure their separation in arcseconds</li>
+          <li>Set the black and white levels with a histogram and presets</li>
+        </ul>
+        <span class="go">Open the image viewer &rarr;</span>
       </div>
     </a>
   </div>

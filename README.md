@@ -231,6 +231,34 @@ The sky as a sphere, at `https://bpenprase.github.io/moonglobe/sky/`. Look out f
 The plate photographs come from Wikimedia Commons (RareMaps scans of the 1729 edition, public domain). They are kept on
 the `flamsteed-sources` branch, which the **Fetch Flamsteed plates** workflow fills.
 
+## Nieves Image Viewer (the `viewer/` folder)
+
+A viewer for students' own images, at `https://bpenprase.github.io/moonglobe/viewer/`. Everything runs in the browser and
+nothing is uploaded.
+
+- **Opening images**: JPG, PNG and FITS files (`.fits`, `.fit`, `.fts`, and gzipped `.fits.gz`), from the Open button or
+  by dropping a file on the page. FITS images can be 8, 16, 32 or 64-bit integers or floats, with BZERO and BSCALE, in
+  the primary HDU or an image extension. A three-plane FITS cube is shown in color. Tile-compressed `.fz` files must be
+  uncompressed first. FITS images are shown with row 1 at the bottom, as in DS9.
+- **Telescope and camera**: the menu lists the Nieves imaging systems with their 1 x 1 plate scales from the
+  observatory's imaging table: CDK14 with the ASI6200MM Pro (0.303"/px), CDK14 with the ASI2600MC Pro (0.303"/px), CDK14
+  with the ASI585MC Pro (0.233"/px), and the 11-inch HyperStar v4 with the ASI2600MC Pro (1.436"/px). A binning menu
+  multiplies the scale. "Other" takes any typed scale, and a FITS image with a WCS adds "From the image's WCS". The app
+  picks the system from the FITS header (INSTRUME, XBINNING, FOCALLEN) or from the image size when it can. If an image
+  is a reduced copy of a full camera frame, it offers the matching larger scale.
+- **Readout**: pixel x and y under the cursor, the pixel value (R, G, B for color), and for FITS images with a WCS the
+  RA and Dec (gnomonic projection with SIP distortion terms). Checked against astropy to better than 0.001".
+- **Measuring**: in Measure mode, click two points. The line is labeled with its length in arcseconds (or arcminutes)
+  from the plate scale. When the image has a WCS, the list also gives the separation computed from the WCS.
+  "Snap to the center of a star" moves each click to the brightness-weighted center of the nearest star. Measurements
+  can be saved as CSV.
+- **Display**: a histogram of pixel values with draggable black and white lines, sliders and number boxes, presets
+  (Min-max, 99.5%, 99%, and Faint for sky-limited images), a brightness curve (linear, square root, log, asinh) and
+  an invert option.
+- **Samples**: NGC 253 from the HyperStar system, and the Horsehead Nebula from the Digitized Sky Survey (STScI), as
+  distributed with the astropy tutorials, which has a WCS. The NGC 253 file here is a reduced copy (2576 x 1722 of
+  the 6248 x 4176 frame), so its scale is 3.483"/px.
+
 ## Data credits
 
 - Surface: LRO Camera (LROC) Wide Angle Camera mosaic, NASA/GSFC/Arizona State University, distributed in the NASA Scientific Visualization Studio CGI Moon Kit (Ernie Wright).
