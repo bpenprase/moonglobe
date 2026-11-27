@@ -117,7 +117,7 @@ details a{color:#9cc8ff}
 .rs.bad{cursor:default} .rs.bad span{color:#ff9b8a}
 #pasteBox{display:none;margin-top:7px}
 #pasteBox textarea{width:100%;box-sizing:border-box;height:110px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;color:var(--text);font:12.5px/1.45 Inter,sans-serif;padding:7px 9px;outline:none;resize:vertical}
-#rosterCv{position:fixed;inset:0;pointer-events:none}
+#rosterCv{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none}
 #hint{position:fixed;left:50%;top:16px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;transition:opacity 1s}
 @media (max-width:720px){
   #panel{width:calc(100% - 28px);max-height:58%;top:auto;bottom:14px}
@@ -887,7 +887,7 @@ function fitRoster() {
   flyTo(Math.asin(m.y) / DEG, Math.atan2(m.x, m.z) / DEG, d);
 }
 const rcv = $('rosterCv'), r2 = rcv.getContext('2d');
-function sizeRosterCv() { const k = Math.min(devicePixelRatio, 2); rcv.width = innerWidth * k; rcv.height = innerHeight * k; r2.setTransform(k, 0, 0, k, 0, 0); }
+function sizeRosterCv() { const k = Math.min(devicePixelRatio, 2); rcv.width = innerWidth * k; rcv.height = innerHeight * k; rcv.style.width = innerWidth + 'px'; rcv.style.height = innerHeight + 'px'; r2.setTransform(k, 0, 0, k, 0, 0); dirty = true; }
 sizeRosterCv(); addEventListener('resize', sizeRosterCv);
 const rv = new THREE.Vector3();
 function scr(x, y, z) { rv.set(x, y, z).project(camera); return [(rv.x * 0.5 + 0.5) * innerWidth, (-rv.y * 0.5 + 0.5) * innerHeight]; }
