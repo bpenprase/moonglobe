@@ -164,6 +164,18 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
   </div>
 
   <div class="sec">
+    <h2>Save the image</h2>
+    <select id="saveFmt">
+      <option value="png">PNG, full resolution, as shown</option>
+      <option value="jpg">JPG, full resolution, as shown (smaller file)</option>
+      <option value="fits">FITS, the data values (keeps the WCS)</option>
+    </select>
+    <button class="btn gold" id="saveBtn" style="width:100%;margin-top:8px" disabled>Save image</button>
+    <div class="note" id="saveNote">PNG and JPG keep the black and white levels, the brightness curve and any background removal, exactly as on screen.
+      FITS keeps the actual pixel values (after background removal) for measuring in other programs.</div>
+  </div>
+
+  <div class="sec">
     <h2>Measure distances</h2>
     <div class="seg" id="mode"><button data-m="pan" class="on">Move the image</button><button data-m="measure">Measure</button></div>
     <div class="note">In <b>Measure</b> mode, click one spot and then another. The line between them is measured in arcseconds using the plate scale. Dragging still moves the image. Esc cancels a half-finished line.</div>
@@ -415,6 +427,8 @@ function useSet(name) {
   if (S.slo !== undefined) { st.preset = S.spre; markPreset(); setStretch(S.slo, S.shi, S.spre ? 'preset' : 'restore'); }
   else applyPreset(name === 'orig' ? (img.kind === 'pic' ? '100' : '99.5') : name === 'corr' ? 'sky' : '99.5');
   for (const b of $('bgView').children) b.classList.toggle('on', b.dataset.v === name);
+  $('saveBtn').disabled = false;
+  $('saveBtn').textContent = { orig: 'Save image', corr: 'Save corrected image', model: 'Save background model' }[name];
   needImg = true; kick();
 }
 function analyse(im) {
@@ -1015,6 +1029,101 @@ async function runBackground() {
 }
 $('bgRun').onclick = runBackground;
 $('bgUndo').onclick = bgUndo;
+
+
+// ---------------------------------------------------------------- saving
+function baseName() { return (img.name || 'image').replace(/\.(fits?|fts)(\.gz)?$|\.(jpe?g|png|webp|gif|bmp|tiff?)$/i, '').replace(/[^\w.\- ()]+/g, '_'); }
+function saveBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+// the full image, with the current black and white levels and curve, drawn in strips to limit memory
+async function stretchedCanvas() {
+  const w = img.w, h = img.h, ch = img.ch, nc = ch.length;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d'); if (!cx) throw new Error('This image is too large for the browser to save as a picture. Try FITS instead.');
+  const lo = st.lo, inv = 4095 / (st.hi - st.lo), nanC = st.invert ? 200 : 40;
+  const map = v => { if (v !== v) return nanC; let t = (v - lo) * inv; t = t <= 0 ? 0 : t >= 4095 ? 4095 : t | 0; return LUT[t]; };
+  const rows = Math.max(1, Math.min(h, Math.floor(4e6 / w)));
+  for (let y0 = 0; y0 < h; y0 += rows) {
+    const nr = Math.min(rows, h - y0), part = cx.createImageData(w, nr), d = part.data;
+    for (let k = 0, i = y0 * w; k < nr * w; k++, i++) {
+      const p = k * 4;
+      if (nc === 1) d[p] = d[p + 1] = d[p + 2] = map(ch[0][i]);
+      else { d[p] = map(ch[0][i]); d[p + 1] = map(ch[1][i]); d[p + 2] = map(ch[2][i]); }
+      d[p + 3] = 255;
+    }
+    cx.putImageData(part, 0, y0);
+    if (y0 % (rows * 8) === 0) await new Promise(r => setTimeout(r, 0));
+  }
+  return cv;
+}
+// FITS cards: keep the original header's descriptive and WCS keywords, replace the structural ones
+const STRUCT = /^(SIMPLE|BITPIX|NAXIS\d*|EXTEND|BZERO|BSCALE|BLANK|END|XTENSION|PCOUNT|GCOUNT|CHECKSUM|DATASUM|DATAMIN|DATAMAX|INHERIT|EXTNAME|EXTVER|Z[A-Z0-9_]*)$/;
+function card(key, value, comment) {
+  let v;
+  if (typeof value === 'string') v = ("'" + value.replace(/'/g, "''").padEnd(8) + "'").padEnd(20);
+  else if (typeof value === 'boolean') v = (value ? 'T' : 'F').padStart(20);
+  else { let t = String(value); if (t.length > 20) t = value.toPrecision(12); v = t.replace(/e\+?/, 'E').padStart(20); }
+  let c = key.padEnd(8) + '= ' + v; if (comment) c += ' / ' + comment;
+  return c.slice(0, 80).padEnd(80);
+}
+const textCard = (key, text) => (key.padEnd(8) + text).slice(0, 80).padEnd(80);
+function fitsBlob() {
+  const w = img.w, h = img.h, ch = img.ch, nc = ch.length;
+  const cards = [card('SIMPLE', true, 'conforms to FITS standard'), card('BITPIX', -32, '32-bit floating point'), card('NAXIS', nc === 3 ? 3 : 2),
+    card('NAXIS1', w), card('NAXIS2', h)];
+  if (nc === 3) cards.push(card('NAXIS3', 3, 'red, green, blue'));
+  const seen = new Set();
+  for (const raw of (img.cards || [])) {
+    if (!raw || raw.startsWith('----')) continue;
+    const key = raw.slice(0, 8).trim();
+    if (!/^[A-Z0-9_\-]*$/.test(key) || STRUCT.test(key)) continue;
+    if (key && key !== 'COMMENT' && key !== 'HISTORY') { if (seen.has(key)) continue; seen.add(key); }
+    if (!key && !raw.trim()) continue;
+    cards.push(raw.padEnd(80).slice(0, 80));
+  }
+  if (img.kind !== 'fits') cards.push(card('ORIGFILE', String(img.name || '').slice(0, 60), 'converted from a picture file'));
+  if (scale) cards.push(card('PIXSCALE', +scale.toFixed(5), 'plate scale used, arcsec per pixel'));
+  const hist = [`Saved by the Nieves Image Viewer on ${new Date().toISOString().slice(0, 10)}.`];
+  if (img.cur === 'corr') hist.push('Background removed: ' + ($('bgNote').textContent || '').replace(/ Use the buttons.*$/, ''));
+  if (img.cur === 'model') hist.push('This is the fitted background model, not the sky image.');
+  hist.push(`Display range used in the viewer: ${fmtVal(st.lo)} to ${fmtVal(st.hi)} (${$('curve').selectedOptions[0].textContent.toLowerCase()} curve).`);
+  for (const t of hist) {          // wrap each note at word breaks, 70 characters a line
+    let line = '';
+    for (const word of t.split(' ')) { if (line && (line + ' ' + word).length > 70) { cards.push(textCard('HISTORY', line)); line = word; } else line = line ? line + ' ' + word : word; }
+    if (line) cards.push(textCard('HISTORY', line));
+  }
+  cards.push('END'.padEnd(80));
+  while (cards.length % 36) cards.push(''.padEnd(80));
+  const head = new Uint8Array(cards.length * 80);
+  cards.forEach((c, k) => { for (let i = 0; i < 80; i++) { const code = c.charCodeAt(i); head[k * 80 + i] = code >= 32 && code < 127 ? code : 32; } });
+  const nbytes = w * h * nc * 4, padded = Math.ceil(nbytes / 2880) * 2880, data = new ArrayBuffer(padded), dv = new DataView(data);
+  let pos = 0;
+  for (let c = 0; c < nc; c++) for (let fy = 0; fy < h; fy++) {     // FITS row 1 is the bottom row of the display
+    const row = (h - 1 - fy) * w, a = ch[c];
+    for (let x = 0; x < w; x++, pos += 4) dv.setFloat32(pos, a[row + x]);
+  }
+  return new Blob([head, data], { type: 'application/fits' });
+}
+async function saveImage() {
+  if (!img) return;
+  const fmt = $('saveFmt').value, tag = { orig: '', corr: '_corrected', model: '_background' }[img.cur] || '';
+  busy('Preparing the file…'); await new Promise(r => setTimeout(r, 30));
+  try {
+    if (fmt === 'fits') saveBlob(fitsBlob(), `${baseName()}${tag}.fits`);
+    else {
+      const cv = await stretchedCanvas();
+      busy('Compressing the picture…'); await new Promise(r => setTimeout(r, 20));
+      const blob = await new Promise(r => cv.toBlob(r, fmt === 'jpg' ? 'image/jpeg' : 'image/png', 0.93));
+      if (!blob) throw new Error('The browser could not save an image this large. Try JPG or FITS.');
+      saveBlob(blob, `${baseName()}${tag}.${fmt}`);
+      cv.width = cv.height = 0;
+    }
+  } catch (e) { console.error(e); toast(e.message || String(e)); }
+  busy('');
+}
+$('saveBtn').onclick = saveImage;
 
 // ---------------------------------------------------------------- plate scale
 function instById(id) { return INSTRUMENTS.find(I => I.id === id); }

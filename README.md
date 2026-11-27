@@ -265,6 +265,10 @@ nothing is uploaded.
   image. The corrected image opens with the
   Faint stretch. On the NGC 253 sample the circular method leaves the sky inside the disk within about 2 levels (of
   255) of zero, apart from a thin rim at the ragged edge of the stacked frames.
+- **Saving**: the Save button follows what is on screen ("Save image", "Save corrected image" or "Save background
+  model"). PNG and JPG are full resolution with the black and white levels, curve and background removal applied, as
+  shown (FITS images keep row 1 at the bottom, so north stays up). FITS saves the data values as 32-bit floats, with the
+  original header's keywords and WCS kept and HISTORY lines recording the background removal and display range.
 - **Samples**: NGC 253 from the HyperStar system, and the Horsehead Nebula from the Digitized Sky Survey (STScI), as
   distributed with the astropy tutorials, which has a WCS. The NGC 253 file here is a reduced copy (2576 x 1722 of
   the 6248 x 4176 frame), so its scale is 3.483"/px.
