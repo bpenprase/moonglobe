@@ -261,7 +261,8 @@ nothing is uploaded.
   vignetting: it finds the pattern's center separately in each color (by making the sky in thin rings around it as
   uniform as possible), then measures the sky in each ring, a second time with stars and galaxies set aside. It follows
   a sharp-edged vignetting disk that a smooth surface cannot. *Circular pattern, then smooth surface* does both.
-  Original, Background and Corrected buttons switch between the three images, and the corrected image opens with the
+  Original, Background and Corrected buttons switch between the three images, and Reset returns to the uncorrected
+  image. The corrected image opens with the
   Faint stretch. On the NGC 253 sample the circular method leaves the sky inside the disk within about 2 levels (of
   255) of zero, apart from a thin rim at the ragged edge of the stacked frames.
 - **Samples**: NGC 253 from the HyperStar system, and the Horsehead Nebula from the Digitized Sky Survey (STScI), as

@@ -158,7 +158,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
       <div class="note" id="bgEditNote" style="display:none">Each point samples the sky in the square around it. Click a point to leave it out (for example one on a galaxy or a bright star), click it again to bring it back, or click empty sky to add a point.</div>
     </div>
     <div class="note" id="bgRadNote" style="display:none">Finds the center of a circular pattern and measures the sky in thin rings around it, so it can follow a sharp-edged vignetting disk. Stars and small galaxies barely affect the rings.</div>
-    <button class="btn gold" id="bgRun" style="width:100%;margin-top:8px" disabled>Remove background</button>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-top:8px"><button class="btn gold" id="bgRun" disabled>Remove background</button><button class="btn" id="bgUndo" disabled title="Return to the original, uncorrected image">Reset</button></div>
     <div class="seg" id="bgView" style="margin-top:8px;display:none"><button data-v="orig">Original</button><button data-v="model">Background</button><button data-v="corr">Corrected</button></div>
     <div class="note" id="bgNote"></div>
   </div>
@@ -807,7 +807,17 @@ function bgGridPoints() {
   needOv = true; kick();
 }
 function bgReset() {
-  $('bgRun').disabled = false; $('bgView').style.display = 'none'; $('bgNote').textContent = ''; bgGridPoints();
+  $('bgRun').disabled = false; $('bgUndo').disabled = true; $('bgView').style.display = 'none'; $('bgNote').textContent = ''; bgGridPoints();
+}
+// back to the uncorrected image, keeping any sample points the student moved
+function bgUndo() {
+  if (!img || !img.sets.corr) return;
+  useSet('orig');
+  delete img.sets.corr; delete img.sets.model;
+  for (const P of bg.points) P.val = null;
+  $('bgView').style.display = 'none'; $('bgUndo').disabled = true;
+  $('bgNote').textContent = 'Back to the original image.';
+  needOv = true; kick();
 }
 function editBgPoint(sx, sy) {
   const [fx, fy] = toImage(sx, sy);
@@ -988,7 +998,7 @@ async function runBackground() {
     busy('Updating the display…'); await new Promise(r => setTimeout(r, 20));
     img.sets.corr = makeSet(corr, w, h); delete img.sets.corr.slo;
     if (model) img.sets.model = makeSet(model, w, h); else delete img.sets.model;
-    $('bgView').style.display = 'flex';
+    $('bgView').style.display = 'flex'; $('bgUndo').disabled = false;
     $('bgView').querySelector('[data-v="model"]').style.display = model ? '' : 'none';
     useSet('corr');
     const mm = img.sets.model ? `The background ran from ${fmtVal(img.sets.model.min)} to ${fmtVal(img.sets.model.max)}.` : '';
@@ -1004,6 +1014,7 @@ async function runBackground() {
   busy('');
 }
 $('bgRun').onclick = runBackground;
+$('bgUndo').onclick = bgUndo;
 
 // ---------------------------------------------------------------- plate scale
 function instById(id) { return INSTRUMENTS.find(I => I.id === id); }
