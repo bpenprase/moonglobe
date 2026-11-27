@@ -255,6 +255,15 @@ nothing is uploaded.
 - **Display**: a histogram of pixel values with draggable black and white lines, sliders and number boxes, presets
   (Min-max, 99.5%, 99%, and Faint for sky-limited images), a brightness curve (linear, square root, log, asinh) and
   an invert option.
+- **Background removal**: three methods. *Smooth surface* samples the sky at an even grid of points (9, 12, 20 or 30;
+  each point takes a star-rejecting median of the square around it) and fits a plane or a 2nd or 3rd order polynomial
+  surface. Points can be shown, left out (for example one on a galaxy) or added by clicking. *Circular pattern* is for
+  vignetting: it finds the pattern's center separately in each color (by making the sky in thin rings around it as
+  uniform as possible), then measures the sky in each ring, a second time with stars and galaxies set aside. It follows
+  a sharp-edged vignetting disk that a smooth surface cannot. *Circular pattern, then smooth surface* does both.
+  Original, Background and Corrected buttons switch between the three images, and the corrected image opens with the
+  Faint stretch. On the NGC 253 sample the circular method leaves the sky inside the disk within about 2 levels (of
+  255) of zero, apart from a thin rim at the ragged edge of the stacked frames.
 - **Samples**: NGC 253 from the HyperStar system, and the Horsehead Nebula from the Digitized Sky Survey (STScI), as
   distributed with the astropy tutorials, which has a WCS. The NGC 253 file here is a reduced copy (2576 x 1722 of
   the 6248 x 4176 frame), so its scale is 3.483"/px.

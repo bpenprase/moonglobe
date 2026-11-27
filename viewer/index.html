@@ -143,6 +143,27 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
   </div>
 
   <div class="sec">
+    <h2>Background removal</h2>
+    <div class="note" style="margin-top:0">Fits the sky's background, such as vignetting or a glow from light pollution, and subtracts it so the sky is even and close to zero.</div>
+    <select id="bgMethod" style="margin-top:8px">
+      <option value="surf">Smooth surface through sample points</option>
+      <option value="rad">Circular pattern (vignetting)</option>
+      <option value="both">Circular pattern, then smooth surface</option>
+    </select>
+    <div class="note">A smooth surface suits gentle gradients across the frame. For round vignetting with a sharp edge, like the NGC 253 sample, choose the circular pattern.</div>
+    <div id="bgSurfOpts">
+      <div class="row"><label for="bgGrid">Sample points</label><select id="bgGrid" style="width:150px"><option value="3x3">9 (3 × 3)</option><option value="4x3" selected>12 (4 × 3)</option><option value="5x4">20 (5 × 4)</option><option value="6x5">30 (6 × 5)</option></select></div>
+      <div class="row"><label for="bgOrder">Surface shape</label><select id="bgOrder" style="width:150px"><option value="1">Flat tilt (plane)</option><option value="2" selected>Gentle curve</option><option value="3">More curved</option></select></div>
+      <button class="btn" id="bgEdit" style="width:100%">Show and edit the sample points</button>
+      <div class="note" id="bgEditNote" style="display:none">Each point samples the sky in the square around it. Click a point to leave it out (for example one on a galaxy or a bright star), click it again to bring it back, or click empty sky to add a point.</div>
+    </div>
+    <div class="note" id="bgRadNote" style="display:none">Finds the center of a circular pattern and measures the sky in thin rings around it, so it can follow a sharp-edged vignetting disk. Stars and small galaxies barely affect the rings.</div>
+    <button class="btn gold" id="bgRun" style="width:100%;margin-top:8px" disabled>Remove background</button>
+    <div class="seg" id="bgView" style="margin-top:8px;display:none"><button data-v="orig">Original</button><button data-v="model">Background</button><button data-v="corr">Corrected</button></div>
+    <div class="note" id="bgNote"></div>
+  </div>
+
+  <div class="sec">
     <h2>Measure distances</h2>
     <div class="seg" id="mode"><button data-m="pan" class="on">Move the image</button><button data-m="measure">Measure</button></div>
     <div class="note">In <b>Measure</b> mode, click one spot and then another. The line between them is measured in arcseconds using the plate scale. Dragging still moves the image. Esc cancels a half-finished line.</div>
@@ -384,6 +405,18 @@ function skyAt(fx, fy) { if (!img || !img.wcs) return null; const [p1, p2] = fit
 
 // ---------------------------------------------------------------- statistics and the pyramid of smaller copies (for fast zoomed-out views)
 function lum(ch, i) { return ch.length === 3 ? (ch[0][i] + ch[1][i] + ch[2][i]) / 3 : ch[0][i]; }
+// statistics and smaller copies for one set of channels (the original, a background model, or the corrected image)
+function makeSet(ch, w, h) { const S = { ch, w, h }; analyse(S); return S; }
+function useSet(name) {
+  if (img.cur && img.sets[img.cur]) Object.assign(img.sets[img.cur], { slo: st.lo, shi: st.hi, spre: st.preset });
+  const S = img.sets[name]; img.cur = name;
+  img.ch = S.ch; img.levels = S.levels; img.min = S.min; img.max = S.max; img.sample = S.sample;
+  setAxis(); computeHist();
+  if (S.slo !== undefined) { st.preset = S.spre; markPreset(); setStretch(S.slo, S.shi, S.spre ? 'preset' : 'restore'); }
+  else applyPreset(name === 'orig' ? (img.kind === 'pic' ? '100' : '99.5') : name === 'corr' ? 'sky' : '99.5');
+  for (const b of $('bgView').children) b.classList.toggle('on', b.dataset.v === name);
+  needImg = true; kick();
+}
 function analyse(im) {
   const n = im.w * im.h, ch = im.ch;
   let mn = Infinity, mx = -Infinity;
@@ -432,7 +465,7 @@ function buildLUT() {
 function setStretch(lo, hi, from) {
   if (!(hi > lo)) { if (from === 'lo') lo = hi - (st.hi - st.lo || 1) * 0.001; else hi = lo + (st.hi - st.lo || 1) * 0.001; }
   st.lo = lo; st.hi = hi;
-  if (from !== 'preset') { st.preset = null; markPreset(); }
+  if (from !== 'preset' && from !== 'restore') { st.preset = null; markPreset(); }
   const fmt = v => fmtVal(v);
   if (from !== 'nLo') $('nLo').value = fmt(lo);
   if (from !== 'nHi') $('nHi').value = fmt(hi);
@@ -452,7 +485,16 @@ function applyPreset(p) {
   if (!img) return;
   let lo, hi;
   if (p === '100') { lo = img.min; hi = img.max; }
-  else if (p === 'sky') { const med = pct(50), lowq = pct(16); const sig = Math.max(med - lowq, (pct(84) - med) * 0.5, 1e-9); lo = med - 1.5 * sig; hi = Math.min(img.max, Math.max(pct(99.8), med + 40 * sig)); }
+  else if (p === 'sky') {
+    // black just below the typical sky, white a few tens of noise levels above it, so faint light shows
+    const med = pct(50), tiny = (img.max - img.min) * 1e-4 || 1e-9;
+    let sig = med - pct(16);
+    if (sig < tiny) sig = pct(84) - med;                  // a sky clipped at zero, as in many JPGs
+    if (sig < tiny) sig = (pct(99) - med) / 10;
+    if (sig < tiny) sig = (img.max - img.min) / 1000 || 1;
+    if (img.kind === 'pic') sig = Math.max(sig, 1);
+    lo = med - 2 * sig; hi = Math.max(med + 6 * sig, Math.min(pct(99.9), med + 30 * sig));
+  }
   else { const c = (100 - parseFloat(p)) / 2; lo = pct(c); hi = pct(100 - c); }
   if (img.kind === 'pic' && p === '100') { lo = 0; hi = 255; }
   st.preset = p; markPreset();
@@ -579,6 +621,20 @@ function drawOverlay() {
       octx.fillStyle = '#eafff7'; octx.textBaseline = 'middle'; octx.fillText(t, lx + 6, ly + 10.5);
     }
   };
+  if (mode === 'bg' && bg.points.length) {
+    const half = bg.box / 2 * view.zoom;
+    bg.points.forEach((P, i) => {
+      const [x, y] = toScreen(P.x, P.y);
+      octx.lineWidth = 1.5; octx.strokeStyle = P.on ? 'rgba(255,211,124,.95)' : 'rgba(255,120,110,.95)';
+      if (half > 4) { octx.strokeRect(x - half, y - half, 2 * half, 2 * half); }
+      octx.beginPath(); octx.arc(x, y, 5, 0, 2 * Math.PI); octx.stroke();
+      if (!P.on) { octx.beginPath(); octx.moveTo(x - 7, y - 7); octx.lineTo(x + 7, y + 7); octx.moveTo(x + 7, y - 7); octx.lineTo(x - 7, y + 7); octx.stroke(); }
+      if (P.val != null) {
+        octx.font = '600 11px Inter,sans-serif'; const t = P.on ? P.val : 'left out', tw = octx.measureText(t).width + 8;
+        octx.fillStyle = 'rgba(6,12,18,.8)'; octx.fillRect(x + 8, y - 22, tw, 16); octx.fillStyle = P.on ? '#ffe6b0' : '#ffb3aa'; octx.textBaseline = 'middle'; octx.fillText(t, x + 12, y - 13.5);
+      }
+    });
+  }
   meas.forEach((m, i) => { const { px, arc } = measText(m); drawOne(m.a, m.b, arc != null ? fmtArc(arc) : `${px.toFixed(1)} px`, '#7cf0c8', i + 1); });
   if (pending) {
     const [x, y] = toScreen(pending[0], pending[1]);
@@ -647,6 +703,7 @@ const endPtr = e => {
   ptrs.delete(e.pointerId);
   if (ptrs.size < 2) pinch = null;
   if (drag && !drag.moved && e.type === 'pointerup' && mode === 'measure' && img) placePoint(e.clientX, e.clientY);
+  if (drag && !drag.moved && e.type === 'pointerup' && mode === 'bg' && img) editBgPoint(e.clientX, e.clientY);
   if (ptrs.size === 0) { drag = null; stage.classList.remove('dragging'); }
 };
 stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
@@ -681,7 +738,9 @@ function readout(sx, sy) {
 // ---------------------------------------------------------------- measuring
 function setMode(m) {
   mode = m; for (const b of $('mode').children) b.classList.toggle('on', b.dataset.m === m);
-  stage.classList.toggle('measure', m === 'measure'); if (m !== 'measure') { pending = null; needOv = true; kick(); }
+  stage.classList.toggle('measure', m === 'measure' || m === 'bg'); if (m !== 'measure') { pending = null; needOv = true; kick(); }
+  $('bgEdit').classList.toggle('gold', m === 'bg'); $('bgEdit').textContent = m === 'bg' ? 'Done editing the sample points' : 'Show and edit the sample points';
+  $('bgEditNote').style.display = m === 'bg' ? '' : 'none';
 }
 $('mode').onclick = e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
 // the brightness-weighted center of the star nearest the click
@@ -735,6 +794,216 @@ $('mCsv').onclick = () => {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n') + '\n'], { type: 'text/csv' }));
   a.download = (img.name || 'image').replace(/\.[^.]+(\.gz)?$/, '') + '_measurements.csv'; document.body.appendChild(a); a.click(); a.remove();
 };
+
+
+// ---------------------------------------------------------------- background removal
+const bg = { points: [], box: 31 };
+function bgGridPoints() {
+  if (!img) { bg.points = []; return; }
+  const [nx, ny] = $('bgGrid').value.split('x').map(Number);
+  bg.box = Math.max(9, Math.round(Math.min(img.w, img.h) / 40) | 1);
+  bg.points = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) bg.points.push({ x: (i + 0.5) / nx * img.w, y: (j + 0.5) / ny * img.h, on: true, user: false });
+  needOv = true; kick();
+}
+function bgReset() {
+  $('bgRun').disabled = false; $('bgView').style.display = 'none'; $('bgNote').textContent = ''; bgGridPoints();
+}
+function editBgPoint(sx, sy) {
+  const [fx, fy] = toImage(sx, sy);
+  let best = -1, bd = 14;
+  bg.points.forEach((P, i) => { const [x, y] = toScreen(P.x, P.y), d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = i; } });
+  if (best >= 0) { const P = bg.points[best]; if (P.user) bg.points.splice(best, 1); else { P.on = !P.on; } }
+  else if (fx >= 0 && fy >= 0 && fx < img.w && fy < img.h) bg.points.push({ x: fx, y: fy, on: true, user: true });
+  for (const P of bg.points) P.val = null;
+  needOv = true; kick();
+}
+$('bgGrid').onchange = () => { bgGridPoints(); };
+$('bgEdit').onclick = () => setMode(mode === 'bg' ? 'pan' : 'bg');
+$('bgMethod').onchange = () => {
+  const m = $('bgMethod').value;
+  $('bgSurfOpts').style.display = m === 'rad' ? 'none' : ''; $('bgRadNote').style.display = m === 'surf' ? 'none' : '';
+  if (m === 'rad' && mode === 'bg') setMode('pan');
+};
+$('bgView').onclick = e => { const b = e.target.closest('button'); if (b && img && img.sets[b.dataset.v]) useSet(b.dataset.v); };
+
+// the typical sky level in a box, ignoring stars: the median, after setting aside values far from it
+function skyIn(a, cx, cy, half, sub) {
+  const x0 = Math.max(0, Math.round(cx - half)), x1 = Math.min(img.w - 1, Math.round(cx + half)), y0 = Math.max(0, Math.round(cy - half)), y1 = Math.min(img.h - 1, Math.round(cy + half));
+  const v = [], st2 = Math.max(1, Math.floor((x1 - x0 + 1) / 48));
+  for (let y = y0; y <= y1; y += st2) for (let x = x0; x <= x1; x += st2) { const q = a[y * img.w + x] - (sub ? sub(x + 0.5, y + 0.5) : 0); if (q === q) v.push(q); }
+  return clippedMedian(v);
+}
+function clippedMedian(v) {
+  if (!v.length) return NaN;
+  v.sort((p, q) => p - q);
+  let med = v[v.length >> 1];
+  const dev = v.map(q => Math.abs(q - med)).sort((p, q) => p - q), mad = dev[dev.length >> 1] * 1.4826 || 0;
+  if (!mad) return med;
+  const k = v.filter(q => Math.abs(q - med) < 2.5 * mad);
+  return k.length ? k[k.length >> 1] : med;
+}
+// least-squares polynomial surface through the points (coordinates scaled to -1..1)
+function terms(order) { const t = []; for (let n = 0; n <= order; n++) for (let i = n; i >= 0; i--) t.push([i, n - i]); return t; }
+function fitSurface(pts, vals, order) {
+  const T = terms(order), m = T.length, N = Array.from({ length: m }, () => new Float64Array(m + 1));
+  const sx = img.w / 2, sy = img.h / 2;
+  pts.forEach((P, k) => {
+    const u = (P.x - sx) / sx, v = (P.y - sy) / sy, row = T.map(([i, j]) => u ** i * v ** j);
+    for (let a = 0; a < m; a++) { for (let b = 0; b < m; b++) N[a][b] += row[a] * row[b]; N[a][m] += row[a] * vals[k]; }
+  });
+  for (let c = 0; c < m; c++) {          // Gaussian elimination
+    let piv = c; for (let r = c + 1; r < m; r++) if (Math.abs(N[r][c]) > Math.abs(N[piv][c])) piv = r;
+    [N[c], N[piv]] = [N[piv], N[c]];
+    if (Math.abs(N[c][c]) < 1e-12) continue;
+    for (let r = 0; r < m; r++) if (r !== c) { const f = N[r][c] / N[c][c]; for (let k = c; k <= m; k++) N[r][k] -= f * N[c][k]; }
+  }
+  const coef = N.map((r, i) => Math.abs(r[i]) < 1e-12 ? 0 : r[m] / r[i]);
+  return { T, coef, sx, sy };
+}
+function surfAt(S, x, y) { const u = (x - S.sx) / S.sx, v = (y - S.sy) / S.sy; let z = 0; for (let k = 0; k < S.T.length; k++) z += S.coef[k] * u ** S.T[k][0] * v ** S.T[k][1]; return z; }
+
+// circular pattern: find its center, then the sky level in thin rings around it
+function radialSamples(target) {
+  const n = img.w * img.h, stp = Math.max(1, Math.round(Math.sqrt(n / target)));
+  const xs = [], ys = [], is = [];
+  for (let y = (stp >> 1); y < img.h; y += stp) for (let x = (stp >> 1); x < img.w; x += stp) { xs.push(x + 0.5); ys.push(y + 0.5); is.push(y * img.w + x); }
+  return { xs: Float32Array.from(xs), ys: Float32Array.from(ys), is: Int32Array.from(is) };
+}
+function ringSpread(S, vals, cx, cy, bw, cap) {
+  // how much the sky varies within each ring: small when the center is right
+  const nb = Math.ceil(Math.hypot(img.w, img.h) / bw) + 2, bins = Array.from({ length: nb }, () => []);
+  for (let k = 0; k < S.is.length; k++) { const v = vals[k], b = Math.floor(Math.hypot(S.xs[k] - cx, S.ys[k] - cy) / bw); if (v === v && b < nb) bins[b].push(v); }
+  let tot = 0, cnt = 0;
+  for (const b of bins) { if (b.length < 8) continue; b.sort((p, q) => p - q); const med = b[b.length >> 1]; for (const v of b) { tot += Math.min(Math.abs(v - med), cap); cnt++; } }   // a cap keeps stars from dominating
+  return cnt ? tot / cnt : Infinity;
+}
+function findCenter(a) {
+  const lumAt = i => a[i];
+  // first guess: brightness-weighted center of a coarse sky map
+  const cs = Math.max(8, Math.round(Math.min(img.w, img.h) / 50)), cells = [];
+  for (let y = 0; y + cs <= img.h; y += cs) for (let x = 0; x + cs <= img.w; x += cs) {
+    const v = []; for (let yy = y; yy < y + cs; yy += 3) for (let xx = x; xx < x + cs; xx += 3) { const q = lumAt(yy * img.w + xx); if (q === q) v.push(q); }
+    cells.push([x + cs / 2, y + cs / 2, clippedMedian(v)]);
+  }
+  const sv = cells.map(c => c[2]).filter(v => v === v).sort((a, b) => a - b), floor = sv[Math.floor(sv.length * 0.05)] || 0, top = sv[Math.floor(sv.length * 0.95)] || 1;
+  let sw = 0, cx = 0, cy = 0;
+  for (const [x, y, v] of cells) { const wgt = Math.max(0, Math.min(v, top) - floor); sw += wgt; cx += wgt * x; cy += wgt * y; }
+  if (sw > 0) { cx /= sw; cy /= sw; } else { cx = img.w / 2; cy = img.h / 2; }
+  // then move the center to where the rings are most uniform
+  const S = radialSamples(90000), vals = new Float32Array(S.is.length);
+  for (let k = 0; k < S.is.length; k++) vals[k] = lumAt(S.is[k]);
+  const bw = Math.max(2, Math.min(img.w, img.h) / 400);
+  const sorted = Array.from(vals).filter(v => v === v).sort((a, b) => a - b), md = sorted[sorted.length >> 1];
+  const cap = 5 * Math.max(1e-6, sorted.map(v => Math.abs(v - md)).sort((a, b) => a - b)[sorted.length >> 1] * 1.4826, (sorted[Math.floor(sorted.length * 0.9)] - sorted[Math.floor(sorted.length * 0.1)]) / 10);
+  let best = ringSpread(S, vals, cx, cy, bw, cap);
+  for (const step of [cs * 2, cs, cs / 2, cs / 4, Math.max(1, cs / 8)]) {
+    let moved = true, guard = 0;
+    while (moved && guard++ < 12) {
+      moved = false;
+      for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) {
+        const sp = ringSpread(S, vals, cx + dx, cy + dy, bw, cap);
+        if (sp < best) { best = sp; cx += dx; cy += dy; moved = true; }
+      }
+    }
+  }
+  return [cx, cy];
+}
+function radialProfile(a, cx, cy) {
+  const S = radialSamples(1.6e6), bw = Math.max(1, Math.min(img.w, img.h) / 1200);
+  const nb = Math.ceil(Math.hypot(Math.max(cx, img.w - cx), Math.max(cy, img.h - cy)) / bw) + 2;
+  const rb = new Int32Array(S.is.length);
+  for (let k = 0; k < S.is.length; k++) rb[k] = Math.min(nb - 1, Math.floor(Math.hypot(S.xs[k] - cx, S.ys[k] - cy) / bw));
+  const build = keep => {
+    const bins = Array.from({ length: nb }, () => []);
+    for (let k = 0; k < S.is.length; k++) { const v = a[S.is[k]]; if (v === v && (!keep || keep(k, v))) bins[rb[k]].push(v); }
+    // rings near the center hold few pixels, so group them until each group has enough to ignore stars
+    const prof = new Array(nb).fill(NaN), spread = new Array(nb).fill(NaN), need = 400;
+    for (let i = 0; i < nb;) {
+      let j = i; const pool = bins[i].slice();
+      while (pool.length < need && j + 1 < nb && j - i < 60) { j++; for (const v of bins[j]) pool.push(v); }
+      let m = NaN, sp = NaN;
+      if (pool.length >= 6) { m = clippedMedian(pool); const d = pool.map(v => Math.abs(v - m)).sort((p, q) => p - q); sp = d[d.length >> 1] * 1.4826; }
+      for (let k = i; k <= j; k++) { prof[k] = m; spread[k] = sp; }
+      i = j + 1;
+    }
+    let last = NaN; for (let i = 0; i < nb; i++) { if (prof[i] === prof[i]) last = prof[i]; else prof[i] = last; }
+    last = NaN; for (let i = nb - 1; i >= 0; i--) { if (prof[i] === prof[i]) last = prof[i]; else prof[i] = last; }
+    const sm = prof.map((_, i) => { const w = prof.slice(Math.max(0, i - 2), i + 3).filter(v => v === v).sort((p, q) => p - q); return w[w.length >> 1]; });
+    return { prof: sm, spread };
+  };
+  // first pass, then again leaving out pixels well above it (stars, and the brighter parts of galaxies and nebulae)
+  const P1 = build(null);
+  const P2 = build((k, v) => { const i = rb[k], sp = P1.spread[i]; return !(sp > 0) || v - P1.prof[i] < 2 * sp; });
+  return { prof: Float32Array.from(P2.prof), bw, cx, cy };
+}
+const radAt = (R, x, y) => { const r = Math.hypot(x - R.cx, y - R.cy) / R.bw - 0.5, i = Math.max(0, Math.floor(r)), f = Math.max(0, Math.min(1, r - i)); const P = R.prof; return i + 1 < P.length ? P[i] * (1 - f) + P[i + 1] * f : P[P.length - 1]; };
+
+async function runBackground() {
+  if (!img) return;
+  const method = $('bgMethod').value, orig = img.sets.orig.ch, w = img.w, h = img.h, n = w * h;
+  busy('Fitting the background…'); await new Promise(r => setTimeout(r, 30));
+  try {
+    let rad = null;
+    if (method !== 'surf') {
+      rad = [];
+      const names = orig.length === 3 ? ['red', 'green', 'blue'] : [''];
+      for (let c = 0; c < orig.length; c++) {
+        busy(`Finding the center of the circular pattern${names[c] ? ' in ' + names[c] : ''}…`); await new Promise(r => setTimeout(r, 20));
+        const [cx, cy] = findCenter(orig[c]);
+        busy(`Measuring the sky in rings${names[c] ? ' in ' + names[c] : ''}…`); await new Promise(r => setTimeout(r, 20));
+        rad.push(radialProfile(orig[c], cx, cy));
+      }
+    }
+    let surf = null, used = 0;
+    if (method !== 'rad') {
+      const pts = bg.points.filter(P => P.on);
+      if (pts.length < 3) throw new Error('Use at least 3 sample points for the smooth surface.');
+      let order = +$('bgOrder').value; while (order > 1 && terms(order).length > pts.length - 2) order--;
+      surf = orig.map((a, c) => {
+        const sub = rad ? (x, y) => radAt(rad[c], x, y) : null;
+        const vals = pts.map(P => skyIn(a, P.x, P.y, bg.box / 2, sub));
+        return fitSurface(pts, vals, order);
+      });
+      // show each point's sky level (summed over colors as their average)
+      for (const P of bg.points) {
+        if (!P.on) { P.val = 'x'; continue; }
+        const vv = orig.map((a, c) => skyIn(a, P.x, P.y, bg.box / 2, rad ? (x, y) => radAt(rad[c], x, y) : null));
+        P.val = fmtVal(vv.reduce((s, v) => s + v, 0) / vv.length);
+      }
+      used = pts.length; surf.order = order;
+    }
+    busy('Subtracting the background…'); await new Promise(r => setTimeout(r, 20));
+    const keepModel = n * orig.length <= 4e7;          // very large images keep only the corrected copy, to save memory
+    const model = keepModel ? orig.map(() => new Float32Array(n)) : null, corr = orig.map(() => new Float32Array(n));
+    const rowM = new Float32Array(w);
+    for (let c = 0; c < orig.length; c++) {
+      const a = orig[c], R = rad && rad[c], S = surf && surf[c];
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) rowM[x] = (R ? radAt(R, x + 0.5, y + 0.5) : 0) + (S ? surfAt(S, x + 0.5, y + 0.5) : 0);
+        const o = y * w;
+        for (let x = 0; x < w; x++) { corr[c][o + x] = a[o + x] - rowM[x]; if (model) model[c][o + x] = rowM[x]; }
+      }
+    }
+    busy('Updating the display…'); await new Promise(r => setTimeout(r, 20));
+    img.sets.corr = makeSet(corr, w, h); delete img.sets.corr.slo;
+    if (model) img.sets.model = makeSet(model, w, h); else delete img.sets.model;
+    $('bgView').style.display = 'flex';
+    $('bgView').querySelector('[data-v="model"]').style.display = model ? '' : 'none';
+    useSet('corr');
+    const mm = img.sets.model ? `The background ran from ${fmtVal(img.sets.model.min)} to ${fmtVal(img.sets.model.max)}.` : '';
+    const cxy = rad ? pixLabel(rad.reduce((t, R) => t + R.cx, 0) / rad.length, rad.reduce((t, R) => t + R.cy, 0) / rad.length) : null;
+    const shift = rad && rad.length === 3 ? Math.max(...rad.map(R => Math.hypot(R.cx - rad[0].cx, R.cy - rad[0].cy))) : 0;
+    const cnote = cxy ? `centered at pixel (${cxy.x}, ${cxy.y})${shift >= 1 ? ` (the red, green and blue patterns are offset by up to ${shift.toFixed(1)} pixels)` : ''}` : '';
+    const how = method === 'surf' ? `Smooth surface (${['', 'plane', 'gentle curve', 'more curved'][surf.order]}) through ${used} sample points.`
+      : method === 'rad' ? `Circular pattern ${cnote}.`
+      : `Circular pattern ${cnote}, then a smooth surface through ${used} points.`;
+    $('bgNote').innerHTML = `${how} ${mm} The sky in the corrected image is now close to zero. Use the buttons above to compare.`;
+    needOv = true; kick();
+  } catch (e) { console.error(e); toast(e.message || String(e)); }
+  busy('');
+}
+$('bgRun').onclick = runBackground;
 
 // ---------------------------------------------------------------- plate scale
 function instById(id) { return INSTRUMENTS.find(I => I.id === id); }
@@ -809,8 +1078,9 @@ async function openBlob(blob, name, preset) {
     im.name = name;
     busy('Measuring the image…'); await new Promise(r => setTimeout(r, 20));
     im.wcs = im.kind === 'fits' ? readWCS(im.hdr) : null;
-    analyse(im);
+    im.sets = { orig: makeSet(im.ch, im.w, im.h) }; im.cur = null;
     img = im; meas = []; pending = null;
+    bgReset();
     $('welcome').style.display = 'none';
     showInfo(); fillInstruments(img.wcs && img.wcs.scale);
     // plate scale: sample's known setup, then the header or image size, then the WCS
@@ -824,8 +1094,7 @@ async function openBlob(blob, name, preset) {
     if (preset && preset.useReduced) { const b = document.getElementById('useRed'); if (b) b.click(); }
     // stretch
     st.curve = 'lin'; $('curve').value = 'lin'; st.invert = false; $('invert').checked = false; buildLUT();
-    setAxis(); computeHist();
-    applyPreset(img.kind === 'pic' ? '100' : '99.5');
+    useSet('orig');
     fitView(); listMeas();
     $('readout').innerHTML = 'Move over the image to read positions' + (img.wcs ? ' and sky coordinates' : '');
     if (img.kind === 'fits' && !img.wcs) toast('This FITS image has no sky coordinates (WCS), so RA and Dec are not shown. Pixel positions and the plate scale still work.');
@@ -838,7 +1107,7 @@ function showInfo() {
   rows.push(['Size', `${img.w} × ${img.h} pixels`]);
   const type = img.kind === 'fits' ? `FITS, ${{ 8: '8-bit', 16: '16-bit', 32: '32-bit', '-32': '32-bit float', '-64': '64-bit float', 64: '64-bit' }[img.bitpix]}` : (img.ch.length === 3 ? 'Color picture' : 'Grayscale picture');
   rows.push(['Type', type + (img.notes.length ? ` (${img.notes.join(', ')})` : '')]);
-  rows.push(['Values', `${fmtVal(img.min)} to ${fmtVal(img.max)}`]);
+  rows.push(['Values', `${fmtVal(img.sets.orig.min)} to ${fmtVal(img.sets.orig.max)}`]);
   for (const [k, lab] of [['OBJECT', 'Object'], ['DATE-OBS', 'Date'], ['EXPTIME', 'Exposure (s)'], ['EXPOSURE', 'Exposure (s)'], ['FILTER', 'Filter'], ['TELESCOP', 'Telescope'], ['INSTRUME', 'Camera']])
     if (h[k] !== undefined && h[k] !== '' && !rows.some(r => r[0] === lab)) rows.push([lab, esc(String(h[k]))]);
   if (img.kind === 'fits') rows.push(['Sky coordinates', img.wcs ? `Yes (WCS, ${img.wcs.scale.toFixed(3)}″/px)` : 'No WCS in the header']);
@@ -874,7 +1143,7 @@ addEventListener('resize', () => drawHist());
 fillInstruments(null); buildLUT(); resize(); updateScale(); drawHist();
 if (innerWidth < 720) $('hide').click();
 const q = new URLSearchParams(location.search).get('sample'); if (q) loadSample(q);
-window.__viewer = { pix2sky: (p1, p2) => img && img.wcs && pix2sky(img.wcs, p1, p2), state: () => ({ img: img && { w: img.w, h: img.h, kind: img.kind, min: img.min, max: img.max, wcs: img.wcs }, scale, st, view, meas }), openBlob, placePoint, setMode, toImage, toScreen };
+window.__viewer = { sets: () => img && img.sets, pix2sky: (p1, p2) => img && img.wcs && pix2sky(img.wcs, p1, p2), state: () => ({ img: img && { w: img.w, h: img.h, kind: img.kind, min: img.min, max: img.max, wcs: img.wcs }, scale, st, view, meas }), openBlob, placePoint, setMode, toImage, toScreen };
 })();
 </script>
 </body>
