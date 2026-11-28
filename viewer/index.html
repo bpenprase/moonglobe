@@ -24,6 +24,15 @@ h1{font-family:Spectral,serif;font-weight:600;font-size:22px;margin:0 0 2px;line
 .xlink{color:#9cc8ff;text-decoration:none}.xlink:hover{text-decoration:underline}
 .sec{border-top:1px solid var(--line);padding:11px 0 9px}
 .sec h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin:0 0 8px;font-weight:600}
+.sec h2.tog{cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none}
+.sec h2.tog::before{content:'';width:0;height:0;border-left:5px solid var(--gold);border-top:4px solid transparent;border-bottom:4px solid transparent;transform:rotate(90deg);transition:transform .15s}
+.sec.closed h2.tog::before{transform:none}
+.sec h2.tog:hover{color:#f3cf86}
+.sec h2 .sum{margin-left:auto;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.sec.closed{padding-bottom:4px}
+.sec.closed>h2{margin-bottom:6px}
+.sec.closed>*:not(h2){display:none!important}
+.sl.cb{grid-template-columns:44px 1fr 70px}.sl.cb .num{width:70px}
 .row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
 .row label{flex:1}
 .chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0;cursor:pointer}
@@ -110,7 +119,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
   <div class="sub"><a class="xlink" href="../">Exploring Space</a> &middot; Astronomy 150 &middot; Models of Time and Space<br>
     <a class="xlink" href="https://sites.soka.edu/suo/" target="_blank" rel="noopener">Soka University Nieves Observatory</a></div>
 
-  <div class="sec">
+  <div class="sec" id="secImage">
     <h2>Image</h2>
     <div class="btns"><button class="btn gold" id="open">Open image…</button>
       <select id="sample" title="Sample images"><option value="">Samples…</option><option value="ngc253">NGC 253 (HyperStar, JPG)</option><option value="horse">Horsehead Nebula (FITS with WCS)</option></select></div>
@@ -119,7 +128,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
     <details id="hdrBox" style="display:none"><summary>FITS header</summary><div id="hdr"></div></details>
   </div>
 
-  <div class="sec">
+  <div class="sec closed" id="secScope">
     <h2>Telescope and camera</h2>
     <select id="inst"></select>
     <div class="row" id="binRow"><label for="bin">Binning</label>
@@ -129,7 +138,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
     <div id="suggest"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="secDisplay">
     <h2>Display (stretch)</h2>
     <canvas id="hist"></canvas>
     <div class="hticks"><span id="hLo"></span><span id="hMid"></span><span id="hHi"></span></div>
@@ -142,7 +151,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
     <label class="chk"><input type="checkbox" id="invert">Invert (dark stars on white)</label>
   </div>
 
-  <div class="sec">
+  <div class="sec closed" id="secBg">
     <h2>Background removal</h2>
     <div class="note" style="margin-top:0">Fits the sky's background, such as vignetting or a glow from light pollution, and subtracts it so the sky is even and close to zero.</div>
     <select id="bgMethod" style="margin-top:8px">
@@ -157,13 +166,27 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
       <button class="btn" id="bgEdit" style="width:100%">Show and edit the sample points</button>
       <div class="note" id="bgEditNote" style="display:none">Each point samples the sky in the square around it. Click a point to leave it out (for example one on a galaxy or a bright star), click it again to bring it back, or click empty sky to add a point.</div>
     </div>
-    <div class="note" id="bgRadNote" style="display:none">Finds the center of a circular pattern and measures the sky in thin rings around it, so it can follow a sharp-edged vignetting disk. Stars and small galaxies barely affect the rings.</div>
+    <div id="bgRadNote" style="display:none">
+      <div class="note">Finds the center of a circular pattern and measures the sky in thin rings around it, so it can follow a sharp-edged vignetting disk. Stars and small galaxies barely affect the rings.</div>
+      <div class="sl" style="grid-template-columns:1fr 1fr 70px;margin-top:6px"><span>Smoothing (pixels)</span><input type="range" id="bgSmoothR" min="10" max="400" step="5" value="100"><input class="num" id="bgSmooth" type="number" min="2" max="2000" step="5" value="100" style="width:70px"></div>
+      <div class="note">How far along the radius the sky levels are smoothed. Larger values give a smoother background without circular ripples. Smaller values follow a sharp vignetting edge more closely.</div>
+    </div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-top:8px"><button class="btn gold" id="bgRun" disabled>Remove background</button><button class="btn" id="bgUndo" disabled title="Return to the original, uncorrected image">Reset</button></div>
     <div class="seg" id="bgView" style="margin-top:8px;display:none"><button data-v="orig">Original</button><button data-v="model">Background</button><button data-v="corr">Corrected</button></div>
     <div class="note" id="bgNote"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec closed" id="secColor">
+    <h2>Color balance</h2>
+    <div class="note" style="margin:0 0 6px">Turn each color up or down. The sliders multiply the brightness above the black level, so a black sky stays black.</div>
+    <div class="sl cb"><span style="color:#ff9a8c">Red</span><input type="range" id="cbR" min="0" max="300" step="1" value="100"><input class="num" id="cbRn" type="number" min="0" max="10" step="0.01" value="1.00"></div>
+    <div class="sl cb"><span style="color:#8fe39a">Green</span><input type="range" id="cbG" min="0" max="300" step="1" value="100"><input class="num" id="cbGn" type="number" min="0" max="10" step="0.01" value="1.00"></div>
+    <div class="sl cb"><span style="color:#9cc3ff">Blue</span><input type="range" id="cbB" min="0" max="300" step="1" value="100"><input class="num" id="cbBn" type="number" min="0" max="10" step="0.01" value="1.00"></div>
+    <div class="btns" style="margin-top:6px"><button class="btn" id="cbAuto" title="Set the colors so that typical stars come out white">Auto (white stars)</button><button class="btn" id="cbReset">Reset to 1, 1, 1</button></div>
+    <div class="note" id="cbNote">For a neutral sky, remove the background first. Saved PNG and JPG files include the color balance.</div>
+  </div>
+
+  <div class="sec" id="secSave">
     <h2>Save the image</h2>
     <select id="saveFmt">
       <option value="png">PNG, full resolution, as shown</option>
@@ -175,7 +198,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
       FITS keeps the actual pixel values (after background removal) for measuring in other programs.</div>
   </div>
 
-  <div class="sec">
+  <div class="sec closed" id="secMeasure">
     <h2>Measure distances</h2>
     <div class="seg" id="mode"><button data-m="pan" class="on">Move the image</button><button data-m="measure">Measure</button></div>
     <div class="note">In <b>Measure</b> mode, click one spot and then another. The line between them is measured in arcseconds using the plate scale. Dragging still moves the image. Esc cancels a half-finished line.</div>
@@ -586,7 +609,8 @@ function renderImage() {
   for (let sx = 0; sx < W; sx++) { const ix = Math.floor((view.ox + (sx + 0.5) / view.zoom) / f); cols[sx] = ix >= 0 && ix < L.w ? ix : -1; }
   const lo = st.lo, inv = 4095 / (st.hi - st.lo), bg = st.invert ? 255 : 0, nanC = st.invert ? 200 : 40;
   const c0 = ch[0], c1 = ch[1], c2 = ch[2];
-  const map = v => { if (v !== v) return -1; let t = (v - lo) * inv; t = t <= 0 ? 0 : t >= 4095 ? 4095 : t | 0; return LUT[t]; };
+  const map = (v, k = inv) => { if (v !== v) return -1; let t = (v - lo) * k; t = t <= 0 ? 0 : t >= 4095 ? 4095 : t | 0; return LUT[t]; };
+  const kR = inv * cb.r, kG = inv * cb.g, kB = inv * cb.b;
   let p = 0;
   for (let sy = 0; sy < H; sy++) {
     const iy = Math.floor((view.oy + (sy + 0.5) / view.zoom) / f);
@@ -596,7 +620,7 @@ function renderImage() {
       if (!inside || ix < 0) { out[p] = 14; out[p + 1] = 16; out[p + 2] = 22; out[p + 3] = 255; continue; }
       const i = row + ix;
       if (nc === 1) { let g = map(c0[i]); if (g < 0) g = nanC; out[p] = out[p + 1] = out[p + 2] = g; }
-      else { let r = map(c0[i]), g = map(c1[i]), b = map(c2[i]); out[p] = r < 0 ? nanC : r; out[p + 1] = g < 0 ? nanC : g; out[p + 2] = b < 0 ? nanC : b; }
+      else { let r = map(c0[i], kR), g = map(c1[i], kG), b = map(c2[i], kB); out[p] = r < 0 ? nanC : r; out[p + 1] = g < 0 ? nanC : g; out[p + 2] = b < 0 ? nanC : b; }
       out[p + 3] = 255;
     }
   }
@@ -784,7 +808,7 @@ function placePoint(sx, sy) {
   needOv = true; kick();
 }
 function listMeas() {
-  $('mCsv').disabled = $('mClear').disabled = !meas.length;
+  $('mCsv').disabled = $('mClear').disabled = !meas.length; updateSums();
   $('meas').innerHTML = meas.map((m, i) => {
     const { px, arc } = measText(m), pa = pixLabel(m.a[0], m.a[1]), pb = pixLabel(m.b[0], m.b[1]);
     const exact = img.kind === 'fits' ? (x, y) => `(${(x + 0.5).toFixed(1)}, ${(img.h - y + 0.5).toFixed(1)})` : (x, y) => `(${x.toFixed(1)}, ${y.toFixed(1)})`;
@@ -829,7 +853,7 @@ function bgUndo() {
   useSet('orig');
   delete img.sets.corr; delete img.sets.model;
   for (const P of bg.points) P.val = null;
-  $('bgView').style.display = 'none'; $('bgUndo').disabled = true;
+  $('bgView').style.display = 'none'; $('bgUndo').disabled = true; updateSums();
   $('bgNote').textContent = 'Back to the original image.';
   needOv = true; kick();
 }
@@ -857,6 +881,39 @@ function skyIn(a, cx, cy, half, sub) {
   const v = [], st2 = Math.max(1, Math.floor((x1 - x0 + 1) / 48));
   for (let y = y0; y <= y1; y += st2) for (let x = x0; x <= x1; x += st2) { const q = a[y * img.w + x] - (sub ? sub(x + 0.5, y + 0.5) : 0); if (q === q) v.push(q); }
   return clippedMedian(v);
+}
+function clippedMean(v) {
+  if (!v.length) return NaN;
+  v.sort((p, q) => p - q);
+  const med = v[v.length >> 1], dev = v.map(q => Math.abs(q - med)).sort((p, q) => p - q), mad = dev[dev.length >> 1] * 1.4826;
+  if (!mad) { let t = 0; for (const q of v) t += q; return t / v.length; }
+  let t = 0, n = 0; for (const q of v) if (Math.abs(q - med) < 2.5 * mad) { t += q; n++; }
+  return n ? t / n : med;
+}
+// running median, then a running mean, over a profile (window sizes in samples)
+function runMedian(P, half) {
+  const out = new Float32Array(P.length), win = [];
+  for (let i = 0; i < P.length; i++) {
+    const a = Math.max(0, i - half), b = Math.min(P.length - 1, i + half);
+    win.length = 0; for (let k = a; k <= b; k++) win.push(P[k]);
+    win.sort((p, q) => p - q); out[i] = win[win.length >> 1];
+  }
+  return out;
+}
+// running mean that does not reach across a sharp jump (such as the edge of a vignetting disk)
+function runMean(P, half) {
+  const n = P.length, out = new Float32Array(n), cs = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) cs[i + 1] = cs[i] + P[i];
+  const d = []; for (let i = 1; i < n; i++) d.push(Math.abs(P[i] - P[i - 1]));
+  const ds = d.slice().sort((p, q) => p - q), T = 8 * (ds[Math.floor(ds.length * 0.5)] || 0) + 1e-9 + (ds[Math.floor(ds.length * 0.9)] || 0);
+  const segStart = new Int32Array(n), segEnd = new Int32Array(n);
+  let st0 = 0; for (let i = 0; i < n; i++) { if (i > 0 && Math.abs(P[i] - P[i - 1]) > T) st0 = i; segStart[i] = st0; }
+  let en = n - 1; for (let i = n - 1; i >= 0; i--) { if (i < n - 1 && Math.abs(P[i + 1] - P[i]) > T) en = i; segEnd[i] = en; }
+  for (let i = 0; i < n; i++) {
+    const h2 = Math.min(half, i - segStart[i], segEnd[i] - i);      // keep the window centered, and inside this side of any jump
+    const a = i - h2, b = i + h2; out[i] = (cs[b + 1] - cs[a]) / (b - a + 1);
+  }
+  return out;
 }
 function clippedMedian(v) {
   if (!v.length) return NaN;
@@ -947,13 +1004,17 @@ function radialProfile(a, cx, cy) {
       let j = i; const pool = bins[i].slice();
       while (pool.length < need && j + 1 < nb && j - i < 60) { j++; for (const v of bins[j]) pool.push(v); }
       let m = NaN, sp = NaN;
-      if (pool.length >= 6) { m = clippedMedian(pool); const d = pool.map(v => Math.abs(v - m)).sort((p, q) => p - q); sp = d[d.length >> 1] * 1.4826; }
+      if (pool.length >= 6) { m = clippedMean(pool); const d = pool.map(v => Math.abs(v - m)).sort((p, q) => p - q); sp = d[d.length >> 1] * 1.4826; }
       for (let k = i; k <= j; k++) { prof[k] = m; spread[k] = sp; }
       i = j + 1;
     }
     let last = NaN; for (let i = 0; i < nb; i++) { if (prof[i] === prof[i]) last = prof[i]; else prof[i] = last; }
     last = NaN; for (let i = nb - 1; i >= 0; i--) { if (prof[i] === prof[i]) last = prof[i]; else prof[i] = last; }
-    const sm = prof.map((_, i) => { const w = prof.slice(Math.max(0, i - 2), i + 3).filter(v => v === v).sort((p, q) => p - q); return w[w.length >> 1]; });
+    // smooth along the radius: a median over the chosen width removes ripples but keeps a sharp vignetting edge in place,
+    // then a short running mean turns any small remaining steps into gentle ramps
+    const K = Math.max(2, +$('bgSmooth').value || 100), half = Math.max(1, Math.round(K / bw / 2));
+    let sm = runMedian(Float32Array.from(prof.map(v => v === v ? v : 0)), half);
+    sm = runMean(sm, Math.max(1, Math.round(half / 3)));
     return { prof: sm, spread };
   };
   // first pass, then again leaving out pixels well above it (stars, and the brighter parts of galaxies and nebulae)
@@ -1012,7 +1073,7 @@ async function runBackground() {
     busy('Updating the display…'); await new Promise(r => setTimeout(r, 20));
     img.sets.corr = makeSet(corr, w, h); delete img.sets.corr.slo;
     if (model) img.sets.model = makeSet(model, w, h); else delete img.sets.model;
-    $('bgView').style.display = 'flex'; $('bgUndo').disabled = false;
+    $('bgView').style.display = 'flex'; $('bgUndo').disabled = false; updateSums();
     $('bgView').querySelector('[data-v="model"]').style.display = model ? '' : 'none';
     useSet('corr');
     const mm = img.sets.model ? `The background ran from ${fmtVal(img.sets.model.min)} to ${fmtVal(img.sets.model.max)}.` : '';
@@ -1029,6 +1090,8 @@ async function runBackground() {
 }
 $('bgRun').onclick = runBackground;
 $('bgUndo').onclick = bgUndo;
+$('bgSmoothR').oninput = e => { $('bgSmooth').value = e.target.value; };
+$('bgSmooth').onchange = e => { const v = Math.max(2, Math.min(2000, +e.target.value || 100)); e.target.value = v; $('bgSmoothR').value = Math.min(400, v); };
 
 
 // ---------------------------------------------------------------- saving
@@ -1043,14 +1106,15 @@ async function stretchedCanvas() {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const cx = cv.getContext('2d'); if (!cx) throw new Error('This image is too large for the browser to save as a picture. Try FITS instead.');
   const lo = st.lo, inv = 4095 / (st.hi - st.lo), nanC = st.invert ? 200 : 40;
-  const map = v => { if (v !== v) return nanC; let t = (v - lo) * inv; t = t <= 0 ? 0 : t >= 4095 ? 4095 : t | 0; return LUT[t]; };
+  const map = (v, k = inv) => { if (v !== v) return nanC; let t = (v - lo) * k; t = t <= 0 ? 0 : t >= 4095 ? 4095 : t | 0; return LUT[t]; };
+  const kR = inv * cb.r, kG = inv * cb.g, kB = inv * cb.b;
   const rows = Math.max(1, Math.min(h, Math.floor(4e6 / w)));
   for (let y0 = 0; y0 < h; y0 += rows) {
     const nr = Math.min(rows, h - y0), part = cx.createImageData(w, nr), d = part.data;
     for (let k = 0, i = y0 * w; k < nr * w; k++, i++) {
       const p = k * 4;
       if (nc === 1) d[p] = d[p + 1] = d[p + 2] = map(ch[0][i]);
-      else { d[p] = map(ch[0][i]); d[p + 1] = map(ch[1][i]); d[p + 2] = map(ch[2][i]); }
+      else { d[p] = map(ch[0][i], kR); d[p + 1] = map(ch[1][i], kG); d[p + 2] = map(ch[2][i], kB); }
       d[p + 3] = 255;
     }
     cx.putImageData(part, 0, y0);
@@ -1089,6 +1153,7 @@ function fitsBlob() {
   if (img.cur === 'corr') hist.push('Background removed: ' + ($('bgNote').textContent || '').replace(/ Use the buttons.*$/, ''));
   if (img.cur === 'model') hist.push('This is the fitted background model, not the sky image.');
   hist.push(`Display range used in the viewer: ${fmtVal(st.lo)} to ${fmtVal(st.hi)} (${$('curve').selectedOptions[0].textContent.toLowerCase()} curve).`);
+  if (nc === 3 && (cb.r !== 1 || cb.g !== 1 || cb.b !== 1)) hist.push(`Color balance in the viewer (not applied to these values): red ${cb.r.toFixed(2)}, green ${cb.g.toFixed(2)}, blue ${cb.b.toFixed(2)}.`);
   for (const t of hist) {          // wrap each note at word breaks, 70 characters a line
     let line = '';
     for (const word of t.split(' ')) { if (line && (line + ' ' + word).length > 70) { cards.push(textCard('HISTORY', line)); line = word; } else line = line ? line + ' ' + word : word; }
@@ -1125,6 +1190,53 @@ async function saveImage() {
 }
 $('saveBtn').onclick = saveImage;
 
+
+// ---------------------------------------------------------------- color balance
+const cb = { r: 1, g: 1, b: 1 };
+const CBK = [['r', 'cbR', 'cbRn'], ['g', 'cbG', 'cbGn'], ['b', 'cbB', 'cbBn']];
+function cbSet(r, g, b, quiet) {
+  cb.r = r; cb.g = g; cb.b = b;
+  for (const [k, sl, nm] of CBK) { $(sl).value = Math.round(Math.min(3, cb[k]) * 100); $(nm).value = cb[k].toFixed(2); }
+  updateSums(); if (!quiet) { needImg = true; kick(); }
+}
+function cbEnable() {
+  const color = img && img.ch.length === 3;
+  for (const [, sl, nm] of CBK) { $(sl).disabled = !color; $(nm).disabled = !color; }
+  $('cbAuto').disabled = $('cbReset').disabled = !color;
+  $('cbNote').textContent = !img ? 'For a neutral sky, remove the background first. Saved PNG and JPG files include the color balance.'
+    : color ? 'For a neutral sky, remove the background first. Saved PNG and JPG files include the color balance.'
+    : 'This image has a single color channel, so there is no color to balance.';
+}
+for (const [k, sl, nm] of CBK) {
+  $(sl).oninput = e => { cb[k] = +e.target.value / 100; $(nm).value = cb[k].toFixed(2); updateSums(); needImg = true; kick(); };
+  $(nm).onchange = e => { const v = Math.max(0, Math.min(10, parseFloat(e.target.value))); cb[k] = isFinite(v) ? v : 1; cbSet(cb.r, cb.g, cb.b); };
+}
+$('cbReset').onclick = () => cbSet(1, 1, 1);
+// typical stars come out white: match each color's brightness of the bright pixels above its sky level
+$('cbAuto').onclick = () => {
+  if (!img || img.ch.length !== 3) return;
+  const n = img.w * img.h, step = Math.max(1, Math.floor(n / 6e5));
+  const spans = img.ch.map(a => { const v = []; for (let i = 0; i < n; i += step) if (a[i] === a[i]) v.push(a[i]); v.sort((p, q) => p - q);
+    return v[Math.floor(v.length * 0.997)] - v[v.length >> 1]; });
+  if (spans.some(x => !(x > 0))) { toast('Could not find enough bright stars to balance the colors.'); return; }
+  let g = spans.map(x => 1 / x); const mean = (g[0] + g[1] + g[2]) / 3; g = g.map(x => Math.max(0.05, Math.min(10, x / mean)));
+  cbSet(g[0], g[1], g[2]);
+};
+// short summaries beside the headings of closed sections
+function updateSums() {
+  const put = (id, t) => { const el = document.querySelector(`#${id} > h2 .sum`); if (el) el.textContent = t || ''; };
+  put('secScope', img ? (scale ? `${+scale.toFixed(3)}″/px` : 'not set') : '');
+  put('secBg', img && img.sets && img.sets.corr ? 'removed' : '');
+  put('secColor', img && img.ch && img.ch.length === 3 && (cb.r !== 1 || cb.g !== 1 || cb.b !== 1) ? `R ${cb.r.toFixed(2)} · G ${cb.g.toFixed(2)} · B ${cb.b.toFixed(2)}` : '');
+  put('secMeasure', meas.length ? `${meas.length} line${meas.length > 1 ? 's' : ''}` : '');
+}
+document.querySelectorAll('#panel .sec').forEach(sec => {
+  const h = sec.querySelector(':scope > h2'); if (!h) return;
+  h.classList.add('tog'); h.insertAdjacentHTML('beforeend', '<span class="sum"></span>');
+  h.title = 'Show or hide this section';
+  h.onclick = () => { sec.classList.toggle('closed'); if (!sec.classList.contains('closed')) drawHist(); };
+});
+
 // ---------------------------------------------------------------- plate scale
 function instById(id) { return INSTRUMENTS.find(I => I.id === id); }
 function updateScale(from) {
@@ -1145,7 +1257,7 @@ function updateScale(from) {
   } else if (img) f = 'Choose the telescope and camera, or type a plate scale, to measure in arcseconds.';
   $('fov').innerHTML = f;
   suggestReduced();
-  listMeas(); needOv = true; kick();
+  listMeas(); updateSums(); needOv = true; kick();
 }
 $('inst').onchange = () => updateScale();
 $('bin').onchange = () => updateScale();
@@ -1200,6 +1312,7 @@ async function openBlob(blob, name, preset) {
     im.wcs = im.kind === 'fits' ? readWCS(im.hdr) : null;
     im.sets = { orig: makeSet(im.ch, im.w, im.h) }; im.cur = null;
     img = im; meas = []; pending = null;
+    cbSet(1, 1, 1, true); cbEnable();
     bgReset();
     $('welcome').style.display = 'none';
     showInfo(); fillInstruments(img.wcs && img.wcs.scale);
@@ -1260,7 +1373,7 @@ $('toggle').onclick = () => { $('panel').classList.remove('hidden'); $('toggle')
 addEventListener('resize', () => drawHist());
 
 // ---------------------------------------------------------------- start
-fillInstruments(null); buildLUT(); resize(); updateScale(); drawHist();
+fillInstruments(null); buildLUT(); resize(); cbEnable(); updateScale(); drawHist();
 if (innerWidth < 720) $('hide').click();
 const q = new URLSearchParams(location.search).get('sample'); if (q) loadSample(q);
 window.__viewer = { sets: () => img && img.sets, pix2sky: (p1, p2) => img && img.wcs && pix2sky(img.wcs, p1, p2), state: () => ({ img: img && { w: img.w, h: img.h, kind: img.kind, min: img.min, max: img.max, wcs: img.wcs }, scale, st, view, meas }), openBlob, placePoint, setMode, toImage, toScreen };

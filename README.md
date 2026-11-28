@@ -259,12 +259,21 @@ nothing is uploaded.
   each point takes a star-rejecting median of the square around it) and fits a plane or a 2nd or 3rd order polynomial
   surface. Points can be shown, left out (for example one on a galaxy) or added by clicking. *Circular pattern* is for
   vignetting: it finds the pattern's center separately in each color (by making the sky in thin rings around it as
-  uniform as possible), then measures the sky in each ring, a second time with stars and galaxies set aside. It follows
-  a sharp-edged vignetting disk that a smooth surface cannot. *Circular pattern, then smooth surface* does both.
+  uniform as possible), then measures the sky in each ring as a star-rejecting mean, a second time with stars and
+  galaxies set aside. The radial curve is then median filtered over a user-set width (default 100 pixels), and lightly
+  averaged without reaching across sharp jumps, so the background is a smooth function of radius with no concentric
+  ripples, while a sharp-edged vignetting disk keeps its edge. (Ripple in the fitted background fell from about 0.43 to
+  0.06 to 0.08 levels on synthetic 16-bit test images.) *Circular pattern, then smooth surface* does both.
   Original, Background and Corrected buttons switch between the three images, and Reset returns to the uncorrected
   image. The corrected image opens with the
   Faint stretch. On the NGC 253 sample the circular method leaves the sky inside the disk within about 2 levels (of
   255) of zero, apart from a thin rim at the ragged edge of the stacked frames.
+- **Color balance**: red, green and blue sliders (0 to 3, or typed values) multiply each color's brightness above the
+  black level. "Auto (white stars)" matches the colors of the brightest 0.3% of pixels above the sky, so typical stars come
+  out white. Saved PNG and JPG files include the balance; FITS files keep the data values and note the balance used.
+- **Panel layout**: each section folds open or closed by clicking its heading. Image, Display (stretch) and Save the image
+  start open; Telescope and camera, Background removal, Color balance and Measure distances start closed, with a short
+  summary beside the heading (plate scale, "removed", the color gains, the number of lines measured).
 - **Saving**: the Save button follows what is on screen ("Save image", "Save corrected image" or "Save background
   model"). PNG and JPG are full resolution with the black and white levels, curve and background removal applied, as
   shown (FITS images keep row 1 at the bottom, so north stays up). FITS saves the data values as 32-bit floats, with the
