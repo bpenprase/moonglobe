@@ -460,6 +460,21 @@ function sampleH(lat, lon) {
   const x = Math.min(HW - 1, Math.max(0, Math.floor((lon + 180) / 360 * HW))), y = Math.min(HH - 1, Math.max(0, Math.floor((90 - lat) / 180 * HH)));
   return heightKm[y * HW + x];
 }
+// the height map read smoothly (bilinear), as the globe's shader reads it
+function sampleHB(lat, lon) {
+  if (!heightKm) return 0;
+  lon = ((lon + 540) % 360 + 360) % 360 - 180;
+  const fx = (lon + 180) / 360 * HW - 0.5, fy = (90 - lat) / 180 * HH - 0.5;
+  const x0 = Math.floor(fx), y0 = Math.max(0, Math.min(HH - 1, Math.floor(fy))), y1 = Math.min(HH - 1, y0 + 1), tx = fx - x0, ty = Math.max(0, Math.min(1, fy - y0));
+  const xa = (x0 % HW + HW) % HW, xb = (xa + 1) % HW;
+  const h00 = heightKm[y0 * HW + xa], h10 = heightKm[y0 * HW + xb], h01 = heightKm[y1 * HW + xa], h11 = heightKm[y1 * HW + xb];
+  return (h00 * (1 - tx) + h10 * tx) * (1 - ty) + (h01 * (1 - tx) + h11 * tx) * ty;
+}
+// a direction on the unit sphere -> the point on the surface as drawn, raised or lowered by the elevation exaggeration
+function surfPt(x, y, z) {
+  const k = 1 + uniforms.exag.value * sampleHB(Math.asin(Math.max(-1, Math.min(1, y))) / DEG, Math.atan2(x, z) / DEG) / R_KM;
+  return [x * k, y * k, z * k, k];
+}
 const fmtLat = v => Math.abs(v).toFixed(2) + '° ' + (v >= 0 ? 'N' : 'S');
 const fmtLon = v => Math.abs(v).toFixed(2) + '° ' + (v >= 0 ? 'E' : 'W');
 const fmtH = v => isNaN(v) ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + ' km';
@@ -557,7 +572,9 @@ function updateLabels() {
     else if (it.kind === 'albedo') { if (px < 60 * zf) continue; pri = 8.5e5 + Math.min(px, 2000); }
     else if (it.kind === 'volcano') { if (px < 22 * zf) continue; pri = 8.8e5 + px; }
     else { if (px < (it.kind === 'crater' ? 26 : it.kind === 'canyon' ? 45 : 40) * zf) continue; pri = it.kind === 'canyon' ? px * 1.2 : it.kind === 'crater' ? px : px * 0.7; }
-    tmp.set(it.x, it.y, it.z).project(camera);
+    const sp = surfPt(it.x, it.y, it.z);
+    if (dd < sp[3] + 0.0005) continue;                            // behind the limb of the raised or lowered surface
+    tmp.set(sp[0], sp[1], sp[2]).project(camera);
     if (tmp.z > 1) continue;
     const sx = (tmp.x * 0.5 + 0.5) * W, sy = (-tmp.y * 0.5 + 0.5) * H;
     if (sx < -60 || sx > W + 60 || sy < -20 || sy > H + 20) continue;
@@ -891,6 +908,8 @@ function sizeRosterCv() { const k = Math.min(devicePixelRatio, 2); rcv.width = i
 sizeRosterCv(); addEventListener('resize', sizeRosterCv);
 const rv = new THREE.Vector3();
 function scr(x, y, z) { rv.set(x, y, z).project(camera); return [(rv.x * 0.5 + 0.5) * innerWidth, (-rv.y * 0.5 + 0.5) * innerHeight]; }
+// screen position of a point on the drawn surface, and whether it faces the camera
+function scrSurf(x, y, z) { const p = surfPt(x, y, z), C = camera.position; return { xy: scr(p[0], p[1], p[2]), vis: x * C.x + y * C.y + z * C.z > p[3] + 0.0005 }; }
 function drawRoster() {
   r2.clearRect(0, 0, innerWidth, innerHeight);
   if (!roster.show || !roster.rows.length || !items.length) return;
@@ -900,8 +919,9 @@ function drawRoster() {
   const placed = []; let hidden = 0;
   r2.font = '600 13px Inter,sans-serif';
   for (const [it, names] of groups) {
-    if (it.x * C.x + it.y * C.y + it.z * C.z < 1.002) { hidden += names.length; continue; }   // on the far side
-    const [sx, sy] = scr(it.x, it.y, it.z);
+    const S0 = scrSurf(it.x, it.y, it.z);
+    if (!S0.vis) { hidden += names.length; continue; }   // on the far side
+    const [sx, sy] = S0.xy;
     if (sx < 0 || sy < 0 || sx > innerWidth || sy > innerHeight) { hidden += names.length; continue; }
     let rad = 8;
     const ring = it.diam > 2 && it.diam < 400 && it.kind !== 'mare';
@@ -913,7 +933,7 @@ function drawRoster() {
       const pts = []; let maxr = 0;
       for (let k = 0; k <= 48; k++) {
         const t = k / 48 * 2 * Math.PI, px = ca * v.x + sa * (Math.cos(t) * e1.x + Math.sin(t) * e2.x), py = ca * v.y + sa * (Math.cos(t) * e1.y + Math.sin(t) * e2.y), pz = ca * v.z + sa * (Math.cos(t) * e1.z + Math.sin(t) * e2.z);
-        const vis = px * C.x + py * C.y + pz * C.z > 1.0; const q = scr(px, py, pz); pts.push([q[0], q[1], vis]); maxr = Math.max(maxr, Math.hypot(q[0] - sx, q[1] - sy));
+        const Sk = scrSurf(px, py, pz), q = Sk.xy; pts.push([q[0], q[1], Sk.vis]); maxr = Math.max(maxr, Math.hypot(q[0] - sx, q[1] - sy));
       }
       if (maxr < 7) { r2.beginPath(); r2.arc(sx, sy, 7, 0, 2 * Math.PI); r2.stroke(); rad = 7; }
       else {
