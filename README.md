@@ -260,7 +260,7 @@ nothing is uploaded.
   surface. Points can be shown, left out (for example one on a galaxy) or added by clicking. *Circular pattern* is for
   vignetting: it finds the pattern's center separately in each color (by making the sky in thin rings around it as
   uniform as possible), then measures the sky in each ring as a star-rejecting mean, a second time with stars and
-  galaxies set aside. The radial curve is then median filtered over a user-set width (default 100 pixels), and lightly
+  galaxies set aside. The radial curve is then median filtered over a user-set width (default 250 pixels), and lightly
   averaged without reaching across sharp jumps, so the background is a smooth function of radius with no concentric
   ripples, while a sharp-edged vignetting disk keeps its edge. (Ripple in the fitted background fell from about 0.43 to
   0.06 to 0.08 levels on synthetic 16-bit test images.) *Circular pattern, then smooth surface* does both.

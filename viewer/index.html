@@ -168,7 +168,7 @@ body.dropping #welcome .box,body.dropping #stage{outline:3px dashed var(--gold);
     </div>
     <div id="bgRadNote" style="display:none">
       <div class="note">Finds the center of a circular pattern and measures the sky in thin rings around it, so it can follow a sharp-edged vignetting disk. Stars and small galaxies barely affect the rings.</div>
-      <div class="sl" style="grid-template-columns:1fr 1fr 70px;margin-top:6px"><span>Smoothing (pixels)</span><input type="range" id="bgSmoothR" min="10" max="400" step="5" value="100"><input class="num" id="bgSmooth" type="number" min="2" max="2000" step="5" value="100" style="width:70px"></div>
+      <div class="sl" style="grid-template-columns:1fr 1fr 70px;margin-top:6px"><span>Smoothing (pixels)</span><input type="range" id="bgSmoothR" min="10" max="600" step="5" value="250"><input class="num" id="bgSmooth" type="number" min="2" max="2000" step="5" value="250" style="width:70px"></div>
       <div class="note">How far along the radius the sky levels are smoothed. Larger values give a smoother background without circular ripples. Smaller values follow a sharp vignetting edge more closely.</div>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-top:8px"><button class="btn gold" id="bgRun" disabled>Remove background</button><button class="btn" id="bgUndo" disabled title="Return to the original, uncorrected image">Reset</button></div>
@@ -1012,7 +1012,7 @@ function radialProfile(a, cx, cy) {
     last = NaN; for (let i = nb - 1; i >= 0; i--) { if (prof[i] === prof[i]) last = prof[i]; else prof[i] = last; }
     // smooth along the radius: a median over the chosen width removes ripples but keeps a sharp vignetting edge in place,
     // then a short running mean turns any small remaining steps into gentle ramps
-    const K = Math.max(2, +$('bgSmooth').value || 100), half = Math.max(1, Math.round(K / bw / 2));
+    const K = Math.max(2, +$('bgSmooth').value || 250), half = Math.max(1, Math.round(K / bw / 2));
     let sm = runMedian(Float32Array.from(prof.map(v => v === v ? v : 0)), half);
     sm = runMean(sm, Math.max(1, Math.round(half / 3)));
     return { prof: sm, spread };
@@ -1091,7 +1091,7 @@ async function runBackground() {
 $('bgRun').onclick = runBackground;
 $('bgUndo').onclick = bgUndo;
 $('bgSmoothR').oninput = e => { $('bgSmooth').value = e.target.value; };
-$('bgSmooth').onchange = e => { const v = Math.max(2, Math.min(2000, +e.target.value || 100)); e.target.value = v; $('bgSmoothR').value = Math.min(400, v); };
+$('bgSmooth').onchange = e => { const v = Math.max(2, Math.min(2000, +e.target.value || 250)); e.target.value = v; $('bgSmoothR').value = Math.min(600, v); };
 
 
 // ---------------------------------------------------------------- saving
